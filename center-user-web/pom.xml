@@ -11,6 +11,7 @@
 
     <modules>
         <module>common-user-service</module>
+        <module>admain-user-service</module>
     </modules>
 
     <groupId>com.yulgnier.centeruserweb</groupId>
@@ -33,6 +34,11 @@
             <groupId>com.mysql</groupId>
             <artifactId>mysql-connector-j</artifactId>
             <scope>runtime</scope>
+        </dependency>
+        <!-- mybatis-plus -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-boot-starter</artifactId>
         </dependency>
     </dependencies>
 

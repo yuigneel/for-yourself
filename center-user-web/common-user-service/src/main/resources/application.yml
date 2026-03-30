@@ -36,17 +36,4 @@ spring:
       connection-test-query: SELECT 1    # 心跳检测SQL，保活验证连接可用
 
 knife4j:
-  enable: true
-  openapi:
-    title: For-Yourself普通用户接口文档
-    description: "For-Yourself普通用户接口文档"
-    email: yulgnier@gmail.com
-    concat: yulgnier
-    url: https://amis-homepage-main.vercel.app
-    version: v0.0.1-SNAPSHOT
-    group:
-      default:
-        group-name: default
-        api-rule: package
-        api-rule-resources:
-          - com.yulgnier.center.common.user.controller
+  enable: true  # 开启Knife4j增强功能
