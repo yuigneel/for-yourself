@@ -1,0 +1,52 @@
+server:
+  port: ${your.server.port}
+# 全局时间格式化（统一后端返回时间格式）
+jackson:
+  date-format: yyyy-MM-dd HH:mm:ss
+  time-zone: ${your.timezone}
+spring:
+  application:
+    name: common-user-service
+  profiles:
+    active: local
+  # ====================== 数据源核心配置 ======================
+  datasource:
+    # 1. MySQL连接地址
+    url: jdbc:mysql://${your.datasource.ip}:${your.datasource.port}/${your.datasource.db}?useUnicode=true&characterEncoding=utf-8&serverTimezone=${your.timezone}&useSSL=${your.datasource.usessl}&allowPublicKeyRetrieval=${your.datasource.allowPublicKeyRetrieval}
+    # 逐参数解释：
+    # jdbc:mysql://ip:端口/数据库名
+    # useUnicode=true&characterEncoding=utf-8 统一编码，中文不乱码
+    # serverTimezone=Asia/Shanghai 时区必须配，否则时差、时间报错
+    # useSSL=false 本地开发关闭SSL；生产环境改为true安全加密
+    # allowPublicKeyRetrieval=true 本地解决MySQL8公钥报错，生产建议关闭
+    username: ${your.datasource.username}
+    password: ${your.datasource.password}
+
+    # 3. MySQL8驱动类（SpringBoot高版本可省略，建议显式写）
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+    # ====================== HikariCP 企业级连接池调优 ======================
+    hikari:
+      pool-name: yourHikariPool       # 连接池名称，便于监控排查
+      minimum-idle: 5                    # 最小空闲连接数（常驻保活）
+      maximum-pool-size: 20              # 最大连接数（并发峰值承载，企业常用10~30）
+      idle-timeout: 300000               # 空闲连接超时时间(毫秒)，5分钟释放闲置
+      max-lifetime: 1800000              # 连接最大生命周期(毫秒)，30分钟强制换新，避免断连
+      connection-timeout: 3000           # 获取连接最大等待时间(毫秒)，超时抛异常
+      connection-test-query: SELECT 1    # 心跳检测SQL，保活验证连接可用
+
+knife4j:
+  enable: true
+  openapi:
+    title: For-Yourself普通用户接口文档
+    description: "For-Yourself普通用户接口文档"
+    email: yulgnier@gmail.com
+    concat: yulgnier
+    url: https://amis-homepage-main.vercel.app
+    version: v0.0.1-SNAPSHOT
+    group:
+      default:
+        group-name: default
+        api-rule: package
+        api-rule-resources:
+          - com.yulgnier.center.common.user.controller
