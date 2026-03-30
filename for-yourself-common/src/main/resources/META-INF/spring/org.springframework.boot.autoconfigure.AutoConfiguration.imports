@@ -1,0 +1,9 @@
+# 创建位置：for-yourself-common/src/main/resources/META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports
+# Spring Boot 3.x 自动配置文件
+# 此文件会被 Spring Boot 自动扫描并加载其中列出的配置类
+# 配置说明：
+# 1. 每行写一个配置类的全限定名
+# 2. Spring Boot 启动时会自动实例化这些配置类
+# 3. 配置类上的 @Configuration 注解会触发 Bean 的注册
+# 注册的配置类：common 模块的自动配置类
+com.yulgnier.common.config.ForYourselfCommonAutoConfiguration
