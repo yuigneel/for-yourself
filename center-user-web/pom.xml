@@ -19,6 +19,10 @@
     <packaging>pom</packaging>
 
     <dependencies>
+        <dependency>
+            <groupId>com.yulgnier.common</groupId>
+            <artifactId>for-yourself-common</artifactId>
+        </dependency>
         <!-- web -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

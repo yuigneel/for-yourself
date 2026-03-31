@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 日志配置根标签，scan=true表示修改配置后自动生效  每60秒扫一次  -->
+<configuration scan="true" scanPeriod="60 seconds">
+
+    <!-- ==========================================
+        1. 读取application.yml里的日志存储路径
+      “context”存入上下文方便${}引用 名字就叫 "LOG_PATH" source是你yml中的属性也就是日志输出路径 默认值是defaultValue
+         ========================================== -->
+    <springProperty scope="context" name="LOG_PATH" source="logging.file.path" defaultValue="logs/center-common-user-service"/>
+
+    <!-- ==========================================
+        2. 控制台输出配置（开发时看日志用）
+        ========================================== -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <!-- 日志输出格式 -->
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{50} - %msg%n</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- ==========================================
+         3. 文件输出配置（永久保存日志，自动切割）
+        ========================================== -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <!-- 日志文件路径 + 文件名 -->
+        <file>${LOG_PATH}/sys-log.log</file>
+
+        <!-- 滚动策略：按时间+大小切割日志 -->
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <!-- 切割后的日志文件名格式：路径/年-月-日-编号.log -->
+            <fileNamePattern>${LOG_PATH}/sys-log.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <!--logs/for-yourself/sys-log.2026-03-31.0.log （100MB，满了）
+                logs/for-yourself/sys-log.2026-03-31.1.log （新文件，编号1）
+                logs/for-yourself/sys-log.2026-03-31.2.log （继续满，继续加） yulgnier:嗷呜~ （哥：加油！）-->
+
+            <!-- 单个日志文件最大大小：100MB（超过自动切新文件） -->
+            <maxFileSize>100MB</maxFileSize>
+
+            <!-- 最多保留多少天的日志：30天（自动删除旧日志） -->
+            <maxHistory>30</maxHistory>
+
+            <!-- 所有日志文件总大小上限：10GB（超过删最旧的） -->
+            <totalSizeCap>10GB</totalSizeCap>
+        </rollingPolicy>
+
+        <!-- 日志文件编码 -->
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{50} - %msg%n</pattern>
+            <!-- %-5level 打印日志级别(DEBUG/INFO/WARN/ERROR) -5左对齐占 5 个字符，日志排版整齐
+             %logger{50} 打印类名显示打印日志的那个 Java 类，最多显示 50 个字符   yu:不想写了 尼酱：想想小排球
+             %msg 你自己写的日志内容 比如：用户登录成功、发送验证码失败-->
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- ==========================================
+        4. 开发环境配置（dev/local）
+         日志级别：DEBUG，所有日志都打印（控制台+文件）
+         ========================================== -->
+    <springProfile name="local">
+        <!-- 根日志级别：DEBUG -->
+        <root level="DEBUG">
+            <appender-ref ref="CONSOLE"/> <!-- 控制台输出 -->
+            <appender-ref ref="FILE"/>    <!-- 文件输出 -->
+        </root>
+    </springProfile>
+
+    <!-- ==========================================
+         5. 生产环境配置（prod）
+         日志级别：INFO，关闭调试日志，只留重要日志
+         ========================================== -->
+    <springProfile name="prod">
+        <!-- 根日志级别：INFO（关闭DEBUG调试日志） -->
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/> <!-- 控制台输出 -->
+            <appender-ref ref="FILE"/>    <!-- 文件输出 -->
+        </root>
+    </springProfile>
+<!-- 羽辰：呜呜呜~，我好难啊！嗷呜~ -->
+</configuration>

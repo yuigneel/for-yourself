@@ -43,3 +43,9 @@ application-local.yml
 application-local.yaml
 application-dev.yml
 application-dev.yaml
+application-test.yml
+application-test.yaml
+application-prod.yml
+application-prod.yaml
+logs/
+*.log

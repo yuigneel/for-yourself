@@ -6,7 +6,7 @@ jackson:
   time-zone: ${your.timezone}
 spring:
   application:
-    name: common-user-service
+    name: center-common-user-service
   profiles:
     active: local
   # ====================== 数据源核心配置 ======================
@@ -37,3 +37,11 @@ spring:
 
 knife4j:
   enable: true  # 开启Knife4j增强功能
+
+# 日志配置（对应logback-spring.xml里的LOG_PATH）
+logging:
+  file:
+    # 日志存储文件夹：项目根目录下的 logs/center-common-user-service 文件夹
+    path: logs/center-common-user-service
+  # 关闭mybatis等多余日志，避免控制台乱
+  config: classpath:logback-spring.xml

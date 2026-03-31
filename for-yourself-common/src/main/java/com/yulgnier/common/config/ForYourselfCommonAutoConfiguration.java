@@ -21,16 +21,12 @@ import org.springframework.context.annotation.Import;
  */
 @Configuration       // 标记这是一个Spring配置类，Spring会识别并加载
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)// 限定：只有在 SpringMVC Web 项目中才生效（非Web项目不加载，避免无效配置）
-@Import(GlobalExceptionHandler.class)   // 核心：自动导入全局异常处理器，将其注册到Spring容器中
+@Import({GlobalExceptionHandler.class})   // 核心：自动导入全局异常处理器，将其注册到Spring容器中
 public class ForYourselfCommonAutoConfiguration {
-
     /**
-     * 空构造方法
      *
      * 本类不需要写任何业务代码
      * 所有功能完全依靠上面的注解实现自动配置
      * 未来如果需要添加拦截器、工具类等自动配置，都可以在这个类里扩展
      */
-    public ForYourselfCommonAutoConfiguration() {
-    }
 }
