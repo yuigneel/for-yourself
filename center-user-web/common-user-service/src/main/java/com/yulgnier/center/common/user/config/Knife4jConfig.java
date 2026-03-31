@@ -3,6 +3,7 @@ package com.yulgnier.center.common.user.config;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Contact;
 import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.info.License;
 import org.springdoc.core.models.GroupedOpenApi;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -26,6 +27,12 @@ public class Knife4jConfig {
                                         .url("https://amis-homepage-main.vercel.app")  // 开发者地址（选填）
                                         .email("yulgnier@gmail.com")           // 联系邮箱
                         )
+                        // 服务条款地址（可选，标注API的使用规则/协议，无特殊要求可填示例地址）
+                        .termsOfService("http://doc.xiaominfo.com")
+                        // 配置API的许可证信息（声明项目遵循的开源协议/使用许可）
+                        .license(new License()
+                                .name("Apache 2.0")  // 许可证名称（如 Apache 2.0、MIT、私有协议等）
+                                .url("http://doc.xiaominfo.com"))   // 许可证官方链接（建议填对应协议的官方地址）
                 );
     }
 
@@ -39,7 +46,10 @@ public class Knife4jConfig {
     public GroupedOpenApi businessApi() {
         return GroupedOpenApi.builder()
                 .group("根普通用户接口")       // 分组名称（页面显示用）
-                .pathsToMatch("/center-common/user/**")        // 接口路径匹配规则 /* 表示匹配所有单级路径 /** 表示匹配所有多级路径
+                .pathsToMatch(      // 接口路径匹配规则 /* 表示匹配所有单级路径 /** 表示匹配所有多级路径
+                        "/center-common/user/**",
+                        "/test/**"
+                )
                 .build();
     }
 }

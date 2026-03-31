@@ -9,5 +9,6 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class CenterCommonUserApplication {
     public static void main(String[] args) {
         org.springframework.boot.SpringApplication.run(CenterCommonUserApplication.class, args);
+        log.info("==================center-common-user-service启动成功=======================");
     }
 }

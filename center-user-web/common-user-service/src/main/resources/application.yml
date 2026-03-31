@@ -10,7 +10,7 @@ spring:
   application:
     name: ${your.application.name}
   profiles:
-    active: local
+    active: local           #TODO-----------------------改---------------------
   # ====================== 数据源核心配置 ======================
   datasource:
     # 1. MySQL连接地址
@@ -50,6 +50,19 @@ spring:
           max-idle: 8      # 最大空闲连接
           min-idle: 0      # 最小空闲连接
 
+  # 邮箱配置（项目专用发件邮箱）
+  mail:
+    host: ${your.mail.host}  # 邮箱服务器地址
+    username: ${your.mail.username}  # 邮箱账号
+    password: ${your.mail.password}  # 邮箱授权码
+    default-encoding: utf-8
+    protocol: smtp    # 邮箱协议
+    properties:
+        mail:
+          debug: ${your.mail.debug}
+          ssl:
+            enable: true  # 开启SSL
+
 
 knife4j:
   enable: ${your.knife4j.enable}  # 开启Knife4j增强功能
@@ -61,3 +74,30 @@ logging:
     path: logs/center-common-user-service
   # 关闭mybatis等多余日志，避免控制台乱
   config: classpath:logback-spring.xml
+  # ✅ 核心：分级控制日志级别（解决99%冗余问题）
+  level:
+    # 1. 全局默认级别：WARN
+    # 作用：所有第三方框架，只打印 警告+错误，不打印冗余info/debug
+    root: WARN
+
+    # 2. ✅ 你的业务代码包：设为DEBUG
+    # 把 com.yourproject 改成你项目的**根包名**（启动类所在的包）
+    com.yulgnier.center.common.user: DEBUG            #TODO-----------------------改---------------------
+
+    # 3. 可选：额外关闭更烦人的框架日志（彻底干净，防止有些第三方框架默认用root级别，自带日志配置）
+    org.springframework: WARN
+    org.mybatis: WARN
+    com.baomidou.mybatisplus: WARN
+    io.lettuce.core: WARN  # Redis客户端
+    com.sun.mail: debug     # 邮箱客户端
+    springfox.documentation: WARN  # Knife4j
+
+
+mybatis-plus:
+  configuration:
+    default-enum-type-handler: com.baomidou.mybatisplus.core.handlers.CompositeEnumTypeHandler # 枚举类型处理器
+
+
+
+
+
