@@ -1,12 +1,14 @@
 server:
   port: ${your.server.port}
+
 # 全局时间格式化（统一后端返回时间格式）
 jackson:
   date-format: yyyy-MM-dd HH:mm:ss
   time-zone: ${your.timezone}
+
 spring:
   application:
-    name: center-common-user-service
+    name: ${your.application.name}
   profiles:
     active: local
   # ====================== 数据源核心配置 ======================
@@ -27,16 +29,30 @@ spring:
 
     # ====================== HikariCP 企业级连接池调优 ======================
     hikari:
-      pool-name: yourHikariPool       # 连接池名称，便于监控排查
+      pool-name: ${your.application.name}-HikariPool       # 连接池名称，便于监控排查
       minimum-idle: 5                    # 最小空闲连接数（常驻保活）
       maximum-pool-size: 20              # 最大连接数（并发峰值承载，企业常用10~30）
       idle-timeout: 300000               # 空闲连接超时时间(毫秒)，5分钟释放闲置
       max-lifetime: 1800000              # 连接最大生命周期(毫秒)，30分钟强制换新，避免断连
       connection-timeout: 3000           # 获取连接最大等待时间(毫秒)，超时抛异常
       connection-test-query: SELECT 1    # 心跳检测SQL，保活验证连接可用
+  data:
+    # Redis 配置
+    redis:
+      host: ${your.redis.host}      # Redis地址
+      port: ${your.redis.port}           # 端口
+      password: ${your.redis.password}           # 默认无密码
+      database: ${your.redis.database}          # 使用0号库
+      # 连接池配置
+      lettuce:
+        pool:
+          max-active: 8    # 最大连接数
+          max-idle: 8      # 最大空闲连接
+          min-idle: 0      # 最小空闲连接
+
 
 knife4j:
-  enable: true  # 开启Knife4j增强功能
+  enable: ${your.knife4j.enable}  # 开启Knife4j增强功能
 
 # 日志配置（对应logback-spring.xml里的LOG_PATH）
 logging:
