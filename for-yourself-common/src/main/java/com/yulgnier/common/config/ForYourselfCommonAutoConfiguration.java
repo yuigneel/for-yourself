@@ -4,7 +4,6 @@ import com.yulgnier.common.exception.GlobalExceptionHandler;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
-import org.springframework.data.redis.core.RedisTemplate;
 
 /**
  * Common 通用模块 自动配置类

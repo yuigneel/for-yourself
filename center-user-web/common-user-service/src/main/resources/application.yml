@@ -11,6 +11,7 @@ spring:
     name: ${your.application.name}
   profiles:
     active: local           #TODO-----------------------改---------------------
+
   # ====================== 数据源核心配置 ======================
   datasource:
     # 1. MySQL连接地址
@@ -96,6 +97,10 @@ logging:
 mybatis-plus:
   configuration:
     default-enum-type-handler: com.baomidou.mybatisplus.core.handlers.CompositeEnumTypeHandler # 枚举类型处理器
+
+cloudflare:
+  turnstile:
+    secret: ${your.cloudflare.turnstile.secret}
 
 
 

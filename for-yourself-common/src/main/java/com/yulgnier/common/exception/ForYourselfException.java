@@ -54,20 +54,4 @@ public class ForYourselfException extends RuntimeException {
         super(resultCodeEnum.getMessage());  // 从枚举中获取错误消息并传递给父类
         this.code = resultCodeEnum.getCode();  // 从枚举中获取状态码并赋值给本类的 code 字段
     }
-
-    /**
-     * 获取异常状态码的 getter 方法，父类没有code的getter方法，需要自己定义
-     * 
-     * @return 返回当前异常的状态码
-     * 
-     * 用途：在全局异常处理器中，可以通过此方法获取状态码，
-     *      并将其返回给前端，让前端知道发生了什么类型的错误
-     * 示例：在 ControllerAdvice 中：
-     *      if (ex instanceof ForYourselfException) {
-     *          return Result.fail(ex.getCode(), ex.getMessage());
-     *      }
-     */
-    public Integer getCode() {
-        return code;
-    }
 }
