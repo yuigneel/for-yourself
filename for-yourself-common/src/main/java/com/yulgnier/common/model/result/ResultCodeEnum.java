@@ -28,6 +28,7 @@ public enum ResultCodeEnum {
     REQUEST_TOO_OFTEN(411, "操作过于频繁"),
     DATA_NOT_FOUND(412, "数据不存在"),
     DATA_ALREADY_EXISTS(413, "数据已存在"),
+    REQUEST_INCOMPLETE(414, "请求信息不完整"),
 
     ADMIN_ACCOUNT_EXIST_ERROR(301, "账号已存在"),
     ADMIN_CAPTCHA_CODE_ERROR(302, "验证码错误"),

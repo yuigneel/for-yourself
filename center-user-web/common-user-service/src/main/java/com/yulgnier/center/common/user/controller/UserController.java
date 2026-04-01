@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     private final UserService userService;
+
     @Operation(summary = "用户注册")
     @PostMapping("/register")
     public String register(@RequestBody UserRegisterRequestDTO request) {

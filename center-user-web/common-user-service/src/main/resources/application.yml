@@ -90,7 +90,7 @@ logging:
     org.mybatis: WARN
     com.baomidou.mybatisplus: WARN
     io.lettuce.core: WARN  # Redis客户端
-    com.sun.mail: debug     # 邮箱客户端
+    com.sun.mail: WARN     # 邮箱客户端
     springfox.documentation: WARN  # Knife4j
 
 
@@ -101,6 +101,12 @@ mybatis-plus:
 cloudflare:
   turnstile:
     secret: ${your.cloudflare.turnstile.secret}
+
+
+yulgnier:
+  email-expire-minutes: ${your.yulgnier.email-expire-minutes}
+
+
 
 
 

@@ -23,7 +23,6 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-redis</artifactId>
-            <scope>provided</scope>    <!-- scope=provided：编译用，运行不携带，专门给公共模块用 -->
         </dependency>
         <!-- 连接池（必加，否则Redis会报错） -->
         <dependency>
@@ -36,6 +35,16 @@
             <artifactId>swagger-annotations-jakarta</artifactId>
             <version>2.2.19</version>
             <scope>compile</scope>
+        </dependency>
+        <!--
+        Jakarta注解API核心依赖
+        1. 前身：Java EE标准注解包（老版本叫javax.annotation）
+        2. 作用：提供@Resource、@PostConstruct等Java官方标准通用注解
+        3. 必加原因：Spring Boot 3.x 全面改用Jakarta EE规范，包名从javax→jakarta，不加此依赖则@Resource/@PostConstruct注解会报错找不到
+        -->
+        <dependency>
+            <groupId>jakarta.annotation</groupId>
+            <artifactId>jakarta.annotation-api</artifactId>
         </dependency>
     </dependencies>
 
