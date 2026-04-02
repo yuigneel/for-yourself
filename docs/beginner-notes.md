@@ -1,0 +1,80 @@
+# ============懒人笔记============
+
+## ------------构建工具-------------
+
+### -- maven：
+        1.下载解压压缩包
+        2.配置环境变量到电脑，MAVEN_HOME:你的maven安装目录（M2_HOME新时代推荐变量名）编辑 Path 变量，添加：%MAVEN_HOME%\bin
+        3.配置【本地仓库路径】修改 conf/settings.xml
+          找到文件里的 <localRepository> 标签（默认被注释）删掉注释，改为你自己的本地仓库文件夹（随便建个空文件夹）
+        4.配置【阿里云镜像】（添加新标签，不是修改原有）
+            <mirrors>
+              <!-- 阿里云Maven镜像，新手必加 -->
+              <mirror>
+                <id>aliyunmaven</id>
+                <name>阿里云公共仓库</name> 起个名字
+                <url>https://maven.aliyun.com/repository/public</url>
+                <mirrorOf>*</mirrorOf> <!-- 国内开发推荐用*，覆盖所有仓库或者central中央仓库 --> 指定要代理的仓库
+            </mirrors>
+        5.IDEA集成
+
+## ------------数据库---------------
+
+### -- MySQL：
+        1.下载解压压缩包
+        2.配置环境变量到电脑，配置 MYSQL_HOME 环境变量 + Path 加 bin
+        3.初始化mysql mysqld --initialize-insecure（可以先不创建my.ini文件）
+        4.注册服务 mysqld --install 若提示 The service already exists（服务已存在）：先执行 sc delete mysql 删除旧服务，再重新注册。
+        5.启动服务 net start mysql
+        6.MySQL 初始化时默认 root 用户无密码，需手动设置：mysql -uroot -p123456
+        7.IDEA集成 spring集成 配置application.yml文件
+
+## -----------缓存相关类-------------
+
+### -- Redis：
+        1.官方无默认win版本，去别处下载压缩包 默认端口6379
+        2.到根目录注册服务：redis-server --service-install redis.windows.conf --service-name Redis
+                    redis-server：Redis 的主程序文件
+                    service-install：告诉 Redis 要注册成 Windows 系统服务
+                    redis.windows.conf：指定启动时用的配置文件（必须写对路径 / 文件名）
+                    service-name Redis：给服务起个名字，默认就是 Redis，可以不改
+        3.最好写一个配置类防止乱码
+        4.图形化工具 RedisInsight
+
+## -----------接口文档--------------
+
+### --Knife4j：
+        1.引依赖
+        2.配置application.yml文件
+        3.写配置类，对应地方加注解
+
+## -------------工具类--------------
+
+
+
+## ---------消息通知类---------------
+
+### --SMTP
+        1.选择一个邮箱开通POP3/SMTP服务，并生成邮箱授权码
+        2.引入依赖
+        3.配置application.yml文件
+
+## -----------日志及异常类------------
+
+### --logback：
+        1.配置application.yml文件
+        2.用的地方加注解 @Slf4j
+
+### --自定义异常：
+        1.自定义一个异常
+        2.写全局异常处理器
+
+## --------安全加密相关类-------------
+
+## -----------开发辅助类-------------
+
+## -----------其它--------------
+
+### --自动注入：
+        1.在resources/META-INF/spring写一个org.springframework.boot.autoconfigure.AutoConfiguration.imports文件，添加你需要自动注入的类
+        2.写一个配置类用@Import注解注入，首先会注入文件里提到的，然后这个类又得注入其他类

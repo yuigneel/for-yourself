@@ -79,11 +79,11 @@ public class UserServiceImpl
             log.warn("缓存保存失败！", e);
             throw new ForYourselfException(ResultCodeEnum.FAIL.getCode(), e.getMessage());
         }
-        log.info("开始向邮箱{}发送验证码：{}", receiveEmail, code);
+        log.info("开始向邮箱{}发送验证码", receiveEmail);
         try {
             // 5.2 核心：构建并发送邮件（真实发送！）
             SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom(mailProperties.getUsername());       // 发件人（你的163邮箱）
+            message.setFrom(mailProperties.getUsername());       // 发件人（你的 163 邮箱）
             message.setTo(receiveEmail);      // 收件人（前端传的真实邮箱）
             message.setSubject("验证码通知"); // 邮件标题
             message.setText("您的验证码是：" + code + "，5分钟内有效！"); // 邮件内容

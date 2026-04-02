@@ -60,7 +60,7 @@ spring:
     protocol: smtp    # 邮箱协议
     properties:
         mail:
-          debug: ${your.mail.debug}
+          debug: ${your.mail.debug}   # 是否强制输出日志信息
           ssl:
             enable: true  # 开启SSL
 
