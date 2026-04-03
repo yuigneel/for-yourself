@@ -77,7 +77,7 @@ public class Result<T> {
     }
 
     //lgnier~yu:接收code&message
-    public static <T> Result<T> fail(Integer code, String message) {
-       return buildDIY(code, message, null);
+    public static <T> Result<T> fail(Integer code, String message, T data) {
+       return buildDIY(code, message, data);
     }
 }

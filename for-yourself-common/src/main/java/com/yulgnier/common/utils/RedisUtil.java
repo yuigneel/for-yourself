@@ -13,11 +13,11 @@ import java.util.concurrent.TimeUnit;
 @Component
 public class RedisUtil {
 
-    @Resource
     /**
-     * @Resource：从Spring容器中注入StringRedisTemplate（Redis操作核心对象）
+     * @ Resource：从Spring容器中注入StringRedisTemplate（Redis操作核心对象）
      * 作用等价于@Autowired，是Java官方标准注入注解
      */
+    @Resource
     private StringRedisTemplate stringRedisTemplate;
 
     /**
@@ -25,12 +25,12 @@ public class RedisUtil {
      */
     private static StringRedisTemplate redisTemplate;
 
-    @PostConstruct
     /**
-     * @PostConstruct：Bean初始化后自动执行
+     * @ PostConstruct：Bean初始化后自动执行
      * 作用：将Spring注入的实例对象，赋值给静态变量，让静态方法能使用RedisTemplate
      */
-    public void init() {
+    @PostConstruct
+    private void init() {
         redisTemplate = this.stringRedisTemplate;
     }
 
@@ -78,9 +78,20 @@ public class RedisUtil {
     }
 
     /**
-     * 给已有key设置过期时间（秒）
+     * 给已有 key 设置过期时间（秒）
      */
     public static Boolean expire(String key, long timeout, TimeUnit unit) {
         return redisTemplate.expire(key, timeout, unit);
+    }
+
+    /**
+     * 获取 key 的剩余存活时间
+     * @param key Redis 键名
+     * @param unit 时间单位（如：TimeUnit.SECONDS、TimeUnit.MINUTES 等）
+     * @return 剩余时间（指定单位）；如果 key 不存在、已过期或永久有效，返回 0
+     */
+    public static Long getTtl(String key, TimeUnit unit) {
+        Long ttl = redisTemplate.getExpire(key, unit);
+        return ttl == null || ttl < 0 ? 0 : ttl;
     }
 }

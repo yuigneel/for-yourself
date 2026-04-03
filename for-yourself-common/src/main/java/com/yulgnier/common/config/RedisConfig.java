@@ -10,13 +10,15 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
+import javax.swing.*;
+
 @Configuration
-@ConditionalOnClass(RedisConnectionFactory.class)   // 当容器中没有这个Bean时，才创建这个Bean
+@ConditionalOnClass(RedisConnectionFactory.class)   // 只有项目引入了Redis依赖（存在该类），当前配置类才生效
 public class RedisConfig {
 
     @Bean
-    @ConditionalOnMissingBean(RedisTemplate.class)
-    @ConditionalOnSingleCandidate(RedisConnectionFactory.class)//既能告诉 Spring 只有 Redis 连接工厂存在时才创建这个 Bean，又能让 IDEA 识别并消除报错
+    @ConditionalOnMissingBean(RedisTemplate.class)//Spring 容器里，如果【还没有 RedisTemplate 这个 Bean】，我才创建；如果【已经有别人创建了】，我就不创建、不覆盖、直接跳过
+    @ConditionalOnSingleCandidate(RedisConnectionFactory.class)//既能告诉Spring只有这个 Bean 是不是只有一个才创建这个 Bean，又能让 IDEA 识别并消除报错
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory factory) {
         RedisTemplate<String, Object> template = new RedisTemplate<>();
         template.setConnectionFactory(factory);

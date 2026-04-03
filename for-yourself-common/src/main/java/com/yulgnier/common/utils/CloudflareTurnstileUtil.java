@@ -8,13 +8,13 @@ import java.util.Map;
  * Cloudflare Turnstile 人机验证工具类
  * 静态调用，无需 Spring 注入/扫描
  */
-public final class CloudflareTurnstileUtils {
+public final class CloudflareTurnstileUtil {
 
     // Cloudflare 官方验证地址
     private static final String CF_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 
     // 工具类禁止实例化
-    private CloudflareTurnstileUtils() {}
+    private CloudflareTurnstileUtil() {}
 
     /**
      * 验证 Turnstile 令牌

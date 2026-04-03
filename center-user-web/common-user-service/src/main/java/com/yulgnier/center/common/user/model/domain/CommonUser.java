@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+
+import com.yulgnier.center.common.user.model.enums.GenderEnum;
 import lombok.Data;
 
 /**
@@ -23,7 +25,7 @@ public class CommonUser {
     /**
      * 用户唯一业务UID
      */
-    private String uid;
+    private Long uid;
 
     /**
      * 登录邮箱(唯一)
@@ -43,7 +45,7 @@ public class CommonUser {
     /**
      * 性别：0-未知 3-强男 2-男 1-弱男 -1-弱女 -2-女 -3-强女
      */
-    private Integer gender;
+    private GenderEnum gender;
 
     /**
      * 出生日期
@@ -56,12 +58,12 @@ public class CommonUser {
     private LocalDate joinDate;
 
     /**
-     * 账户状态：2-禁用 1-警告 0-正常
+     * 账户状态：2-禁用 1-警告 0-正常(默认0)
      */
     private Integer accountStatus;
 
     /**
-     * 逻辑删除：0-未删除 1-已删除
+     * 逻辑删除：0-未删除 1-已删除（默认0）
      */
     private Integer isDeleted;
 
@@ -76,7 +78,7 @@ public class CommonUser {
     private LocalDateTime updateTime;
 
     /**
-     * 最后更新人ID
+     * 最后更新人ID（默认null）
      */
     private Long updateBy;
 }

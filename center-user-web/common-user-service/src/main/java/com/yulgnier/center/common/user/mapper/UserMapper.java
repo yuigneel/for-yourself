@@ -9,7 +9,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 * @createDate 2026-03-30 13:04:36
 * @Entity com.yulgnier.center.common.user.model.domain.CommonUser
 */
-public interface CommonUserMapper extends BaseMapper<CommonUser> {
+public interface UserMapper extends BaseMapper<CommonUser> {
 
 }
 

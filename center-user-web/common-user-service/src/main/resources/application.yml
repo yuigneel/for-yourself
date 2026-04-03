@@ -103,8 +103,21 @@ cloudflare:
     secret: ${your.cloudflare.turnstile.secret}
 
 
+# 雪花算法分布式配置（每个实例改这里就行）
+snowflake:
+  data-center-id: ${your.snowflake.data-center-id}    # 数据中心ID 0~31
+  worker-id: ${your.snowflake.worker-id}         # 机器ID 0~31
+
+# JWT 配置
+jwt:
+  secret-key: ${your.jwt.secret-key}
+  issuer: ${your.jwt.issuer}
+  expire-hour: ${your.jwt.expire-hour}
+
 yulgnier:
   email-expire-minutes: ${your.yulgnier.email-expire-minutes}
+  email-try-times: ${your.yulgnier.email-try-times}  # 邮箱验证码尝试次数
+
 
 
 

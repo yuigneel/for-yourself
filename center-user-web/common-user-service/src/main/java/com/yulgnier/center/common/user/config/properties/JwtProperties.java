@@ -4,13 +4,11 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
-/**
- * 杂项类配置
- */
 @Data
 @Component
-@ConfigurationProperties(prefix = "yulgnier")
-public class MiscellaneousProperties {
-    private Integer emailExpireMinutes;
-    private Integer emailTryTimes;
+@ConfigurationProperties(prefix = "jwt") // 绑定 yml 前缀
+public class JwtProperties {
+    private String secretKey;
+    private String issuer;
+    private Integer expireHour;
 }

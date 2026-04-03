@@ -71,7 +71,40 @@
 
 ## --------安全加密相关类-------------
 
+### --Cloudflare Turnstile 人机验证完整集成步骤
+        1.账号注册与开通 Turnstile，左侧菜单找到Turnstile，点击Add site（添加站点）创建 Widget
+          Site name：自定义名称 Domain：填写你的域名，本地测试可选择 "Non-website"  Widget type：推荐Managed（智能分析，可信用户免验证）
+          创建成功后，获取一对密钥 Site key：前端公开密钥 Secret key：后端私有密钥
+        2.引入依赖
+          <!-- RestTemplate -->
+            <dependency>
+              <groupId>org.springframework.boot</groupId>
+              <artifactId>spring-boot-starter-web</artifactId>
+            </dependency> 
+          <!--或使用 HTTP客户端（用于调用Turnstile验证API） -->
+            <dependency>
+              <groupId>org.springframework.boot</groupId>
+              <artifactId>spring-boot-starter-webflux</artifactId>
+            </dependency>
+        3. 配置密钥（application.yml）
+        4. 创建配置类与验证服务
+        5. 可以写一个工具类
+
+### --BCrypt:
+        1.引入依赖
+        2.创建一个配置类注入BCryptPasswordEncoder
+
+## --JWT:
+        1.引入依赖
+        2.写一个properties引入参数
+        3.写一个工具类
+
 ## -----------开发辅助类-------------
+
+### --糊涂工具包的雪花算法
+        1.引入依赖
+        2.创建一个配置类注入SnowFlake
+        3.写一个config类注入创建雪花算法Bean
 
 ## -----------其它--------------
 

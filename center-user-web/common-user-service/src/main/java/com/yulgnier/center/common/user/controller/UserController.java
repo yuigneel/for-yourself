@@ -3,10 +3,7 @@ package com.yulgnier.center.common.user.controller;
 import com.yulgnier.center.common.user.model.dto.EmailCodeRequestDTO;
 import com.yulgnier.center.common.user.model.dto.UserRegisterRequestDTO;
 import com.yulgnier.center.common.user.service.UserService;
-import com.yulgnier.common.exception.ForYourselfException;
 import com.yulgnier.common.model.result.Result;
-import com.yulgnier.common.model.result.ResultCodeEnum;
-import com.yulgnier.common.utils.ValidateUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -24,15 +21,15 @@ public class UserController {
 
     @Operation(summary = "用户注册")
     @PostMapping("/register")
-    public String register(@RequestBody UserRegisterRequestDTO request) {
-        log.info("用户{}申请注册", request.getNickname());
-        return null;
+    public Result<String> register(@RequestBody UserRegisterRequestDTO request) {
+        String result = userService.register(request);
+        return Result.ok(result);
     }
 
     @Operation(summary = "用户登录")
     @PostMapping("/login")
-    public String login() {
-        return "登录成功";
+    public Result<String> login() {
+        return Result.ok();
     }
 
     @Operation(summary = "用户注销")
@@ -44,7 +41,6 @@ public class UserController {
     @Operation(summary = "获取邮箱验证码")
     @PostMapping("/getEmailCode")
     public Result<String> getEmailCode(@RequestBody EmailCodeRequestDTO request) {
-        log.info("用户申请获取邮箱验证码：email={}, businessType={}", request.getEmail(), request.getBusinessType());
         String result = userService.getEmailCode(request);
         return Result.ok(result);
     }

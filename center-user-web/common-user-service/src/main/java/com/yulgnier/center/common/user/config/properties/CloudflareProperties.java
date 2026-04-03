@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
  */
 @Data
 @Component
-@ConfigurationProperties(prefix = "cloudflare.turnstile") // 绑定yml前缀
+@ConfigurationProperties(prefix = "cloudflare.turnstile") // 绑定 yml前缀
 public class CloudflareProperties {
     /**
      * 私密密钥
