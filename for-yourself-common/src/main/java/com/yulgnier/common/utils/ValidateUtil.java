@@ -21,20 +21,55 @@ public class ValidateUtil {
             "^(?=.*[0-9])(?=.*[a-zA-Z])[a-zA-Z0-9]{8,20}$"
     );
 
+    // 禁止使用的敏感用户名列表（小写）
+    private static final java.util.Set<String> FORBIDDEN_USERNAMES = java.util.Set.of(
+            "admin", "administrator", "root", "superuser",
+            "system", "sys", "operator", "manager",
+            "null", "none", "undefined", "nil",
+            "test", "guest", "anonymous", "default",
+            "user", "username", "password", "login",
+            "support", "help", "service", "info",
+            "webmaster", "postmaster", "hostmaster", "abuse",
+            "security", "noreply", "no-reply", "donotreply"
+    );
+
     // 所有方法都加 static
     /**
-     * 宽松版用户名校验
-     * 仅校验：非空 + 长度 2-20 位，其余字符无任何限制
+     * 用户名校验（增强版）
+     * 校验规则：
+     * 1. 非空且长度 2-20 位
+     * 2. 不能包含首尾空格（防止恶意填充空格绕过校验）
+     * 3. 不能是 null、none、undefined 等无效值（不区分大小写）
+     * 4. 不能是 admin、root、system 等系统保留用户名（不区分大小写）
+     * 5. 支持任意字符（包括中文、特殊符号等）
      *
      * @param username 待校验的用户名
      * @return 校验通过返回 true，否则返回 false
      */
     public static boolean isValidUsername(String username) {
+        // 1. 基础非空校验
         if (username == null || username.isBlank()) {
             return false;
         }
-        int length = username.trim().length();
-        return length >= 2 && length <= 20;
+        
+        // 2. 禁止首尾空格（防止 "   用户名   " 这种极端情况）
+        if (!username.equals(username.trim())) {
+            return false;
+        }
+        
+        // 3. 校验长度（2-20 位）
+        int length = username.length();
+        if (length < 2 || length > 20) {
+            return false;
+        }
+        
+        // 4. 检查是否为敏感/保留用户名（不区分大小写）
+        String lowerCase = username.toLowerCase();
+        if (FORBIDDEN_USERNAMES.contains(lowerCase)) {
+            return false;
+        }
+        
+        return true;
     }
     
     /**
