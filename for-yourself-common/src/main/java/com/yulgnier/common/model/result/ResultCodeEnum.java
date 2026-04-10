@@ -70,7 +70,10 @@ public enum ResultCodeEnum {
     // ====================== 700 系统/服务异常 ======================
     SERVICE_ERROR(700, "服务异常，请稍后重试"),
     DATA_ERROR(701, "数据异常"),
-    SYSTEM_BUSY(702, "系统繁忙");
+    SYSTEM_BUSY(702, "系统繁忙"),
+
+    // ====================== 800 功能开发状态 ======================
+    FEATURE_NOT_IMPLEMENTED(800, "功能尚未实现");
 
     //根据枚举的定义，不能加static，因为枚举是类，不能有静态成员变量
     private final Integer code;

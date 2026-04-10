@@ -1,6 +1,7 @@
 package com.yulgnier.center.common.user.controller;
 
 import com.yulgnier.center.common.user.model.dto.EmailCodeRequestDTO;
+import com.yulgnier.center.common.user.model.dto.UserLoginRequestDTO;
 import com.yulgnier.center.common.user.model.dto.UserRegisterRequestDTO;
 import com.yulgnier.center.common.user.service.UserService;
 import com.yulgnier.common.model.result.Result;
@@ -28,8 +29,9 @@ public class UserController {
 
     @Operation(summary = "用户登录")
     @PostMapping("/login")
-    public Result<String> login() {
-        return Result.ok();
+    public Result<String> login(@RequestBody UserLoginRequestDTO  request) {
+        String result = userService.login(request);
+        return Result.ok(result);
     }
 
     @Operation(summary = "用户注销")

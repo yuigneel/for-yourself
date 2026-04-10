@@ -12,6 +12,7 @@ import com.yulgnier.center.common.user.config.properties.MiscellaneousProperties
 import com.yulgnier.center.common.user.mapper.UserMapper;
 import com.yulgnier.center.common.user.model.domain.CommonUser;
 import com.yulgnier.center.common.user.model.dto.EmailCodeRequestDTO;
+import com.yulgnier.center.common.user.model.dto.UserLoginRequestDTO;
 import com.yulgnier.center.common.user.model.dto.UserRegisterRequestDTO;
 import com.yulgnier.center.common.user.model.enums.BanLevelEnum;
 import com.yulgnier.center.common.user.model.enums.BusinessTypeEnum;
@@ -133,7 +134,7 @@ public class UserServiceImpl
      * 用户注册
      *
      * @param request 注册请求参数
-     * @return 注册结果
+     * @return jwt 令牌
      */
     @Override
     public String register(UserRegisterRequestDTO request) {
@@ -196,7 +197,7 @@ public class UserServiceImpl
             //  顺便检查验证码是否没有次数了
             if (tryTimes <= 0) {
                 log.info("用户{}：尝试次数为零，删除缓存的验证码,将用户邮箱录入缓存标记冻结", nickname);
-            //      删除缓存中的验证码
+                //      删除缓存中的验证码
                 try {
                     RedisUtil.delete(emailCodeKey);
                 } catch (Exception e) {
@@ -241,22 +242,75 @@ public class UserServiceImpl
             throw new ForYourselfException(ResultCodeEnum.SERVICE_ERROR, null);
         }
         //  生成 jwt 令牌
-        HashMap<String, Object> loadHashMap = new HashMap<>(Map.of("UID", uid));
-        String jwt = null;
-        try {
-            jwt = JwtUtil.generateToken(loadHashMap, jwtProperties.getExpireHour(), TimeUnit.HOURS);
-        } catch (Exception e) {
-            log.error("用户{}：生成jwt令牌失败", nickname, e);
-            throw new ForYourselfException(ResultCodeEnum.SERVICE_ERROR, null);
+        return generateToken(nickname, uid);
+    }
+
+    /**
+     * 登录
+     *
+     * @param request 登录请求参数
+     * @return jwt 令牌
+     */
+    @Override
+    public String login(UserLoginRequestDTO request) {
+        String name = request.getName();
+        log.info("用户{}：开始登录", name);
+        // 人机检测
+        if (!CloudflareTurnstileUtil.verify(request.getCfTurnstileResponse(), cloudflareProperties.getSecret())) {
+            log.info("用户{}：传来无效cloud flare令牌", name);
+            throw new ForYourselfException(ResultCodeEnum.TOKEN_INVALID, "别攻击了，用爱发电，真的怕了！");
         }
-        // 将jwt令牌的jti保存到缓存中 key=uid+"jti"  value=jti 并返回jwt令牌
-        HashMap<String, Object> claimsFromToken = new HashMap<>(JwtUtil.getClaimsFromToken(jwt));
-        try {
-            RedisUtil.set(uid + "jti", claimsFromToken.get("jti").toString(), jwtProperties.getExpireHour(), TimeUnit.HOURS);
-            return jwt;
-        } catch (Exception e) {
-            log.error("用户{}：保存jti失败", nickname, e);
-            throw new ForYourselfException(ResultCodeEnum.SERVICE_ERROR, null);
+        // switch 到不同的登录方式
+        switch (request.getLoginType().getCode()) {
+            // 用户名登录
+            case 1 -> {
+                CommonUser user = this.getOne(new LambdaQueryWrapper<CommonUser>().eq(CommonUser::getNickname, name));
+                if (user == null) {
+                    log.info("用户{}：用户名不存在", name);
+                    throw new ForYourselfException(ResultCodeEnum.ADMIN_ACCOUNT_NOT_EXIST, null);
+                }
+                if (!bCryptPasswordEncoder.matches(request.getPw(), user.getPassword())) {
+                    log.info("用户{}：账户或密码错误", name);
+                    throw new ForYourselfException(ResultCodeEnum.ADMIN_ACCOUNT_PASSWORD_ERROR, null);
+                }
+                return generateToken(name, user.getUid());
+            }
+            // 邮箱登录
+            case 2 -> {
+                CommonUser user = this.getOne(new LambdaQueryWrapper<CommonUser>().eq(CommonUser::getEmail, name));
+                if (user == null) {
+                    log.info("用户{}：邮箱不存在", name);
+                    throw new ForYourselfException(ResultCodeEnum.ADMIN_ACCOUNT_NOT_EXIST, null);
+                }
+                if (!bCryptPasswordEncoder.matches(request.getPw(), user.getPassword())) {
+                    log.info("用户{}：账户或密码错误", name);
+                    throw new ForYourselfException(ResultCodeEnum.ADMIN_ACCOUNT_PASSWORD_ERROR, null);
+                }
+                return generateToken(name, user.getUid());
+            }
+            // 手机号登录
+            case 3 -> {
+                // TODO
+                log.warn("用户{}：手机号登录未实现", name);
+                throw new ForYourselfException(ResultCodeEnum.FEATURE_NOT_IMPLEMENTED, null);
+            }
+            // UID 登录
+            case 4 -> {
+                CommonUser user = this.getOne(new LambdaQueryWrapper<CommonUser>().eq(CommonUser::getUid, name));
+                if (user == null) {
+                    log.info("用户{}：UID不存在", name);
+                    throw new ForYourselfException(ResultCodeEnum.ADMIN_ACCOUNT_NOT_EXIST, null);
+                }
+                if (!bCryptPasswordEncoder.matches(request.getPw(), user.getPassword())) {
+                    log.info("用户{}：账户或密码错误", name);
+                    throw new ForYourselfException(ResultCodeEnum.ADMIN_ACCOUNT_PASSWORD_ERROR, null);
+                }
+                return generateToken(name, user.getUid());
+            }
+            default -> {
+                log.warn("用户{}：登录方式错误", name);
+                throw new ForYourselfException(ResultCodeEnum.ILLEGAL_REQUEST, null);
+            }
         }
     }
 
@@ -320,7 +374,7 @@ public class UserServiceImpl
 
         // 1. 安全获取缓存，防空指针
         String value = RedisUtil.get(key);
-        String currentBanLevel = (value == null) ? "x": value.split(":")[0];
+        String currentBanLevel = (value == null) ? "x" : value.split(":")[0];
 
         // 2. switch 必须用【字符串字面量】（Java语法强制要求，解决报错）
         // 内部直接用上面提取的变量，无任何冗余调用
@@ -334,6 +388,19 @@ public class UserServiceImpl
             case "F" -> RedisUtil.set(key, E + ":" + timeE, timeS, TimeUnit.MINUTES);
             case "G" -> RedisUtil.set(key, F + ":" + timeF, timeS, TimeUnit.MINUTES);
             default -> RedisUtil.set(key, G + ":" + timeG, timeS, TimeUnit.MINUTES);
+        }
+    }
+
+    /**
+     * 生成jwt 令牌
+     */
+    private String generateToken(String nickname, Long uid) {
+        HashMap<String, Object> loadHashMap = new HashMap<>(Map.of("UID", uid));
+        try {
+            return JwtUtil.generateToken(loadHashMap, jwtProperties.getExpireHour(), TimeUnit.HOURS);
+        } catch (Exception e) {
+            log.error("用户{}：生成jwt令牌失败", nickname, e);
+            throw new ForYourselfException(ResultCodeEnum.SERVICE_ERROR, null);
         }
     }
 }

@@ -3,6 +3,7 @@ package com.yulgnier.center.common.user;
 import lombok.extern.slf4j.Slf4j;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.openfeign.EnableFeignClients;
 
 @Slf4j
 @MapperScan("com.yulgnier.center.common.user.mapper")

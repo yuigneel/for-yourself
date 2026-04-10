@@ -13,5 +13,32 @@
     <artifactId>for-yourself-gateway</artifactId>
     <packaging>jar</packaging>
 
+    <dependencies>
+        <!-- 1. Spring Cloud Gateway 核心依赖（必须） -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-gateway</artifactId>
+        </dependency>
+
+        <!-- 2. Nacos 服务发现（让网关找到其他微服务） -->
+        <dependency>
+            <groupId>com.alibaba.cloud</groupId>
+            <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
+        </dependency>
+
+        <!-- 3. Nacos 配置中心（后续存路由规则用） -->
+        <dependency>
+            <groupId>com.alibaba.cloud</groupId>
+            <artifactId>spring-cloud-starter-alibaba-nacos-config</artifactId>
+        </dependency>
+
+        <!-- 4. 加载 bootstrap 配置文件（必须加，否则nacos配置不生效） -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-bootstrap</artifactId>
+        </dependency>
+
+    </dependencies>
+
 
 </project>

@@ -63,6 +63,9 @@ spring:
           debug: ${your.mail.debug}   # 是否强制输出日志信息
           ssl:
             enable: true  # 开启SSL
+  cloud:
+    nacos:  # Nacos配置
+      server-addr: ${your.nacos.server-addr}
 
 
 knife4j:
@@ -117,7 +120,6 @@ jwt:
 yulgnier:
   email-expire-minutes: ${your.yulgnier.email-expire-minutes}
   email-try-times: ${your.yulgnier.email-try-times}  # 邮箱验证码尝试次数
-
 
 
 

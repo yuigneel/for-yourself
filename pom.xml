@@ -34,7 +34,28 @@
             <dependency>
                 <groupId>com.yulgnier.common</groupId>
                 <artifactId>for-yourself-common</artifactId>
-                <version>0.0.1-SNAPSHOT</version>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.yulgnier.gateway</groupId>
+                <artifactId>for-yourself-gateway</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <!-- Spring Cloud 版本管理 -->
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>2022.0.5</version> <!-- 适配 SpringBoot 3.1.x -->
+                <type>pom</type>        <!-- 告诉 maven，这不是代码包，而是版本清单 -->
+                <scope>import</scope>   <!-- 告诉 maven，把这份清单导入到我的父工程里统一管理 -->
+            </dependency>
+            <!-- Spring Cloud Alibaba 版本管理 (适配 SpringBoot 3.1.x) -->
+            <dependency>
+                <groupId>com.alibaba.cloud</groupId>
+                <artifactId>spring-cloud-alibaba-dependencies</artifactId>
+                <version>2022.0.0.0</version>
+                <type>pom</type>
+                <scope>import</scope>
             </dependency>
             <!-- lombok -->
             <dependency>

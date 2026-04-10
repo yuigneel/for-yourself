@@ -106,6 +106,16 @@
         2.创建一个配置类注入SnowFlake
         3.写一个config类注入创建雪花算法Bean
 
+
+## --------服务注册与配置中心--------
+
+### --Nacos（服务发现 + 配置管理 + 网关）：
+       1.配置nacos：下载官方压缩包，解压，找到"nacos\conf\mysql-schema.sql"，创建mysql数据库，修改application.properties文件，修改nacos的配置 单机启动命令：startup.cmd -m standalone
+       2.父项目引入spring cloud ,阿里巴巴 cloud 版本管理依赖
+       3.服务注册与发现： 引入nacos依赖，配置application.yml文件，发现用FeignClient，引入依赖，用@FeignClient(value = "center-common-user-service")
+         指定对应的服务名，里面写类似contriller的方法用注解就行，要远程调用的话，启动类添加@EnableDiscoveryClient，扫描对应的client包，然后直接注入调用方法就行。还可以配置连接池，引入依赖
+         ，修改application.yml文件，添加连接池参数就行
+       4.网关：
 ## -----------其它--------------
 
 ### --自动注入：

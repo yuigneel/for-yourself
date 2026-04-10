@@ -16,9 +16,9 @@ public class ValidateUtil {
             "^[a-zA-Z0-9_-]+@[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)+$"
     );
 
-    // 密码正则：8-20位，必须包含字母+数字
+    // 密码正则：8-32位，必须包含字母+数字+特殊符号（允许中间有空格）
     private static final Pattern PASSWORD_PATTERN = Pattern.compile(
-            "^(?=.*[0-9])(?=.*[a-zA-Z])[a-zA-Z0-9]{8,20}$"
+            "^(?=.*[0-9])(?=.*[a-zA-Z])(?=.*[^a-zA-Z0-9]).{8,32}$"
     );
 
     // 禁止使用的敏感用户名列表（小写）
@@ -86,13 +86,23 @@ public class ValidateUtil {
     
     /**
      * 密码强度校验
-     * 要求：8-20 位，必须同时包含字母和数字
+     * 要求：8-32 位，必须同时包含字母、数字和特殊符号（如 . ! @ # 等），不允许首尾空格
      *
      * @param password 待校验的密码
      * @return 校验通过返回 true，否则返回 false
      */
     public static boolean isValidPassword(String password) {
-        return password != null && !password.isBlank()
-                && PASSWORD_PATTERN.matcher(password).matches();
+        // 1. 基础非空校验
+        if (password == null || password.isBlank()) {
+            return false;
+        }
+        
+        // 2. 禁止首尾空格（防止恶意填充空格绕过校验）
+        if (!password.equals(password.trim())) {
+            return false;
+        }
+        
+        // 3. 使用正则校验：必须包含字母+数字+特殊符号，长度8-32位（允许中间有空格）
+        return PASSWORD_PATTERN.matcher(password).matches();
     }
 }
