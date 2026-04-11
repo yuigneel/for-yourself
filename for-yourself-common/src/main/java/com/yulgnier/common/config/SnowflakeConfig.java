@@ -1,8 +1,8 @@
-package com.yulgnier.center.common.user.config;
+package com.yulgnier.common.config;
 
 import cn.hutool.core.lang.Snowflake;
 import cn.hutool.core.util.IdUtil;
-import com.yulgnier.center.common.user.config.properties.SnowflakeProperties;
+import com.yulgnier.common.config.properties.SnowflakeProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 

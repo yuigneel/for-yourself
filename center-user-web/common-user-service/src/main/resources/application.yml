@@ -87,6 +87,7 @@ logging:
     # 2. ✅ 你的业务代码包：设为DEBUG
     # 把 com.yourproject 改成你项目的**根包名**（启动类所在的包）
     com.yulgnier.center.common.user: DEBUG            #TODO-----------------------改---------------------
+    com.yulgnier.common: DEBUG  # 公共模块（包含全局异常处理器）  #TODO-----------------------改---------------------
 
     # 3. 可选：额外关闭更烦人的框架日志（彻底干净，防止有些第三方框架默认用root级别，自带日志配置）
     org.springframework: WARN
@@ -105,17 +106,17 @@ cloudflare:
   turnstile:
     secret: ${your.cloudflare.turnstile.secret}
 
+# JWT 配置
+jwt:
+  secret-key: ${your.jwt.secret-key}
+  issuer: ${your.jwt.issuer}
+  expire-hour: ${your.jwt.expire-hour}
 
 # 雪花算法分布式配置（每个实例改这里就行）
 snowflake:
   data-center-id: ${your.snowflake.data-center-id}    # 数据中心ID 0~31
   worker-id: ${your.snowflake.worker-id}         # 机器ID 0~31
 
-# JWT 配置
-jwt:
-  secret-key: ${your.jwt.secret-key}
-  issuer: ${your.jwt.issuer}
-  expire-hour: ${your.jwt.expire-hour}
 
 yulgnier:
   email-expire-minutes: ${your.yulgnier.email-expire-minutes}

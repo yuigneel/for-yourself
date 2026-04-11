@@ -7,6 +7,7 @@ import com.yulgnier.center.common.user.service.UserService;
 import com.yulgnier.common.model.result.Result;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
@@ -22,14 +23,14 @@ public class UserController {
 
     @Operation(summary = "用户注册")
     @PostMapping("/register")
-    public Result<String> register(@RequestBody UserRegisterRequestDTO request) {
+    public Result<String> register(@Valid @RequestBody UserRegisterRequestDTO request) {
         String result = userService.register(request);
         return Result.ok(result);
     }
 
     @Operation(summary = "用户登录")
     @PostMapping("/login")
-    public Result<String> login(@RequestBody UserLoginRequestDTO  request) {
+    public Result<String> login( @Valid @RequestBody UserLoginRequestDTO  request) {
         String result = userService.login(request);
         return Result.ok(result);
     }
@@ -42,7 +43,7 @@ public class UserController {
 
     @Operation(summary = "获取邮箱验证码")
     @PostMapping("/getEmailCode")
-    public Result<String> getEmailCode(@RequestBody EmailCodeRequestDTO request) {
+    public Result<String> getEmailCode(@Valid @RequestBody EmailCodeRequestDTO request) {
         String result = userService.getEmailCode(request);
         return Result.ok(result);
     }

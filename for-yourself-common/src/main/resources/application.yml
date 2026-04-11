@@ -1,0 +1,11 @@
+# 这里只是做一个占位，避免报错和忘记写，其实根本不会被扫描到
+# JWT 配置
+jwt:
+  secret-key: ${your.jwt.secret-key}
+  issuer: ${your.jwt.issuer}
+  expire-hour: ${your.jwt.expire-hour}
+
+# 雪花算法分布式配置（每个实例改这里就行,启动类的模块的配置等级优先于依赖引入的模块）
+snowflake:
+  data-center-id: ${your.snowflake.data-center-id}    # 数据中心ID 0~31
+  worker-id: ${your.snowflake.worker-id}         # 机器ID 0~31

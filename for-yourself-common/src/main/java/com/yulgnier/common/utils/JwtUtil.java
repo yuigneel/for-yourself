@@ -1,7 +1,7 @@
-package com.yulgnier.center.common.user.utils;
+package com.yulgnier.common.utils;
 
 import cn.hutool.core.lang.Snowflake;
-import com.yulgnier.center.common.user.config.properties.JwtProperties;
+import com.yulgnier.common.config.properties.JwtProperties;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;

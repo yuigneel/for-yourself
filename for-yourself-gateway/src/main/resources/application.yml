@@ -1,0 +1,18 @@
+server:
+  port: ${your.server.port}
+
+spring:
+  application:
+    name: ${your.application.name}
+  profiles:
+    active: local                 #TODO------------------改------------------------------
+  cloud:
+    nacos:
+      server-addr: ${your.nacos.server-addr}
+
+gateway:
+  white-list:
+    - /center-common/user/register
+    - /center-common/user/login
+    - /center-common/user/getEmailCode
+    - /center-common/user/forgetPassword
