@@ -1,9 +1,11 @@
 package com.yulgnier.gateway.filters;
 
+import com.yulgnier.common.config.properties.TruthProperties;
 import com.yulgnier.common.exception.ForYourselfException;
+import com.yulgnier.common.model.constants.AuthConstants;
 import com.yulgnier.common.model.result.ResultCodeEnum;
 import com.yulgnier.common.utils.JwtUtil;
-import com.yulgnier.gateway.config.properties.GateWayProperties;
+import com.yulgnier.common.config.properties.GateWayProperties;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
@@ -22,7 +24,7 @@ import java.util.Map;
 public class AuthGlobalFilter implements GlobalFilter, Ordered {
     private final GateWayProperties gateWayProperties;
     private final AntPathMatcher antPathMatcher = new AntPathMatcher();
-
+    private final TruthProperties truthProperties;
     /**
      * 鉴权拦截器
      */
@@ -35,21 +37,42 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
             return chain.filter(exchange);
         }
         // 校验并解析token
-        //   获取jwt(“Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9”)
-        String token = null;
-        token = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
-        // 严格校验Bearer格式（杜绝数组越界）
-        if (token == null || !token.startsWith("Bearer ")) {
+        //   获取jwt("Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9")
+        String authorization = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+
+        // 严格校验Bearer格式
+        if (authorization == null || authorization.length() <= 7 || !authorization.startsWith("Bearer ")) {
             return Mono.error(new ForYourselfException(ResultCodeEnum.ADMIN_LOGIN_REQUIRED, null));
-        } else token = token.split(" ")[1];
+        }
+
+        // 安全提取JWT token（防止数组越界）
+        String token = authorization.substring(7); // "Bearer " 长度为7
+        if (token.isEmpty()) {
+            return Mono.error(new ForYourselfException(ResultCodeEnum.ADMIN_LOGIN_REQUIRED, null));
+        }
 
         Map<String, Object> claimsFromToken = JwtUtil.getClaimsFromToken(token); // 解析token,token无效返回null
         if (claimsFromToken == null) {
             return Mono.error(new ForYourselfException(ResultCodeEnum.ADMIN_LOGIN_REQUIRED, null));
         }
-        //TODO =================================================
-        // 放行
-        return chain.filter(exchange);
+
+        // 从 token 中获取用户 UID
+        Object uidObj = claimsFromToken.get(AuthConstants.UID_KEY);
+        if (uidObj == null) {
+            return Mono.error(new ForYourselfException(ResultCodeEnum.TOKEN_INVALID, "Token 中缺少用户信息"));
+        }
+
+        String uid = String.valueOf(uidObj);
+
+        // 将修改后的请求传递到过滤器链（Lambda 风格，更简洁）
+        return chain.filter(exchange.mutate()
+                .request(builder -> builder
+                        .headers(h -> h.remove(HttpHeaders.AUTHORIZATION))       // ① 删除 JWT Token 头
+                        .header(AuthConstants.UID_KEY, uid)                      // ② 添加用户 UID
+                        .header(truthProperties.getTruthKey(), truthProperties.getTruthValue()) // ③ 添加特殊请求头
+                )
+                .build()
+        );
     }
 
     /**

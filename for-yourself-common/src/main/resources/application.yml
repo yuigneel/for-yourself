@@ -9,3 +9,13 @@ jwt:
 snowflake:
   data-center-id: ${your.snowflake.data-center-id}    # 数据中心ID 0~31
   worker-id: ${your.snowflake.worker-id}         # 机器ID 0~31
+
+gateway:
+  white-list:
+    - /center-common/user/register
+    - /center-common/user/login
+    - /center-common/user/getEmailCode
+
+truth:
+  truth-key: ${your.yulgnier.truth-key}
+  truth-value: ${your.yulgnier.truth-value}

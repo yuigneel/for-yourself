@@ -1,4 +1,4 @@
-package com.yulgnier.gateway.config.properties;
+package com.yulgnier.common.config.properties;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;

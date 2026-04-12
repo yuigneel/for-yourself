@@ -59,12 +59,12 @@ spring:
     default-encoding: utf-8
     protocol: smtp    # 邮箱协议
     properties:
-        mail:
-          debug: ${your.mail.debug}   # 是否强制输出日志信息
-          ssl:
-            enable: true  # 开启SSL
+      mail:
+        debug: ${your.mail.debug}   # 是否强制输出日志信息
+        ssl:
+          enable: true  # 开启SSL
   cloud:
-    nacos:  # Nacos配置
+    nacos: # Nacos配置
       server-addr: ${your.nacos.server-addr}
 
 
@@ -74,8 +74,8 @@ knife4j:
 # 日志配置（对应logback-spring.xml里的LOG_PATH）
 logging:
   file:
-    # 日志存储文件夹：项目根目录下的 logs/center-common-user-service 文件夹
-    path: logs/center-common-user-service
+    # 日志存储文件夹
+    path: ${your.logging.file.path}
   # 关闭mybatis等多余日志，避免控制台乱
   config: classpath:logback-spring.xml
   # ✅ 核心：分级控制日志级别（解决99%冗余问题）
@@ -117,11 +117,47 @@ snowflake:
   data-center-id: ${your.snowflake.data-center-id}    # 数据中心ID 0~31
   worker-id: ${your.snowflake.worker-id}         # 机器ID 0~31
 
+gateway:
+  white-list:
+    # Knife4j 接口文档
+    - /doc.html
+    - /webjars/**
+    - /swagger-resources/**
+    - /v3/api-docs/**
+    - /v2/api-docs/**
+    # 浏览器自动请求 + 框架错误页
+    - /.well-known/**
+    - /error
+    - /favicon.ico
+    # 项目用
+    - /center-common/user/register
+    - /center-common/user/login
+    - /center-common/user/getEmailCode
+    - /center-common/user/forgetPassword
+
+jasypt:
+  # 是否启用 jasypt 加解密功能
+  enabled: true
+
+  encryptor:
+    # 1. 根密钥（加密/解密的“主密码”）
+    # 真正生产环境一定从环境变量读，绝对不能写死
+    password: ${your.jasypt.password}
+
+    # 2. 加密算法（默认就是这个，不用改）
+    algorithm: PBEWithMD5AndDES
+
+    # 3. 密钥迭代次数（越高越安全，默认1000）
+    key-obtention-iterations: 1000
+
+truth:
+  truth-key: ${your.truth.truth-key}
+  truth-value: ${your.truth.truth-value}
+
 
 yulgnier:
   email-expire-minutes: ${your.yulgnier.email-expire-minutes}
   email-try-times: ${your.yulgnier.email-try-times}  # 邮箱验证码尝试次数
-
 
 
 

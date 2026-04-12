@@ -16,3 +16,27 @@ gateway:
     - /center-common/user/login
     - /center-common/user/getEmailCode
     - /center-common/user/forgetPassword
+
+# JWT 配置
+jwt:
+  secret-key: ${your.jwt.secret-key}
+
+jasypt:
+  # 是否启用 jasypt 加解密功能
+  enabled: true
+
+  encryptor:
+    # 1. 根密钥（加密/解密的“主密码”）
+    # 真正生产环境一定从环境变量读，绝对不能写死
+    password: ${your.jasypt.password}
+
+    # 2. 加密算法（默认就是这个，不用改）
+    algorithm: PBEWithMD5AndDES
+
+    # 3. 密钥迭代次数（越高越安全，默认1000）
+    key-obtention-iterations: 1000
+
+
+truth:
+  truth-key: ${your.truth.truth-key}
+  truth-value: ${your.truth.truth-value}

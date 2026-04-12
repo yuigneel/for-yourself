@@ -18,6 +18,7 @@ import com.yulgnier.center.common.user.model.enums.BusinessTypeEnum;
 import com.yulgnier.center.common.user.model.enums.GenderEnum;
 import com.yulgnier.center.common.user.service.UserService;
 import com.yulgnier.common.config.properties.JwtProperties;
+import com.yulgnier.common.model.constants.AuthConstants;
 import com.yulgnier.common.utils.JwtUtil;
 import com.yulgnier.common.exception.ForYourselfException;
 import com.yulgnier.common.model.result.ResultCodeEnum;
@@ -79,10 +80,10 @@ public class UserServiceImpl
             log.warn("邮箱{}：业务类型为空", receiveEmail);
             throw new ForYourselfException(ResultCodeEnum.REQUEST_INCOMPLETE, null);
         }
-        String emailCodeKey = request.getBusinessType().getName() + ":" + receiveEmail; //eg: 注册:example@163.com
+        String emailCodeKey = request.getBusinessType().getName() + AuthConstants.SEPARATOR + receiveEmail; //eg: 注册:example@163.com
         String code = generateCode();   // 生成6位随机验证码    あなたのことが大好きです。付き合ってください-愚人节快乐
-        String emailCodeValue = code + ":" + miscellaneousProperties.getEmailTryTimes(); //eg: 123456:6
-        String emailSendCountKey = BusinessTypeEnum.SEND_EMAIL.getName() + ":" + receiveEmail;
+        String emailCodeValue = code + AuthConstants.SEPARATOR + miscellaneousProperties.getEmailTryTimes(); //eg: 123456:6
+        String emailSendCountKey = BusinessTypeEnum.SEND_EMAIL.getName() + AuthConstants.SEPARATOR + receiveEmail;
         log.info("用户申请获取邮箱验证码：email={}, businessType={}", receiveEmail, request.getBusinessType());
         //  检验该邮箱是否允许发送验证码
         Integer needWaitTime = getNeedWaitTime(emailSendCountKey);
@@ -111,7 +112,7 @@ public class UserServiceImpl
             message.setFrom(mailProperties.getUsername());       // 发件人（你的 163 邮箱）
             message.setTo(receiveEmail);      // 收件人（前端传的真实邮箱）
             message.setSubject("验证码通知"); // 邮件标题
-            message.setText("您的验证码是：" + code + "，5分钟内有效！"); // 邮件内容
+            message.setText("您的验证码是：" + code + "，" + miscellaneousProperties.getEmailExpireMinutes() + "分钟内有效！"); // 邮件内容
             //  执行发送！！！
             javaMailSender.send(message);
             log.debug("验证码发送成功！邮箱：{}，验证码：{}", receiveEmail, code);
@@ -179,20 +180,20 @@ public class UserServiceImpl
             request.setGenderEnum(GenderEnum.UNKNOWN);
         }
         //  检查邮箱和验证码是否匹配
-        String emailCodeKey = BusinessTypeEnum.REGISTER.getName() + ":" + userEmail;
+        String emailCodeKey = BusinessTypeEnum.REGISTER.getName() + AuthConstants.SEPARATOR + userEmail;
         String emailCodeValue = RedisUtil.get(emailCodeKey);
         if (emailCodeValue == null) {
             log.info("用户{}：验证码已过期，请重新获取", nickname);
             throw new ForYourselfException(ResultCodeEnum.VERIFICATION_CODE_EXPIRED, null);
         }
         String cacheCode = emailCodeValue.substring(0, 6);
-        Integer tryTimes = Integer.valueOf(emailCodeValue.split(":")[1]);
+        Integer tryTimes = Integer.valueOf(emailCodeValue.split(AuthConstants.SEPARATOR)[1]);
         if (cacheCode == null || !cacheCode.equals(request.getCode())) {
             log.info("用户{}：验证码错误", nickname);
             //  记录一次到缓存，下次登录时检查
             tryTimes -= 1;
             Long ttl = RedisUtil.getTtl(emailCodeKey, TimeUnit.MICROSECONDS);
-            RedisUtil.set(emailCodeKey, cacheCode + ":" + tryTimes, ttl, TimeUnit.MICROSECONDS);
+            RedisUtil.set(emailCodeKey, cacheCode + AuthConstants.SEPARATOR + tryTimes, ttl, TimeUnit.MICROSECONDS);
             log.info("用户{}：验证码还剩{}次验证机会", nickname, tryTimes);
             //  顺便检查验证码是否没有次数了
             if (tryTimes <= 0) {
@@ -205,7 +206,7 @@ public class UserServiceImpl
                     throw new ForYourselfException(ResultCodeEnum.SERVICE_ERROR, null);
                 }
                 //  将用户邮箱录入缓存标记冻结
-                String emailSendCountKey = BusinessTypeEnum.SEND_EMAIL.getName() + ":" + userEmail;
+                String emailSendCountKey = BusinessTypeEnum.SEND_EMAIL.getName() +AuthConstants.SEPARATOR + userEmail;
                 try {
                     markEmailAsCaptchaFreeze(emailSendCountKey);
                 } catch (Exception e) {
@@ -336,7 +337,7 @@ public class UserServiceImpl
         //  提取计划冻结时间
         try {
             String value = RedisUtil.get(key); //eg: A:1440
-            Integer needTime = value == null ? 0 : Integer.valueOf(value.split(":")[1]);
+            Integer needTime = value == null ? 0 : Integer.valueOf(value.split(AuthConstants.SEPARATOR)[1]);
             //  获得实际剩余时间
             Long ttl = RedisUtil.getTtl(key, TimeUnit.MINUTES); //不存在则返回0
             //  计算实际冻结的时间（最大时间-实际剩余时间）
@@ -374,28 +375,28 @@ public class UserServiceImpl
 
         // 1. 安全获取缓存，防空指针
         String value = RedisUtil.get(key);
-        String currentBanLevel = (value == null) ? "x" : value.split(":")[0];
+        String currentBanLevel = (value == null) ? "x" : value.split(AuthConstants.SEPARATOR)[0];
 
         // 2. switch 必须用【字符串字面量】（Java语法强制要求，解决报错）
         // 内部直接用上面提取的变量，无任何冗余调用
         switch (currentBanLevel) {
-            case "S" -> RedisUtil.set(key, S + ":" + timeS, timeS, TimeUnit.MINUTES);
-            case "A" -> RedisUtil.set(key, S + ":" + timeS, timeS, TimeUnit.MINUTES);
-            case "B" -> RedisUtil.set(key, A + ":" + timeA, timeS, TimeUnit.MINUTES);
-            case "C" -> RedisUtil.set(key, B + ":" + timeB, timeS, TimeUnit.MINUTES);
-            case "D" -> RedisUtil.set(key, C + ":" + timeC, timeS, TimeUnit.MINUTES);
-            case "E" -> RedisUtil.set(key, D + ":" + timeD, timeS, TimeUnit.MINUTES);
-            case "F" -> RedisUtil.set(key, E + ":" + timeE, timeS, TimeUnit.MINUTES);
-            case "G" -> RedisUtil.set(key, F + ":" + timeF, timeS, TimeUnit.MINUTES);
-            default -> RedisUtil.set(key, G + ":" + timeG, timeS, TimeUnit.MINUTES);
-        }
+        case "S" -> RedisUtil.set(key, S +AuthConstants.SEPARATOR + timeS, timeS, TimeUnit.MINUTES);
+        case "A" -> RedisUtil.set(key, S +AuthConstants.SEPARATOR + timeS, timeS, TimeUnit.MINUTES);
+        case "B" -> RedisUtil.set(key, A +AuthConstants.SEPARATOR + timeA, timeS, TimeUnit.MINUTES);
+        case "C" -> RedisUtil.set(key, B +AuthConstants.SEPARATOR + timeB, timeS, TimeUnit.MINUTES);
+        case "D" -> RedisUtil.set(key, C +AuthConstants.SEPARATOR + timeC, timeS, TimeUnit.MINUTES);
+        case "E" -> RedisUtil.set(key, D +AuthConstants.SEPARATOR + timeD, timeS, TimeUnit.MINUTES);
+        case "F" -> RedisUtil.set(key, E +AuthConstants.SEPARATOR + timeE, timeS, TimeUnit.MINUTES);
+        case "G" -> RedisUtil.set(key, F +AuthConstants.SEPARATOR + timeF, timeS, TimeUnit.MINUTES);
+        default -> RedisUtil.set(key, G + AuthConstants.SEPARATOR + timeG, timeS, TimeUnit.MINUTES);
     }
+}
 
     /**
      * 生成jwt 令牌
      */
     private String generateToken(String nickname, Long uid) {
-        HashMap<String, Object> loadHashMap = new HashMap<>(Map.of("UID", uid));
+        HashMap<String, Object> loadHashMap = new HashMap<>(Map.of(AuthConstants.UID_KEY, uid));
         try {
             return JwtUtil.generateToken(loadHashMap, jwtProperties.getExpireHour(), TimeUnit.HOURS);
         } catch (Exception e) {
