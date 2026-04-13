@@ -10,45 +10,6 @@ spring:
   profiles:
     active: local           #TODO-----------------------改---------------------
 
-  # ====================== 数据源核心配置 ======================
-  datasource:
-    # 1. MySQL连接地址
-    url: jdbc:mysql://${your.datasource.ip}:${your.datasource.port}/${your.datasource.db}?useUnicode=true&characterEncoding=utf-8&serverTimezone=${your.timezone}&useSSL=${your.datasource.usessl}&allowPublicKeyRetrieval=${your.datasource.allowPublicKeyRetrieval}
-    # 逐参数解释：
-    # jdbc:mysql://ip:端口/数据库名
-    # useUnicode=true&characterEncoding=utf-8 统一编码，中文不乱码
-    # serverTimezone=Asia/Shanghai 时区必须配，否则时差、时间报错
-    # useSSL=false 本地开发关闭SSL；生产环境改为true安全加密
-    # allowPublicKeyRetrieval=true 本地解决MySQL8公钥报错，生产建议关闭
-    username: ${your.datasource.username}
-    password: ${your.datasource.password}
-
-    # 3. MySQL8驱动类（SpringBoot高版本可省略，建议显式写）
-    driver-class-name: com.mysql.cj.jdbc.Driver
-
-    # ====================== HikariCP 企业级连接池调优 ======================
-    hikari:
-      pool-name: ${spring.application.name}-HikariPool       # 连接池名称，便于监控排查
-      minimum-idle: 5                    # 最小空闲连接数（常驻保活）
-      maximum-pool-size: 20              # 最大连接数（并发峰值承载，企业常用10~30）
-      idle-timeout: 300000               # 空闲连接超时时间(毫秒)，5分钟释放闲置
-      max-lifetime: 1800000              # 连接最大生命周期(毫秒)，30分钟强制换新，避免断连
-      connection-timeout: 3000           # 获取连接最大等待时间(毫秒)，超时抛异常
-      connection-test-query: SELECT 1    # 心跳检测SQL，保活验证连接可用
-  data:
-    # Redis 配置
-    redis:
-      host: ${your.redis.host}      # Redis地址
-      port: ${your.redis.port}           # 端口
-      password: ${your.redis.password}           # 默认无密码
-      database: ${your.redis.database}          # 使用0号库
-      # 连接池配置
-      lettuce:
-        pool:
-          max-active: 8    # 最大连接数
-          max-idle: 8      # 最大空闲连接
-          min-idle: 0      # 最小空闲连接
-
   # 邮箱配置（项目专用发件邮箱）
   mail:
     host: ${your.mail.host}  # 邮箱服务器地址
@@ -61,44 +22,14 @@ spring:
         debug: ${your.mail.debug}   # 是否强制输出日志信息
         ssl:
           enable: true  # 开启SSL
-  cloud:
-    nacos: # Nacos配置
-      server-addr: ${your.nacos.server-addr}
-
-
-knife4j:
-  enable: ${your.knife4j.enable}  # 开启Knife4j增强功能
 
 # 日志配置（对应logback-spring.xml里的LOG_PATH）
 logging:
-  file:
-    # 日志存储文件夹
-    path: ${your.logging.file.path}
-  # 关闭mybatis等多余日志，避免控制台乱
-  config: classpath:logback-spring.xml  # 日志配置文件都可以起这个名字
-  # ✅ 核心：分级控制日志级别（解决99%冗余问题）
   level:
-    # 1. 全局默认级别：WARN
-    # 作用：所有第三方框架，只打印 警告+错误，不打印冗余info/debug
-    root: WARN
-
-    # 2. ✅ 你的业务代码包：设为DEBUG
+    #✅ 你的业务代码包：设为DEBUG
     # 把 com.yourproject 改成你项目的**根包名**（启动类所在的包）
     com.yulgnier.center.common.user: DEBUG            #TODO-----------------------改---------------------
     com.yulgnier.common: DEBUG  # 公共模块（包含全局异常处理器）  #TODO-----------------------改---------------------
-
-    # 3. 可选：额外关闭更烦人的框架日志（彻底干净，防止有些第三方框架默认用root级别，自带日志配置）
-    org.springframework: WARN
-    org.mybatis: WARN
-    com.baomidou.mybatisplus: WARN
-    io.lettuce.core: WARN  # Redis客户端
-    com.sun.mail: WARN     # 邮箱客户端
-    springfox.documentation: WARN  # Knife4j
-
-
-mybatis-plus:
-  configuration:
-    default-enum-type-handler: com.baomidou.mybatisplus.core.handlers.CompositeEnumTypeHandler # 枚举类型处理器
 
 cloudflare:
   turnstile:
@@ -132,15 +63,6 @@ gateway:
     - /center-common/user/login
     - /center-common/user/getEmailCode
     - /center-common/user/forgetPassword
-
-jasypt:
-  enabled: true # 是否启用 jasypt 加解密功能
-  encryptor:
-    password: ${your.jasypt.password} # 你的根密钥（和工具类用的一样）
-    algorithm: PBEWITHHMACSHA512ANDAES_256 # 固定算法（和工具类一致）
-    iv-generator-classname: org.jasypt.iv.RandomIvGenerator # 固定盐值（必须加）
-  property:
-    exclude-prefixes: spring.cloud.,server,logging  # 解决Spring加载顺序冲突，告诉Jasypt：spring开头的配置，等我加载完再解密
 
 truth:
   truth-key: ${your.truth.truth-key}
