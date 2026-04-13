@@ -26,15 +26,31 @@ jasypt:
   enabled: true
 
   encryptor:
-    # 1. 根密钥（加密/解密的“主密码”）
-    # 真正生产环境一定从环境变量读，绝对不能写死
-    password: ${your.jasypt.password}
+    # 1. 根密钥（加密/解密的"主密码"）
+    # 重要:不能在这里使用 ${} 占位符引用其他属性,否则会导致 StackOverflowError
+    # 方案1:直接写死(不推荐生产环境)
+    password: yulgnier
+    # 方案2:通过 JVM 参数 -Djasypt.encryptor.password=yulgnier 传入
+    # 方案3:通过环境变量 JASYPT_ENCRYPTOR_PASSWORD=yulgnier 传入
 
     # 2. 加密算法（默认就是这个，不用改）
     algorithm: PBEWithMD5AndDES
 
     # 3. 密钥迭代次数（越高越安全，默认1000）
     key-obtention-iterations: 1000
+
+  # 配置属性过滤器,避免与 Spring 占位符解析冲突导致 StackOverflowError
+  property:
+    filter:
+      # 排除不需要解密的属性前缀,避免递归解析
+      exclude-prefixes:
+        - jasypt
+        - spring.cloud
+        - server
+        - logging
+        - gateway
+        - jwt
+        - truth
 
 
 truth:
