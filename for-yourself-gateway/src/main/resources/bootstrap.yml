@@ -1,0 +1,19 @@
+spring:
+  application:
+    name: for-yourself-gateway
+  cloud:
+    nacos:
+      server-addr: 127.0.0.1:8848 # nacos地址
+      config:
+        file-extension: yml # 文件后缀名
+        group: FOR_YOURSELF_local  # 配置文件的分组
+        shared-configs:   # 共享配置
+          - data-id: logging-common.yml
+            group: FOR_YOURSELF_local
+          - data-id: jasypt-common.yml
+            group: FOR_YOURSELF_local
+          - data-id: nacos-common.yml
+            group: FOR_YOURSELF_local
+
+      discovery:
+        group: FOR_YOURSELF_local # 服务分组

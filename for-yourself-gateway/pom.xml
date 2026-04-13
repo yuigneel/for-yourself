@@ -17,6 +17,15 @@
         <dependency>
             <groupId>com.yulgnier.common</groupId>
             <artifactId>for-yourself-common</artifactId>
+            <exclusions>
+                <!-- 排除 Spring MVC，避免与 Spring Cloud Gateway 冲突
+                Spring Cloud Gateway 基于 WebFlux（响应式），
+                不能与传统的 Spring MVC（基于 Servlet）共存。-->
+                <exclusion>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-web</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <!-- Spring Cloud Gateway 核心依赖（必须） -->
         <dependency>

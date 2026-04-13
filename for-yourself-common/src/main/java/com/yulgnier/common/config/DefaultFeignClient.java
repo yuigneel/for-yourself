@@ -1,11 +1,14 @@
 package com.yulgnier.common.config;
 
+import com.yulgnier.common.config.properties.TruthProperties;
 import com.yulgnier.common.model.constants.AuthConstants;
 import com.yulgnier.common.utils.UserContextUtil;
 import feign.RequestInterceptor;
 import feign.RequestTemplate;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
+import org.springframework.stereotype.Component;
 
 
 /**
@@ -27,13 +30,10 @@ import org.springframework.context.annotation.Bean;
  * 所有引入此 API 接口的模块，创建对应 Feign 客户端时都会自动应用该配置，
  * 无需在每个模块启动类重复声明，实现一处配置 、多处复用
  */
+@Component
+@RequiredArgsConstructor
 public class DefaultFeignClient {
-
-    @Value("${truth.truth-key}")
-    private String truthKey;
-
-    @Value("${truth.truth-value}")
-    private String truthValue;
+    private final TruthProperties truthProperties;
 
     /**
      * Feign 请求拦截器：自动添加 truth 和 uid 请求头
@@ -46,7 +46,7 @@ public class DefaultFeignClient {
             @Override
             public void apply(RequestTemplate template) {
                 // 添加 truth 请求头（防止恶意请求）
-                template.header(truthKey, truthValue);
+                template.header(truthProperties.getTruthKey(), truthProperties.getTruthValue());
 
                 // 添加 uid 请求头（从 ThreadLocal 中获取当前用户 UID）
                 Long uid = UserContextUtil.getUid();
