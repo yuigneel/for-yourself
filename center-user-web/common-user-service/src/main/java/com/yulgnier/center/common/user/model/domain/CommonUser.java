@@ -1,26 +1,20 @@
 package com.yulgnier.center.common.user.model.domain;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 import com.yulgnier.center.common.user.model.enums.GenderEnum;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 /**
  * 普通用户基础信息表
- * @TableName t_common_user
+ * @ TableName t_common_user
  */
 @Data
+@EqualsAndHashCode(callSuper = true) // 让 equals 和 hashCode 方法，同时对比【子类 + 父类】所有字段
 @TableName(value ="t_common_user")
-public class CommonUser {
-    /**
-     * 主键自增ID
-     */
-    @TableId(type = IdType.AUTO)
-    private Long id;
+public class CommonUser extends BaseDomain{
 
     /**
      * 用户唯一业务UID
@@ -61,24 +55,4 @@ public class CommonUser {
      * 账户状态：2-禁用 1-警告 0-正常(默认0)
      */
     private Integer accountStatus;
-
-    /**
-     * 逻辑删除：0-未删除 1-已删除（默认0）
-     */
-    private Integer isDeleted;
-
-    /**
-     * 创建时间(自动生成)
-     */
-    private LocalDateTime createTime;
-
-    /**
-     * 更新时间(自动更新)
-     */
-    private LocalDateTime updateTime;
-
-    /**
-     * 最后更新人ID（默认null）
-     */
-    private Long updateBy;
 }

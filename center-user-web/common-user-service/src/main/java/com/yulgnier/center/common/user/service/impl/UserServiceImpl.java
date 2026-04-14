@@ -205,7 +205,7 @@ public class UserServiceImpl
                     throw new ForYourselfException(ResultCodeEnum.SERVICE_ERROR, null);
                 }
                 //  将用户邮箱录入缓存标记冻结
-                String emailSendCountKey = BusinessTypeEnum.SEND_EMAIL.getName() +AuthConstants.SEPARATOR + userEmail;
+                String emailSendCountKey = BusinessTypeEnum.SEND_EMAIL.getName() + AuthConstants.SEPARATOR + userEmail;
                 try {
                     markEmailAsCaptchaFreeze(emailSendCountKey);
                 } catch (Exception e) {
@@ -219,7 +219,7 @@ public class UserServiceImpl
         //  检查邮箱是否已注册
         if (this.getOneOpt(new LambdaQueryWrapper<CommonUser>().eq(CommonUser::getEmail, request.getEmail())).isPresent()) {
             log.debug("用户{}：邮箱已注册", nickname);
-            throw new ForYourselfException(ResultCodeEnum.EMAIL_ALREADY_REGISTERED, "邮箱已注册");
+            throw new ForYourselfException(ResultCodeEnum.EMAIL_ALREADY_REGISTERED, null);
         }
         //  录入数据库
         //      生成密码密文
@@ -271,7 +271,7 @@ public class UserServiceImpl
                 CommonUser user = this.getOne(new LambdaQueryWrapper<CommonUser>().eq(CommonUser::getNickname, name));
                 if (user == null) {
                     log.debug("用户{}：用户名不存在", name);
-                    throw new ForYourselfException(ResultCodeEnum. ACCOUNT_NOT_EXIST, null);
+                    throw new ForYourselfException(ResultCodeEnum.ACCOUNT_NOT_EXIST, null);
                 }
                 if (!bCryptPasswordEncoder.matches(request.getPw(), user.getPassword())) {
                     log.debug("用户{}：账户或密码错误", name);
@@ -322,6 +322,12 @@ public class UserServiceImpl
         }
     }
 
+    /**
+     * 用户注销
+     * <p>校验流程：Cloudflare人机验证 → 用户名/邮箱/密码格式校验 → 验证码校验 → 用户名邮箱匹配校验 → 密码校验 → 逻辑删除</p>
+     *
+     * @param request 用户注销请求DTO，包含昵称、邮箱、密码、验证码和Cloudflare令牌
+     */
     @Override
     public void cancel(UserCancelRequestDTO request) {
         String nickname = request.getNickname();
@@ -345,22 +351,43 @@ public class UserServiceImpl
         }
         // 检验验证码是否正确 yulgnier: (key=用户注销:邮箱 value=验证码:剩余尝试次数) (●ˇ∀ˇ●)
         //   拼接key
-        String key =BusinessTypeEnum.CANCEL_USER.getName() + AuthConstants.SEPARATOR + request.getEmail();
+        String key = BusinessTypeEnum.CANCEL_USER.getName() + AuthConstants.SEPARATOR + request.getEmail();
         //   获取value，为null，抛错误
         String value = RedisUtil.get(key);
         if (value == null) {
             throw new ForYourselfException(ResultCodeEnum.VERIFICATION_CODE_EXPIRED, null);
         }
         //   分离验证码和剩余尝试次数
+        String code = null;
+        Integer remainTimes = null;
         try {
-            String code = value.split(AuthConstants.SEPARATOR)[0];
-            Integer remainTimes = Integer.valueOf(value.split(AuthConstants.SEPARATOR)[1]);
+            code = value.split(AuthConstants.SEPARATOR)[0];
+            remainTimes = Integer.valueOf(value.split(AuthConstants.SEPARATOR)[1]);
         } catch (NumberFormatException | ArrayIndexOutOfBoundsException e) {
+            log.error("用户{}：Redis缓存格式错误，请检查！", nickname);
             throw new ForYourselfException(ResultCodeEnum.SERVICE_ERROR, null);
         }
-        //   匹配验证码
-        // 检验用户名，邮箱，密码是否匹配
-        // 执行逻辑删除操作（30天保留）
+        //   匹配验证码 (包装成方法，返回布尔值，自动执行减次数等措施)
+        // 构造条件：昵称 + 邮箱 匹配
+        LambdaQueryWrapper<CommonUser> lambdaQueryWrapper = new LambdaQueryWrapper<CommonUser>()
+                .eq(CommonUser::getNickname, nickname)
+                .eq(CommonUser::getEmail, request.getEmail());
+
+        // 只查一次数据库】获取用户
+        CommonUser user = this.getOne(lambdaQueryWrapper);
+
+        // 用户不存在 → 抛异常
+        if (user == null) {
+            throw new ForYourselfException(ResultCodeEnum.USERNAME_EMAIL_NOT_MATCH, null);
+        }
+
+        // 校验密码
+        if (!bCryptPasswordEncoder.matches(request.getPassword(), user.getPassword())) {
+            throw new ForYourselfException(ResultCodeEnum.ACCOUNT_PASSWORD_ERROR, null);
+        }
+
+        // 全部匹配 → 执行逻辑删除（自动走 MP 逻辑删除，更新 isDeleted=1）
+        this.remove(lambdaQueryWrapper);
     }
 
     //===================================内部方法===================================
@@ -401,6 +428,8 @@ public class UserServiceImpl
 
     /**
      * 标记该邮箱因验证码错误被冻结（等级自动升级）
+     *
+     * @param key 业务名称+分隔符+邮箱
      */
     private void markEmailAsCaptchaFreeze(String key) {
         // 🔥 核心优化：只调用1次枚举，全部提取到局部变量（后续直接用，不重复调用）
@@ -429,17 +458,17 @@ public class UserServiceImpl
         // 2. switch 必须用【字符串字面量】（Java语法强制要求，解决报错）
         // 内部直接用上面提取的变量，无任何冗余调用
         switch (currentBanLevel) {
-        case "S" -> RedisUtil.set(key, S +AuthConstants.SEPARATOR + timeS, timeS, TimeUnit.MINUTES);
-        case "A" -> RedisUtil.set(key, S +AuthConstants.SEPARATOR + timeS, timeS, TimeUnit.MINUTES);
-        case "B" -> RedisUtil.set(key, A +AuthConstants.SEPARATOR + timeA, timeS, TimeUnit.MINUTES);
-        case "C" -> RedisUtil.set(key, B +AuthConstants.SEPARATOR + timeB, timeS, TimeUnit.MINUTES);
-        case "D" -> RedisUtil.set(key, C +AuthConstants.SEPARATOR + timeC, timeS, TimeUnit.MINUTES);
-        case "E" -> RedisUtil.set(key, D +AuthConstants.SEPARATOR + timeD, timeS, TimeUnit.MINUTES);
-        case "F" -> RedisUtil.set(key, E +AuthConstants.SEPARATOR + timeE, timeS, TimeUnit.MINUTES);
-        case "G" -> RedisUtil.set(key, F +AuthConstants.SEPARATOR + timeF, timeS, TimeUnit.MINUTES);
-        default -> RedisUtil.set(key, G + AuthConstants.SEPARATOR + timeG, timeS, TimeUnit.MINUTES);
+            case "S" -> RedisUtil.set(key, S + AuthConstants.SEPARATOR + timeS, timeS, TimeUnit.MINUTES);
+            case "A" -> RedisUtil.set(key, S + AuthConstants.SEPARATOR + timeS, timeS, TimeUnit.MINUTES);
+            case "B" -> RedisUtil.set(key, A + AuthConstants.SEPARATOR + timeA, timeS, TimeUnit.MINUTES);
+            case "C" -> RedisUtil.set(key, B + AuthConstants.SEPARATOR + timeB, timeS, TimeUnit.MINUTES);
+            case "D" -> RedisUtil.set(key, C + AuthConstants.SEPARATOR + timeC, timeS, TimeUnit.MINUTES);
+            case "E" -> RedisUtil.set(key, D + AuthConstants.SEPARATOR + timeD, timeS, TimeUnit.MINUTES);
+            case "F" -> RedisUtil.set(key, E + AuthConstants.SEPARATOR + timeE, timeS, TimeUnit.MINUTES);
+            case "G" -> RedisUtil.set(key, F + AuthConstants.SEPARATOR + timeF, timeS, TimeUnit.MINUTES);
+            default -> RedisUtil.set(key, G + AuthConstants.SEPARATOR + timeG, timeS, TimeUnit.MINUTES);
+        }
     }
-}
 
     /**
      * 生成jwt 令牌
@@ -452,5 +481,28 @@ public class UserServiceImpl
             log.error("用户{}：生成jwt令牌失败", nickname, e);
             throw new ForYourselfException(ResultCodeEnum.SERVICE_ERROR, null);
         }
+    }
+
+    /**
+     * 检验验证码是否正确
+     *
+     * @param code        用户输入的验证码
+     * @param email       邮箱
+     * @param trueCode    缓存中的验证码
+     * @param remainTimes 缓存中的剩余尝试次数
+     * @return true:验证码正确
+     */
+    private boolean checkCode(String code, String email, String trueCode, Integer remainTimes) {
+        // 验证码正确，返回true
+        if (code.equals(trueCode)) return true;
+        // 验证码错误，尝试次数减一
+        remainTimes -= 1;
+        // 如果尝试次数为0，则开始冻结
+        if (remainTimes <= 0) {
+            String key = BusinessTypeEnum.SEND_EMAIL.getName() + AuthConstants.SEPARATOR + email;
+            markEmailAsCaptchaFreeze(key);
+        }
+        // 返回false
+        return false;
     }
 }

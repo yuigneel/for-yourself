@@ -37,6 +37,7 @@ public enum ResultCodeEnum {
     ACCOUNT_DISABLED(432, "账号已被禁用"),
     ACCOUNT_PASSWORD_ERROR(433, "用户名或密码错误"),
     EMAIL_ALREADY_REGISTERED(434, "邮箱已注册"),
+    USERNAME_EMAIL_NOT_MATCH(435, "用户名和邮箱不匹配"),
 
     // ====================== 440-459 验证码 & 风控限流 ======================
     VERIFICATION_CODE_EMPTY(440, "验证码不能为空"),
