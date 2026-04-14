@@ -11,6 +11,7 @@ import com.yulgnier.center.common.user.config.properties.MiscellaneousProperties
 import com.yulgnier.center.common.user.mapper.UserMapper;
 import com.yulgnier.center.common.user.model.domain.CommonUser;
 import com.yulgnier.center.common.user.model.dto.EmailCodeRequestDTO;
+import com.yulgnier.center.common.user.model.dto.UserCancelRequestDTO;
 import com.yulgnier.center.common.user.model.dto.UserLoginRequestDTO;
 import com.yulgnier.center.common.user.model.dto.UserRegisterRequestDTO;
 import com.yulgnier.center.common.user.model.enums.BanLevelEnum;
@@ -319,6 +320,47 @@ public class UserServiceImpl
                 throw new ForYourselfException(ResultCodeEnum.PARAM_ERROR, null);
             }
         }
+    }
+
+    @Override
+    public void cancel(UserCancelRequestDTO request) {
+        String nickname = request.getNickname();
+        log.debug("用户{}：开始注销", nickname);
+        // 检验是否人机
+        if (!CloudflareTurnstileUtil.verify(request.getCfTurnstileResponse(), cloudflareProperties.getSecret())) {
+            log.warn("用户{}：传来无效cloud flare令牌", nickname);
+            throw new ForYourselfException(ResultCodeEnum.TOKEN_INVALID, "别攻击了，用爱发电，真的怕了！");
+        }
+        // 检验用户名格式
+        if (!ValidateUtil.isValidUsername(nickname)) {
+            throw new ForYourselfException(ResultCodeEnum.USERNAME_FORMAT_ERROR, null);
+        }
+        // 检验邮箱格式
+        if (!ValidateUtil.isValidEmail(request.getEmail())) {
+            throw new ForYourselfException(ResultCodeEnum.EMAIL_FORMAT_ERROR, null);
+        }
+        // 检验密码格式
+        if (!ValidateUtil.isValidPassword(request.getPassword())) {
+            throw new ForYourselfException(ResultCodeEnum.PASSWORD_FORMAT_ERROR, null);
+        }
+        // 检验验证码是否正确 yulgnier: (key=用户注销:邮箱 value=验证码:剩余尝试次数) (●ˇ∀ˇ●)
+        //   拼接key
+        String key =BusinessTypeEnum.CANCEL_USER.getName() + AuthConstants.SEPARATOR + request.getEmail();
+        //   获取value，为null，抛错误
+        String value = RedisUtil.get(key);
+        if (value == null) {
+            throw new ForYourselfException(ResultCodeEnum.VERIFICATION_CODE_EXPIRED, null);
+        }
+        //   分离验证码和剩余尝试次数
+        try {
+            String code = value.split(AuthConstants.SEPARATOR)[0];
+            Integer remainTimes = Integer.valueOf(value.split(AuthConstants.SEPARATOR)[1]);
+        } catch (NumberFormatException | ArrayIndexOutOfBoundsException e) {
+            throw new ForYourselfException(ResultCodeEnum.SERVICE_ERROR, null);
+        }
+        //   匹配验证码
+        // 检验用户名，邮箱，密码是否匹配
+        // 执行逻辑删除操作（30天保留）
     }
 
     //===================================内部方法===================================

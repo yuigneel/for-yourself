@@ -55,7 +55,7 @@ public class RedisUtil {
     // ====================== 常用 get 方法 ======================
 
     /**
-     * 获取值
+     * 获取值，获取失败返回 null
      */
     public static String get(String key) {
         return redisTemplate.opsForValue().get(key);

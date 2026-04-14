@@ -1,6 +1,7 @@
 package com.yulgnier.center.common.user.controller;
 
 import com.yulgnier.center.common.user.model.dto.EmailCodeRequestDTO;
+import com.yulgnier.center.common.user.model.dto.UserCancelRequestDTO;
 import com.yulgnier.center.common.user.model.dto.UserLoginRequestDTO;
 import com.yulgnier.center.common.user.model.dto.UserRegisterRequestDTO;
 import com.yulgnier.center.common.user.service.UserService;
@@ -44,8 +45,9 @@ public class UserController {
 
     @Operation(summary = "用户注销")
     @PostMapping("/cancel")
-    public String cancel() {
-        return "注销成功";
+    public Result<String> cancel(@Valid @RequestBody UserCancelRequestDTO request) {
+        userService.cancel(request);
+        return Result.ok("注销成功") ;
     }
 
     @Operation(summary = "找回密码")
