@@ -21,6 +21,13 @@ public class UserController {
 
     private final UserService userService;
 
+    @Operation(summary = "获取邮箱验证码")
+    @PostMapping("/getEmailCode")
+    public Result<String> getEmailCode(@Valid @RequestBody EmailCodeRequestDTO request) {
+        String result = userService.getEmailCode(request);
+        return Result.ok(result);
+    }
+
     @Operation(summary = "用户注册")
     @PostMapping("/register")
     public Result<String> register(@Valid @RequestBody UserRegisterRequestDTO request) {
@@ -41,18 +48,12 @@ public class UserController {
         return "注销成功";
     }
 
-    @Operation(summary = "获取邮箱验证码")
-    @PostMapping("/getEmailCode")
-    public Result<String> getEmailCode(@Valid @RequestBody EmailCodeRequestDTO request) {
-        String result = userService.getEmailCode(request);
-        return Result.ok(result);
-    }
-
     @Operation(summary = "找回密码")
     @PostMapping("/forgetPassword")
     public String forgetPassword() {
         return "找回成功";
     }
+
 
     @Operation(summary = "修改用户信息")
     @PostMapping("/updateUserInfo")

@@ -67,12 +67,11 @@ public class UserServiceImpl
         //  检验是否人机
         log.debug("前端传来cloud flare的token{}", request.getCfTurnstileResponse());
         if (!CloudflareTurnstileUtil.verify(request.getCfTurnstileResponse(), cloudflareProperties.getSecret())) {
-            log.info("邮箱{}：传来无效cloud flare令牌", receiveEmail);
+            log.warn("邮箱{}：传来无效cloud flare令牌", receiveEmail);
             throw new ForYourselfException(ResultCodeEnum.ILLEGAL_REQUEST, "别攻击了，用爱发电，真的怕了！");
         }
         //  检验邮箱格式是否正确
         if (!ValidateUtil.isValidEmail(receiveEmail)) {
-            log.info("邮箱{}：邮箱格式错误", receiveEmail);
             throw new ForYourselfException(ResultCodeEnum.EMAIL_FORMAT_ERROR, null);
         }
         //  检验业务是否符合参数
@@ -88,12 +87,12 @@ public class UserServiceImpl
         //  检验该邮箱是否允许发送验证码
         Integer needWaitTime = getNeedWaitTime(emailSendCountKey);
         if (needWaitTime > 0) {
-            log.info("邮箱{}：已超过发送限制，请稍后再试", receiveEmail);
-            throw new ForYourselfException(ResultCodeEnum.EMAIL_BANNED_SEND, needWaitTime);
+            log.debug("邮箱{}：已超过发送限制，请稍后再试", receiveEmail);
+            throw new ForYourselfException(ResultCodeEnum.SMS_SEND_TOO_FREQUENT, needWaitTime);
         }
         //  检验验证码是否已经发送
         if (RedisUtil.hasKey(emailCodeKey)) {
-            log.info("邮箱{}：已发送验证码，请勿重复发送", receiveEmail);
+            log.debug("邮箱{}：已发送验证码，请勿重复发送", receiveEmail);
             throw new ForYourselfException(ResultCodeEnum.EMAIL_CODE_SEND_LIMIT, null);
         }
 
@@ -116,7 +115,6 @@ public class UserServiceImpl
             //  执行发送！！！
             javaMailSender.send(message);
             log.debug("验证码发送成功！邮箱：{}，验证码：{}", receiveEmail, code);
-            log.info("验证码发送成功!");
             return "✅ 发送成功！验证码已发送至邮箱：" + receiveEmail;
         } catch (Exception e) {
             log.error("邮件发送失败！", e);
@@ -150,28 +148,28 @@ public class UserServiceImpl
         //  检验邮箱格式是否正确
         String userEmail = request.getEmail();
         if (!ValidateUtil.isValidEmail(userEmail)) {
-            log.info("用户{}：邮箱格式错误", nickname);
+            log.debug("用户{}：邮箱格式错误", nickname);
             throw new ForYourselfException(ResultCodeEnum.EMAIL_FORMAT_ERROR, null);
         }
         //  检查昵称
         if (!ValidateUtil.isValidUsername(nickname)) {
-            log.info("用户{}：昵称格式错误", nickname);
+            log.debug("用户{}：昵称格式错误", nickname);
             throw new ForYourselfException(ResultCodeEnum.USERNAME_FORMAT_ERROR, null);
         }
         //      检查昵称是否已存在
         if (this.getOneOpt(new LambdaQueryWrapper<CommonUser>().eq(CommonUser::getNickname, nickname)).isPresent()) {
-            log.info("用户{}：昵称已存在", nickname);
+            log.debug("用户{}：昵称已存在", nickname);
             throw new ForYourselfException(ResultCodeEnum.USER_ALREADY_EXISTS, null);
         }
         //  检查密码
         if (!ValidateUtil.isValidPassword(request.getPassword())) {
-            log.info("用户{}：密码格式错误", nickname);
+            log.debug("用户{}：密码格式错误", nickname);
             throw new ForYourselfException(ResultCodeEnum.PASSWORD_FORMAT_ERROR, null);
         }
         //  是否有日期，有检查，无，跳过
         if (request.getBirthday() != null) {
             if (request.getBirthday().isAfter(LocalDate.now())) {
-                log.info("用户{}：生日格式错误", nickname);
+                log.debug("用户{}：生日格式错误", nickname);
                 throw new ForYourselfException(ResultCodeEnum.DATE_FORMAT_ERROR, null);
             }
         }
@@ -183,18 +181,18 @@ public class UserServiceImpl
         String emailCodeKey = BusinessTypeEnum.REGISTER.getName() + AuthConstants.SEPARATOR + userEmail;
         String emailCodeValue = RedisUtil.get(emailCodeKey);
         if (emailCodeValue == null) {
-            log.info("用户{}：验证码已过期，请重新获取", nickname);
+            log.debug("用户{}：验证码已过期，请重新获取", nickname);
             throw new ForYourselfException(ResultCodeEnum.VERIFICATION_CODE_EXPIRED, null);
         }
         String cacheCode = emailCodeValue.substring(0, 6);
         Integer tryTimes = Integer.valueOf(emailCodeValue.split(AuthConstants.SEPARATOR)[1]);
         if (cacheCode == null || !cacheCode.equals(request.getCode())) {
-            log.info("用户{}：验证码错误", nickname);
+            log.debug("用户{}：验证码错误", nickname);
             //  记录一次到缓存，下次登录时检查
             tryTimes -= 1;
             Long ttl = RedisUtil.getTtl(emailCodeKey, TimeUnit.MICROSECONDS);
             RedisUtil.set(emailCodeKey, cacheCode + AuthConstants.SEPARATOR + tryTimes, ttl, TimeUnit.MICROSECONDS);
-            log.info("用户{}：验证码还剩{}次验证机会", nickname, tryTimes);
+            log.debug("用户{}：验证码还剩{}次验证机会", nickname, tryTimes);
             //  顺便检查验证码是否没有次数了
             if (tryTimes <= 0) {
                 log.info("用户{}：尝试次数为零，删除缓存的验证码,将用户邮箱录入缓存标记冻结", nickname);
@@ -219,8 +217,8 @@ public class UserServiceImpl
         }
         //  检查邮箱是否已注册
         if (this.getOneOpt(new LambdaQueryWrapper<CommonUser>().eq(CommonUser::getEmail, request.getEmail())).isPresent()) {
-            log.info("用户{}：邮箱已注册", nickname);
-            throw new ForYourselfException(ResultCodeEnum.ADMIN_ACCOUNT_EXIST, "邮箱已注册");
+            log.debug("用户{}：邮箱已注册", nickname);
+            throw new ForYourselfException(ResultCodeEnum.EMAIL_ALREADY_REGISTERED, "邮箱已注册");
         }
         //  录入数据库
         //      生成密码密文
@@ -255,37 +253,45 @@ public class UserServiceImpl
     @Override
     public String login(UserLoginRequestDTO request) {
         String name = request.getName();
-        log.info("用户{}：开始登录", name);
+        log.debug("用户{}：开始登录", name);
         // 人机检测
         if (!CloudflareTurnstileUtil.verify(request.getCfTurnstileResponse(), cloudflareProperties.getSecret())) {
-            log.info("用户{}：传来无效cloud flare令牌", name);
+            log.warn("用户{}：传来无效cloud flare令牌", name);
             throw new ForYourselfException(ResultCodeEnum.TOKEN_INVALID, "别攻击了，用爱发电，真的怕了！");
         }
         // switch 到不同的登录方式
         switch (request.getLoginType().getCode()) {
             // 用户名登录
             case 1 -> {
+                // 检验用户名格式
+                if (!ValidateUtil.isValidUsername(name)) {
+                    throw new ForYourselfException(ResultCodeEnum.USERNAME_FORMAT_ERROR, null);
+                }
                 CommonUser user = this.getOne(new LambdaQueryWrapper<CommonUser>().eq(CommonUser::getNickname, name));
                 if (user == null) {
-                    log.info("用户{}：用户名不存在", name);
-                    throw new ForYourselfException(ResultCodeEnum.ADMIN_ACCOUNT_NOT_EXIST, null);
+                    log.debug("用户{}：用户名不存在", name);
+                    throw new ForYourselfException(ResultCodeEnum. ACCOUNT_NOT_EXIST, null);
                 }
                 if (!bCryptPasswordEncoder.matches(request.getPw(), user.getPassword())) {
-                    log.info("用户{}：账户或密码错误", name);
-                    throw new ForYourselfException(ResultCodeEnum.ADMIN_ACCOUNT_PASSWORD_ERROR, null);
+                    log.debug("用户{}：账户或密码错误", name);
+                    throw new ForYourselfException(ResultCodeEnum.ACCOUNT_PASSWORD_ERROR, null);
                 }
                 return generateToken(name, user.getUid());
             }
             // 邮箱登录
             case 2 -> {
+                // 检验邮箱格式
+                if (!ValidateUtil.isValidEmail(name)) {
+                    throw new ForYourselfException(ResultCodeEnum.EMAIL_FORMAT_ERROR, null);
+                }
                 CommonUser user = this.getOne(new LambdaQueryWrapper<CommonUser>().eq(CommonUser::getEmail, name));
                 if (user == null) {
-                    log.info("用户{}：邮箱不存在", name);
-                    throw new ForYourselfException(ResultCodeEnum.ADMIN_ACCOUNT_NOT_EXIST, null);
+                    log.debug("用户{}：邮箱不存在", name);
+                    throw new ForYourselfException(ResultCodeEnum.ACCOUNT_NOT_EXIST, null);
                 }
                 if (!bCryptPasswordEncoder.matches(request.getPw(), user.getPassword())) {
-                    log.info("用户{}：账户或密码错误", name);
-                    throw new ForYourselfException(ResultCodeEnum.ADMIN_ACCOUNT_PASSWORD_ERROR, null);
+                    log.debug("用户{}：账户或密码错误", name);
+                    throw new ForYourselfException(ResultCodeEnum.ACCOUNT_PASSWORD_ERROR, null);
                 }
                 return generateToken(name, user.getUid());
             }
@@ -299,22 +305,23 @@ public class UserServiceImpl
             case 4 -> {
                 CommonUser user = this.getOne(new LambdaQueryWrapper<CommonUser>().eq(CommonUser::getUid, name));
                 if (user == null) {
-                    log.info("用户{}：UID不存在", name);
-                    throw new ForYourselfException(ResultCodeEnum.ADMIN_ACCOUNT_NOT_EXIST, null);
+                    log.debug("用户{}：UID不存在", name);
+                    throw new ForYourselfException(ResultCodeEnum.ACCOUNT_NOT_EXIST, null);
                 }
                 if (!bCryptPasswordEncoder.matches(request.getPw(), user.getPassword())) {
-                    log.info("用户{}：账户或密码错误", name);
-                    throw new ForYourselfException(ResultCodeEnum.ADMIN_ACCOUNT_PASSWORD_ERROR, null);
+                    log.debug("用户{}：账户或密码错误", name);
+                    throw new ForYourselfException(ResultCodeEnum.ACCOUNT_PASSWORD_ERROR, null);
                 }
                 return generateToken(name, user.getUid());
             }
             default -> {
                 log.warn("用户{}：登录方式错误", name);
-                throw new ForYourselfException(ResultCodeEnum.ILLEGAL_REQUEST, null);
+                throw new ForYourselfException(ResultCodeEnum.PARAM_ERROR, null);
             }
         }
     }
 
+    //===================================内部方法===================================
 
     /**
      * 生成6位随机数字验证码

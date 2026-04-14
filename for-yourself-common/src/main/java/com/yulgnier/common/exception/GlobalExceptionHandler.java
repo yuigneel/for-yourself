@@ -22,7 +22,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ForYourselfException.class)
     @ResponseBody
     public Result handle(ForYourselfException e) {
-        log.error("[自定义全局异常处理]", e);
+        log.debug("[自定义全局异常处理]", e);
         return Result.fail(e.getCode(), e.getMessage(), e.getData());
     }
     /**
@@ -31,7 +31,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     @ResponseBody
     public Result handle(MethodArgumentNotValidException e) {
-        log.info("[参数空值异常处理]");
+        log.debug("[参数空值异常处理]",e);
         return Result.fail(ResultCodeEnum.REQUEST_INCOMPLETE.getCode(), ResultCodeEnum.REQUEST_INCOMPLETE.getMessage(), null);
     }
 }
