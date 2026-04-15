@@ -111,7 +111,7 @@ public class UserServiceImpl
             SimpleMailMessage message = new SimpleMailMessage();
             message.setFrom(mailProperties.getUsername());       // 发件人（你的 163 邮箱）
             message.setTo(receiveEmail);      // 收件人（前端传的真实邮箱）
-            message.setSubject("验证码通知"); // 邮件标题
+            message.setSubject(request.getBusinessType().getName() + "验证码通知"); // 邮件标题
             message.setText("您的验证码是：" + code + "，" + miscellaneousProperties.getEmailExpireMinutes() + "分钟内有效！"); // 邮件内容
             //  执行发送！！！
             javaMailSender.send(message);
@@ -185,36 +185,18 @@ public class UserServiceImpl
             log.debug("用户{}：验证码已过期，请重新获取", nickname);
             throw new ForYourselfException(ResultCodeEnum.VERIFICATION_CODE_EXPIRED, null);
         }
-        String cacheCode = emailCodeValue.substring(0, 6);
-        Integer tryTimes = Integer.valueOf(emailCodeValue.split(AuthConstants.SEPARATOR)[1]);
-        if (cacheCode == null || !cacheCode.equals(request.getCode())) {
+        String code = null;
+        Integer remainTimes = null;
+        try {
+            code = emailCodeValue.split(AuthConstants.SEPARATOR)[0];
+            remainTimes = Integer.parseInt(emailCodeValue.split(AuthConstants.SEPARATOR)[1]);
+        } catch (NumberFormatException | ArrayIndexOutOfBoundsException e) {
+            log.error("用户{}：Redis缓存格式错误，请检查！", nickname);
+            throw new ForYourselfException(ResultCodeEnum.SERVICE_ERROR, null);
+        }
+        if (!checkCode(request.getCode(), userEmail, emailCodeKey, code, remainTimes)) {
             log.debug("用户{}：验证码错误", nickname);
-            //  记录一次到缓存，下次登录时检查
-            tryTimes -= 1;
-            Long ttl = RedisUtil.getTtl(emailCodeKey, TimeUnit.MICROSECONDS);
-            RedisUtil.set(emailCodeKey, cacheCode + AuthConstants.SEPARATOR + tryTimes, ttl, TimeUnit.MICROSECONDS);
-            log.debug("用户{}：验证码还剩{}次验证机会", nickname, tryTimes);
-            //  顺便检查验证码是否没有次数了
-            if (tryTimes <= 0) {
-                log.info("用户{}：尝试次数为零，删除缓存的验证码,将用户邮箱录入缓存标记冻结", nickname);
-                //      删除缓存中的验证码
-                try {
-                    RedisUtil.delete(emailCodeKey);
-                } catch (Exception e) {
-                    log.error("缓存删除失败！", e);
-                    throw new ForYourselfException(ResultCodeEnum.SERVICE_ERROR, null);
-                }
-                //  将用户邮箱录入缓存标记冻结
-                String emailSendCountKey = BusinessTypeEnum.SEND_EMAIL.getName() + AuthConstants.SEPARATOR + userEmail;
-                try {
-                    markEmailAsCaptchaFreeze(emailSendCountKey);
-                } catch (Exception e) {
-                    log.error("缓存保存失败！", e);
-                    throw new ForYourselfException(ResultCodeEnum.SERVICE_ERROR, null);
-                }
-                throw new ForYourselfException(ResultCodeEnum.VERIFICATION_CODE_EXPIRED, "❌ 尝试次数为零，请重新获取验证码");
-            }
-            throw new ForYourselfException(ResultCodeEnum.VERIFICATION_CODE_ERROR, tryTimes);
+            throw new ForYourselfException(ResultCodeEnum.VERIFICATION_CODE_ERROR, remainTimes-1);
         }
         //  检查邮箱是否已注册
         if (this.getOneOpt(new LambdaQueryWrapper<CommonUser>().eq(CommonUser::getEmail, request.getEmail())).isPresent()) {
@@ -331,7 +313,7 @@ public class UserServiceImpl
     @Override
     public void cancel(UserCancelRequestDTO request) {
         String nickname = request.getNickname();
-        log.debug("用户{}：开始注销", nickname);
+        log.info("用户{}：开始注销", nickname);
         // 检验是否人机
         if (!CloudflareTurnstileUtil.verify(request.getCfTurnstileResponse(), cloudflareProperties.getSecret())) {
             log.warn("用户{}：传来无效cloud flare令牌", nickname);
@@ -367,7 +349,10 @@ public class UserServiceImpl
             log.error("用户{}：Redis缓存格式错误，请检查！", nickname);
             throw new ForYourselfException(ResultCodeEnum.SERVICE_ERROR, null);
         }
-        //   匹配验证码 (包装成方法，返回布尔值，自动执行减次数等措施)
+        // 匹配验证码 (包装成方法，返回布尔值，自动执行减次数等措施)
+        if (!checkCode(request.getCode(), request.getEmail(), key, code, remainTimes)) {
+            throw new ForYourselfException(ResultCodeEnum.VERIFICATION_CODE_ERROR, remainTimes-1);
+        }
         // 构造条件：昵称 + 邮箱 匹配
         LambdaQueryWrapper<CommonUser> lambdaQueryWrapper = new LambdaQueryWrapper<CommonUser>()
                 .eq(CommonUser::getNickname, nickname)
@@ -415,12 +400,13 @@ public class UserServiceImpl
             String value = RedisUtil.get(key); //eg: A:1440
             Integer needTime = value == null ? 0 : Integer.valueOf(value.split(AuthConstants.SEPARATOR)[1]);
             //  获得实际剩余时间
-            Long ttl = RedisUtil.getTtl(key, TimeUnit.MINUTES); //不存在则返回0
+            Long ttl = RedisUtil.getTtl(key, TimeUnit.MINUTES);
+            ttl=ttl<=0?0:ttl;
             //  计算实际冻结的时间（最大时间-实际剩余时间）
             long actualTime = BanLevelEnum.LEVEL_S.getCode() - ttl;
             //  计算并返回还剩多长冻结时间（计划冻结时间-实际冻结时间）
             return needTime - (int) actualTime;
-        } catch (NumberFormatException e) {
+        } catch (NumberFormatException | ArrayIndexOutOfBoundsException e) {
             log.error("获取剩余冻结时间失败", e);
             throw new ForYourselfException(ResultCodeEnum.SERVICE_ERROR, null);
         }
@@ -488,19 +474,29 @@ public class UserServiceImpl
      *
      * @param code        用户输入的验证码
      * @param email       邮箱
+     * @param key         业务名称+分隔符+邮箱
      * @param trueCode    缓存中的验证码
      * @param remainTimes 缓存中的剩余尝试次数
      * @return true:验证码正确
      */
-    private boolean checkCode(String code, String email, String trueCode, Integer remainTimes) {
+    private boolean checkCode(String code, String email, String key, String trueCode, Integer remainTimes) {
         // 验证码正确，返回true
         if (code.equals(trueCode)) return true;
         // 验证码错误，尝试次数减一
         remainTimes -= 1;
+        // 存入缓存
+        String value = trueCode + AuthConstants.SEPARATOR + remainTimes;
+        //    如果时间不足一个单位，则设置一秒
+        long time = RedisUtil.getTtl(key, TimeUnit.MINUTES);
+        if (time <= 0) {
+            RedisUtil.set(key, value, 1, TimeUnit.SECONDS);
+        } else RedisUtil.set(key, value, time, TimeUnit.MINUTES);
         // 如果尝试次数为0，则开始冻结
         if (remainTimes <= 0) {
-            String key = BusinessTypeEnum.SEND_EMAIL.getName() + AuthConstants.SEPARATOR + email;
-            markEmailAsCaptchaFreeze(key);
+            String BanYULGNIERKey = BusinessTypeEnum.SEND_EMAIL.getName() + AuthConstants.SEPARATOR + email;
+            markEmailAsCaptchaFreeze(BanYULGNIERKey);
+            // 删除验证码的缓存
+            RedisUtil.delete(key);
         }
         // 返回false
         return false;

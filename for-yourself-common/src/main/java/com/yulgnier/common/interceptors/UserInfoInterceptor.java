@@ -30,12 +30,18 @@ public class UserInfoInterceptor implements HandlerInterceptor {
         // 看header里面是否有truth，且内容符合，没有返回错误
         String truth = request.getHeader(truthProperties.getTruthKey());
         if (truth == null || !truth.equals(truthProperties.getTruthValue())) {
-            log.debug("请求被拦截 - URL: {}, Method: {}", request.getRequestURI(), request.getMethod());
+            log.debug("请求被拦截 - URL(未带请求头'truth'): {}, Method: {}", request.getRequestURI(), request.getMethod());
             throw new ForYourselfException(ResultCodeEnum.ILLEGAL_REQUEST, null);
         }
         // 获取用户uid并存入thread local
-        Long uid = Long.valueOf(request.getHeader(AuthConstants.UID_KEY));
-        UserContextUtil.setUid(uid);
+
+        try {
+            Long uid = Long.valueOf(request.getHeader(AuthConstants.UID_KEY));
+            UserContextUtil.setUid(uid);
+        } catch (NumberFormatException e) {
+            log.warn("请求被拦截 - URL(未获得uid): {}, Method: {}", request.getRequestURI(), request.getMethod());
+            throw new ForYourselfException(ResultCodeEnum.ILLEGAL_REQUEST, null);
+        }
         // 放行
         return true;
     }

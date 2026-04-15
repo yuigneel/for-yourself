@@ -91,7 +91,12 @@ public class RedisUtil {
      * @return 剩余时间（指定单位）；如果 key 不存在、已过期或永久有效，返回 0
      */
     public static Long getTtl(String key, TimeUnit unit) {
-        Long ttl = redisTemplate.getExpire(key, unit);
-        return ttl == null || ttl < 0 ? 0 : ttl;
+        /*
+        如果 key 不存在或已过期，返回 -2；
+        如果 key 存在但没有设置过期时间（永久有效），返回 -1；
+        如果 key 存在且有过期时间，返回大于 0 的整数，代表剩余时间（单位由 unit 指定）。
+        如果 key 存在但不足1个单位，返回 0。
+         */
+        return redisTemplate.getExpire(key, unit);
     }
 }
