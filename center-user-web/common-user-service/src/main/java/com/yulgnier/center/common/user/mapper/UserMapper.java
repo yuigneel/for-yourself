@@ -26,12 +26,28 @@ public interface UserMapper extends BaseMapper<CommonUser> {
     CommonUser selectOneByEmailIgnoreLogicDelete(String email);
 
     /**
+     * 根据UID查询用户(忽略逻辑删除)
+     * @param uid 用户UID
+     * @return 用户对象
+     */
+    CommonUser selectOneByUidIgnoreLogicDelete(Long uid);
+
+    /**
      * 根据UID修改用户密码(忽略逻辑删除)
      * @param uid 用户UID
      * @param password 加密后的新密码
      * @return 影响行数
      */
     int updatePasswordByUidIgnoreLogicDelete(Long uid, String password);
+
+    /**
+     * 恢复用户-将is_deleted设为0(忽略逻辑删除)
+     * @param user 用户对象(需包含uid)
+     * @return 影响行数
+     */
+    int restoreUserIgnoreLogicDelete(CommonUser user);
+
+
 }
 
 

@@ -12,10 +12,10 @@ public interface UserService extends IService<CommonUser> {
 
     String login(UserLoginRequestDTO request);
 
-    void cancel(@Valid UserCancelRequestDTO request);
+    void cancel(UserCancelRequestDTO request);
 
-    String forgetPassword(@Valid UserForgetPasswordRequestDTO request);
+    String forgetPassword(UserForgetPasswordRequestDTO request);
 
-    void updateUserInfo(@Valid UserUpdateInfoRequestDTO request);
+    void updateUserInfo(UserUpdateInfoRequestDTO request);
 }
 

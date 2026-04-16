@@ -17,12 +17,9 @@ import com.yulgnier.center.common.user.model.enums.GenderEnum;
 import com.yulgnier.center.common.user.service.UserService;
 import com.yulgnier.common.config.properties.JwtProperties;
 import com.yulgnier.common.model.constants.AuthConstants;
-import com.yulgnier.common.utils.JwtUtil;
+import com.yulgnier.common.utils.*;
 import com.yulgnier.common.exception.ForYourselfException;
 import com.yulgnier.common.model.result.ResultCodeEnum;
-import com.yulgnier.common.utils.CloudflareTurnstileUtil;
-import com.yulgnier.common.utils.RedisUtil;
-import com.yulgnier.common.utils.ValidateUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.mail.SimpleMailMessage;
@@ -161,8 +158,8 @@ public class UserServiceImpl
             throw new ForYourselfException(ResultCodeEnum.EMAIL_FORMAT_ERROR, null);
         }
         //  检查邮箱是否已注册
-        user=userMapper.selectOneByEmailIgnoreLogicDelete(request.getEmail());
-        if (user!=null) {
+        user = userMapper.selectOneByEmailIgnoreLogicDelete(request.getEmail());
+        if (user != null) {
             log.debug("用户{}：邮箱已注册", nickname);
             throw new ForYourselfException(ResultCodeEnum.EMAIL_ALREADY_REGISTERED, null);
         }
@@ -234,7 +231,6 @@ public class UserServiceImpl
      */
     @Override
     public String login(UserLoginRequestDTO request) {
-        // TODO
         String name = request.getName();
         log.debug("用户{}：开始登录", name);
         // 人机检测
@@ -243,14 +239,14 @@ public class UserServiceImpl
             throw new ForYourselfException(ResultCodeEnum.TOKEN_INVALID, "别攻击了，用爱发电，真的怕了！");
         }
         // switch 到不同的登录方式
-        switch (request.getLoginType().getCode()) {
+        switch (request.getLoginType()) {
             // 用户名登录
-            case 1 -> {
+            case USERNAME -> {
                 // 检验用户名格式
                 if (!ValidateUtil.isValidUsername(name)) {
                     throw new ForYourselfException(ResultCodeEnum.USERNAME_FORMAT_ERROR, null);
                 }
-                CommonUser user = this.getOne(new LambdaQueryWrapper<CommonUser>().eq(CommonUser::getNickname, name));
+                CommonUser user = userMapper.selectOneByNicknameIgnoreLogicDelete(name);
                 if (user == null) {
                     log.debug("用户{}：用户名不存在", name);
                     throw new ForYourselfException(ResultCodeEnum.ACCOUNT_NOT_EXIST, null);
@@ -259,15 +255,21 @@ public class UserServiceImpl
                     log.debug("用户{}：账户或密码错误", name);
                     throw new ForYourselfException(ResultCodeEnum.ACCOUNT_PASSWORD_ERROR, null);
                 }
+                if (user.getIsDeleted() == 1) {
+                    log.info("用户{}：账户已注销,正在恢复。。。", name);
+                    int i = userMapper.restoreUserIgnoreLogicDelete(user);
+                    if (i == 0) throw new ForYourselfException(ResultCodeEnum.SERVICE_ERROR, null);
+                    log.info("用户{}：账户已恢复", name);
+                }
                 return generateToken(name, user.getUid());
             }
             // 邮箱登录
-            case 2 -> {
+            case EMAIL -> {
                 // 检验邮箱格式
                 if (!ValidateUtil.isValidEmail(name)) {
                     throw new ForYourselfException(ResultCodeEnum.EMAIL_FORMAT_ERROR, null);
                 }
-                CommonUser user = this.getOne(new LambdaQueryWrapper<CommonUser>().eq(CommonUser::getEmail, name));
+                CommonUser user = userMapper.selectOneByEmailIgnoreLogicDelete(name);
                 if (user == null) {
                     log.debug("用户{}：邮箱不存在", name);
                     throw new ForYourselfException(ResultCodeEnum.ACCOUNT_NOT_EXIST, null);
@@ -276,17 +278,23 @@ public class UserServiceImpl
                     log.debug("用户{}：账户或密码错误", name);
                     throw new ForYourselfException(ResultCodeEnum.ACCOUNT_PASSWORD_ERROR, null);
                 }
+                if (user.getIsDeleted() == 1) {
+                    log.info("用户{}：账户已注销,正在恢复。。。", name);
+                    int i = userMapper.restoreUserIgnoreLogicDelete(user);
+                    if (i == 0) throw new ForYourselfException(ResultCodeEnum.SERVICE_ERROR, null);
+                    log.info("用户{}：账户已恢复", name);
+                }
                 return generateToken(name, user.getUid());
             }
             // 手机号登录
-            case 3 -> {
+            case PHONE -> {
                 // TODO
                 log.warn("用户{}：手机号登录未实现", name);
                 throw new ForYourselfException(ResultCodeEnum.FEATURE_NOT_IMPLEMENTED, null);
             }
             // UID 登录
-            case 4 -> {
-                CommonUser user = this.getOne(new LambdaQueryWrapper<CommonUser>().eq(CommonUser::getUid, name));
+            case UID -> {
+                CommonUser user = userMapper.selectOneByUidIgnoreLogicDelete(Long.valueOf(name));
                 if (user == null) {
                     log.debug("用户{}：UID不存在", name);
                     throw new ForYourselfException(ResultCodeEnum.ACCOUNT_NOT_EXIST, null);
@@ -294,6 +302,12 @@ public class UserServiceImpl
                 if (!bCryptPasswordEncoder.matches(request.getPw(), user.getPassword())) {
                     log.debug("用户{}：账户或密码错误", name);
                     throw new ForYourselfException(ResultCodeEnum.ACCOUNT_PASSWORD_ERROR, null);
+                }
+                if (user.getIsDeleted() == 1) {
+                    log.info("用户{}：账户已注销,正在恢复。。。", name);
+                    int i = userMapper.restoreUserIgnoreLogicDelete(user);
+                    if (i == 0) throw new ForYourselfException(ResultCodeEnum.SERVICE_ERROR, null);
+                    log.info("用户{}：账户已恢复", name);
                 }
                 return generateToken(name, user.getUid());
             }
@@ -432,9 +446,36 @@ public class UserServiceImpl
         return password;
     }
 
+    /**
+     * 更新用户信息
+     *
+     * @param request 用户信息更新请求参数，包含昵称、性别和生日
+     */
     @Override
     public void updateUserInfo(UserUpdateInfoRequestDTO request) {
-
+        // 获取用户
+        LambdaQueryWrapper<CommonUser> eq = new LambdaQueryWrapper<CommonUser>().eq(CommonUser::getUid, UserContextUtil.getUid());
+        CommonUser user = this.getOne(eq);
+        if (user == null) {
+            throw new ForYourselfException(ResultCodeEnum.ACCOUNT_EXIST, null);
+        }
+        // 检查昵称
+        if (!ValidateUtil.isValidUsername(request.getNickname())) {
+            throw new ForYourselfException(ResultCodeEnum.USERNAME_FORMAT_ERROR, null);
+        }
+        if (this.getOneOpt(new LambdaQueryWrapper<CommonUser>().eq(CommonUser::getNickname, request.getNickname())).isPresent()) {
+            throw new ForYourselfException(ResultCodeEnum.USER_ALREADY_EXISTS, null);
+        }
+        user.setNickname(request.getNickname());
+        // 检查生日
+        if (request.getBirthday() != null && request.getBirthday().isBefore(LocalDate.now())) {
+            user.setBirthday(request.getBirthday());
+        }
+        // 检查性别
+        if (request.getGenderEnum() != null) {
+            user.setGender(request.getGenderEnum());
+        }
+        this.updateById(user);
     }
 
     //===================================内部方法===================================

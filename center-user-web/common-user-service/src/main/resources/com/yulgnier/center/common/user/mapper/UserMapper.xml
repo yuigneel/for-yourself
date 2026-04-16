@@ -4,32 +4,24 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.yulgnier.center.common.user.mapper.UserMapper">
 
-    <resultMap id="BaseResultMap" type="com.yulgnier.center.common.user.model.domain.CommonUser">
-        <id property="id" column="id"/>
-        <result property="uid" column="uid"/>
-        <result property="email" column="email"/>
-        <result property="nickname" column="nickname"/>
-        <result property="password" column="password"/>
-        <result property="gender" column="gender"/>
-        <result property="birthday" column="birthday"/>
-        <result property="joinDate" column="join_date"/>
-        <result property="accountStatus" column="account_status"/>
-        <result property="createTime" column="create_time"/>
-        <result property="updateTime" column="update_time"/>
-        <result property="isDeleted" column="is_deleted"/>
-    </resultMap>
-
-    <select id="selectOneByNicknameIgnoreLogicDelete" resultMap="BaseResultMap">
+    <select id="selectOneByNicknameIgnoreLogicDelete" resultType="com.yulgnier.center.common.user.model.domain.CommonUser">
         SELECT *
         FROM t_common_user
         WHERE nickname = #{nickname}
         LIMIT 1
     </select>
 
-    <select id="selectOneByEmailIgnoreLogicDelete" resultMap="BaseResultMap">
+    <select id="selectOneByEmailIgnoreLogicDelete" resultType="com.yulgnier.center.common.user.model.domain.CommonUser">
         SELECT *
         FROM t_common_user
         WHERE email = #{email}
+        LIMIT 1
+    </select>
+
+    <select id="selectOneByUidIgnoreLogicDelete" resultType="com.yulgnier.center.common.user.model.domain.CommonUser">
+        SELECT *
+        FROM t_common_user
+        WHERE uid = #{uid}
         LIMIT 1
     </select>
 
@@ -37,5 +29,15 @@
         UPDATE t_common_user
         SET password = #{password}
         WHERE uid = #{uid}
+        LIMIT 1
     </update>
+
+    <update id="restoreUserIgnoreLogicDelete">
+        UPDATE t_common_user
+        SET is_deleted = 0
+        WHERE uid = #{uid}
+        LIMIT 1
+    </update>
+
+
 </mapper>
