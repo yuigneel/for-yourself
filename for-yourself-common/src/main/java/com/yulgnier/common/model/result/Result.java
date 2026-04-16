@@ -1,20 +1,25 @@
 package com.yulgnier.common.model.result;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 /**
  * 全局统一返回结果类
  */
 @Data
+@Schema(description = "全局响应结果")
 public class Result<T> {
     //yu: 定义基础属性
     //返回码
+    @Schema(description = "业务响应码", example = "200")
     private Integer code;
 
     //返回消息
+    @Schema(description = "响应消息")
     private String message;
 
     //返回数据
+    @Schema(description = "响应数据")
     private T data;
 
     //lgnier:你不准new

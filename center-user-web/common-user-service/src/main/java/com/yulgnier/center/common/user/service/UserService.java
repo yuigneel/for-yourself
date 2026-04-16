@@ -2,10 +2,7 @@ package com.yulgnier.center.common.user.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.yulgnier.center.common.user.model.domain.CommonUser;
-import com.yulgnier.center.common.user.model.dto.EmailCodeRequestDTO;
-import com.yulgnier.center.common.user.model.dto.UserCancelRequestDTO;
-import com.yulgnier.center.common.user.model.dto.UserLoginRequestDTO;
-import com.yulgnier.center.common.user.model.dto.UserRegisterRequestDTO;
+import com.yulgnier.center.common.user.model.dto.*;
 import jakarta.validation.Valid;
 
 public interface UserService extends IService<CommonUser> {
@@ -16,5 +13,9 @@ public interface UserService extends IService<CommonUser> {
     String login(UserLoginRequestDTO request);
 
     void cancel(@Valid UserCancelRequestDTO request);
+
+    String forgetPassword(@Valid UserForgetPasswordRequestDTO request);
+
+    void updateUserInfo(@Valid UserUpdateInfoRequestDTO request);
 }
 

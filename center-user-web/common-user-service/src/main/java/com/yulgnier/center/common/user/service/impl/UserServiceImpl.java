@@ -10,10 +10,7 @@ import com.yulgnier.center.common.user.config.properties.MailProperties;
 import com.yulgnier.center.common.user.config.properties.MiscellaneousProperties;
 import com.yulgnier.center.common.user.mapper.UserMapper;
 import com.yulgnier.center.common.user.model.domain.CommonUser;
-import com.yulgnier.center.common.user.model.dto.EmailCodeRequestDTO;
-import com.yulgnier.center.common.user.model.dto.UserCancelRequestDTO;
-import com.yulgnier.center.common.user.model.dto.UserLoginRequestDTO;
-import com.yulgnier.center.common.user.model.dto.UserRegisterRequestDTO;
+import com.yulgnier.center.common.user.model.dto.*;
 import com.yulgnier.center.common.user.model.enums.BanLevelEnum;
 import com.yulgnier.center.common.user.model.enums.BusinessTypeEnum;
 import com.yulgnier.center.common.user.model.enums.GenderEnum;
@@ -143,8 +140,19 @@ public class UserServiceImpl
         //  检验是否人机
         log.debug("前端传来cloud flare的token{}", request.getCfTurnstileResponse());
         if (!CloudflareTurnstileUtil.verify(request.getCfTurnstileResponse(), cloudflareProperties.getSecret())) {
-            log.info("用户{}：传来无效cloud flare令牌", nickname);
+            log.warn("用户{}：传来无效cloud flare令牌", nickname);
             throw new ForYourselfException(ResultCodeEnum.TOKEN_INVALID, "别攻击了，用爱发电，真的怕了！");
+        }
+        //  检查昵称格式
+        if (!ValidateUtil.isValidUsername(nickname)) {
+            log.debug("用户{}：昵称格式错误", nickname);
+            throw new ForYourselfException(ResultCodeEnum.USERNAME_FORMAT_ERROR, null);
+        }
+        //  检查昵称是否已存在
+        CommonUser user = userMapper.selectOneByNicknameIgnoreLogicDelete(nickname);
+        if (user != null) {
+            log.debug("用户{}：昵称已存在", nickname);
+            throw new ForYourselfException(ResultCodeEnum.USER_ALREADY_EXISTS, null);
         }
         //  检验邮箱格式是否正确
         String userEmail = request.getEmail();
@@ -152,15 +160,11 @@ public class UserServiceImpl
             log.debug("用户{}：邮箱格式错误", nickname);
             throw new ForYourselfException(ResultCodeEnum.EMAIL_FORMAT_ERROR, null);
         }
-        //  检查昵称
-        if (!ValidateUtil.isValidUsername(nickname)) {
-            log.debug("用户{}：昵称格式错误", nickname);
-            throw new ForYourselfException(ResultCodeEnum.USERNAME_FORMAT_ERROR, null);
-        }
-        //      检查昵称是否已存在
-        if (this.getOneOpt(new LambdaQueryWrapper<CommonUser>().eq(CommonUser::getNickname, nickname)).isPresent()) {
-            log.debug("用户{}：昵称已存在", nickname);
-            throw new ForYourselfException(ResultCodeEnum.USER_ALREADY_EXISTS, null);
+        //  检查邮箱是否已注册
+        user=userMapper.selectOneByEmailIgnoreLogicDelete(request.getEmail());
+        if (user!=null) {
+            log.debug("用户{}：邮箱已注册", nickname);
+            throw new ForYourselfException(ResultCodeEnum.EMAIL_ALREADY_REGISTERED, null);
         }
         //  检查密码
         if (!ValidateUtil.isValidPassword(request.getPassword())) {
@@ -196,18 +200,13 @@ public class UserServiceImpl
         }
         if (!checkCode(request.getCode(), userEmail, emailCodeKey, code, remainTimes)) {
             log.debug("用户{}：验证码错误", nickname);
-            throw new ForYourselfException(ResultCodeEnum.VERIFICATION_CODE_ERROR, remainTimes-1);
-        }
-        //  检查邮箱是否已注册
-        if (this.getOneOpt(new LambdaQueryWrapper<CommonUser>().eq(CommonUser::getEmail, request.getEmail())).isPresent()) {
-            log.debug("用户{}：邮箱已注册", nickname);
-            throw new ForYourselfException(ResultCodeEnum.EMAIL_ALREADY_REGISTERED, null);
+            throw new ForYourselfException(ResultCodeEnum.VERIFICATION_CODE_ERROR, remainTimes - 1);
         }
         //  录入数据库
         //      生成密码密文
         String encryptedPassword = bCryptPasswordEncoder.encode(request.getPassword());
         //      创建用户
-        CommonUser user = new CommonUser();
+        user = new CommonUser();
         //      完善用户信息
         long uid = snowflake.nextId();
         LocalDate joinDate = LocalDate.now();
@@ -235,6 +234,7 @@ public class UserServiceImpl
      */
     @Override
     public String login(UserLoginRequestDTO request) {
+        // TODO
         String name = request.getName();
         log.debug("用户{}：开始登录", name);
         // 人机检测
@@ -349,16 +349,16 @@ public class UserServiceImpl
             log.error("用户{}：Redis缓存格式错误，请检查！", nickname);
             throw new ForYourselfException(ResultCodeEnum.SERVICE_ERROR, null);
         }
-        // 匹配验证码 (包装成方法，返回布尔值，自动执行减次数等措施)
+        //   匹配验证码 (包装成方法，返回布尔值，自动执行减次数等措施)
         if (!checkCode(request.getCode(), request.getEmail(), key, code, remainTimes)) {
-            throw new ForYourselfException(ResultCodeEnum.VERIFICATION_CODE_ERROR, remainTimes-1);
+            throw new ForYourselfException(ResultCodeEnum.VERIFICATION_CODE_ERROR, remainTimes - 1);
         }
         // 构造条件：昵称 + 邮箱 匹配
         LambdaQueryWrapper<CommonUser> lambdaQueryWrapper = new LambdaQueryWrapper<CommonUser>()
                 .eq(CommonUser::getNickname, nickname)
                 .eq(CommonUser::getEmail, request.getEmail());
 
-        // 只查一次数据库】获取用户
+        // 只查一次数据库 获取用户
         CommonUser user = this.getOne(lambdaQueryWrapper);
 
         // 用户不存在 → 抛异常
@@ -373,6 +373,68 @@ public class UserServiceImpl
 
         // 全部匹配 → 执行逻辑删除（自动走 MP 逻辑删除，更新 isDeleted=1）
         this.remove(lambdaQueryWrapper);
+    }
+
+    /**
+     * 用户找回密码
+     * <p>校验流程：Cloudflare人机验证 → 邮箱格式校验 → 验证码校验 → 查询用户(忽略逻辑删除) → 生成随机密码 → 加密更新</p>
+     *
+     * @param request 找回密码请求DTO，包含邮箱、验证码和Cloudflare令牌
+     * @return 新生成的随机密码(明文)
+     */
+    @Override
+    public String forgetPassword(UserForgetPasswordRequestDTO request) {
+        // 提取常用变量
+        String email = request.getEmail();
+        // 检验人机
+        if (!CloudflareTurnstileUtil.verify(request.getCfTurnstileResponse(), cloudflareProperties.getSecret())) {
+            log.warn("用户{}：传来无效cloud flare令牌", email);
+            throw new ForYourselfException(ResultCodeEnum.TOKEN_INVALID, "别攻击了，用爱发电，真的怕了！");
+        }
+        // 检验邮箱格式
+        if (!ValidateUtil.isValidEmail(email)) {
+            throw new ForYourselfException(ResultCodeEnum.EMAIL_FORMAT_ERROR, null);
+        }
+        // 验证验证码
+        String key = BusinessTypeEnum.FORGET_PASSWORD.getName() + AuthConstants.SEPARATOR + email;
+        String value = RedisUtil.get(key);
+        if (value == null) {
+            throw new ForYourselfException(ResultCodeEnum.VERIFICATION_CODE_EXPIRED, null);
+        }
+        String code = null;
+        Integer remainTimes = null;
+        try {
+            code = value.split(AuthConstants.SEPARATOR)[0];
+            remainTimes = Integer.valueOf(value.split(AuthConstants.SEPARATOR)[1]);
+        } catch (NumberFormatException | ArrayIndexOutOfBoundsException e) {
+            log.error("用户{}：Redis缓存格式错误，请检查！", email);
+        }
+        if (!checkCode(request.getVerificationCode(), email, key, code, remainTimes)) {
+            throw new ForYourselfException(ResultCodeEnum.VERIFICATION_CODE_ERROR, remainTimes - 1);
+        }
+        // 获取用户
+        CommonUser user = userMapper.selectOneByEmailIgnoreLogicDelete(email);
+        if (user == null) {
+            throw new ForYourselfException(ResultCodeEnum.ACCOUNT_NOT_EXIST, null);
+        }
+        log.info("用户{}：开始找回密码", user.getNickname());
+        // 生成随机的密码
+        String password = generateRandomPassword(16);
+        // 密码重置
+        user.setPassword(bCryptPasswordEncoder.encode(password));
+        try {
+            userMapper.updatePasswordByUidIgnoreLogicDelete(user.getUid(), user.getPassword());
+        } catch (Exception e) {
+            throw new ForYourselfException(ResultCodeEnum.SERVICE_ERROR, null);
+        }
+        log.info("用户{}：密码重置成功", user.getNickname());
+        // 返回密码
+        return password;
+    }
+
+    @Override
+    public void updateUserInfo(UserUpdateInfoRequestDTO request) {
+
     }
 
     //===================================内部方法===================================
@@ -401,7 +463,7 @@ public class UserServiceImpl
             Integer needTime = value == null ? 0 : Integer.valueOf(value.split(AuthConstants.SEPARATOR)[1]);
             //  获得实际剩余时间
             Long ttl = RedisUtil.getTtl(key, TimeUnit.MINUTES);
-            ttl=ttl<=0?0:ttl;
+            ttl = ttl <= 0 ? 0 : ttl;
             //  计算实际冻结的时间（最大时间-实际剩余时间）
             long actualTime = BanLevelEnum.LEVEL_S.getCode() - ttl;
             //  计算并返回还剩多长冻结时间（计划冻结时间-实际冻结时间）
@@ -501,4 +563,48 @@ public class UserServiceImpl
         // 返回false
         return false;
     }
+
+    /**
+     * 生成符合规则的随机密码
+     * <p>密码规则：8-32位，必须包含字母、数字和特殊符号，不允许首尾空格</p>
+     * <p>生成策略：确保至少包含1 个大写字母、1个小写字母、1 个数字、1个特殊符号，其余字符随机填充</p>
+     *
+     * @param length 密码长度（默认16位）
+     * @return 符合规则的随机密码
+     */
+    private String generateRandomPassword(int length) {
+        // 定义字符集
+        String upperCase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";      // 大写字母
+        String lowerCase = "abcdefghijklmnopqrstuvwxyz";      // 小写字母
+        String digits = "0123456789";                          // 数字
+        String specialChars = "!@#$%^&*()-_=+[]{}|;:',.<>?/"; // 特殊符号
+
+        Random random = new Random();
+        StringBuilder password = new StringBuilder(length);
+
+        // 第一步：确保每种类型至少有一个字符（满足密码强度要求）
+        password.append(upperCase.charAt(random.nextInt(upperCase.length())));   // 至少1个大写字母
+        password.append(lowerCase.charAt(random.nextInt(lowerCase.length())));   // 至少1个小写字母
+        password.append(digits.charAt(random.nextInt(digits.length())));         // 至少1个数字
+        password.append(specialChars.charAt(random.nextInt(specialChars.length()))); // 至少1个特殊符号
+
+        // 第二步：剩余位置从所有字符集中随机选择
+        String allChars = upperCase + lowerCase + digits + specialChars;
+        for (int i = 4; i < length; i++) {
+            password.append(allChars.charAt(random.nextInt(allChars.length())));
+        }
+
+        // 第三步：打乱字符顺序（避免前4位固定是某种类型）
+        char[] passwordArray = password.toString().toCharArray();
+        for (int i = passwordArray.length - 1; i > 0; i--) {
+            int j = random.nextInt(i + 1);
+            // 交换位置
+            char temp = passwordArray[i];
+            passwordArray[i] = passwordArray[j];
+            passwordArray[j] = temp;
+        }
+        return new String(passwordArray);
+    }
+
 }
+

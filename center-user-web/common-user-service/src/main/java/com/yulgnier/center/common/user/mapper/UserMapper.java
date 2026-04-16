@@ -11,6 +11,27 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 */
 public interface UserMapper extends BaseMapper<CommonUser> {
 
+    /**
+     * 根据昵称查询用户(忽略逻辑删除)
+     * @param nickname 用户昵称
+     * @return 用户对象
+     */
+    CommonUser selectOneByNicknameIgnoreLogicDelete(String nickname);
+
+    /**
+     * 根据邮箱查询用户(忽略逻辑删除)
+     * @param email 用户邮箱
+     * @return 用户对象
+     */
+    CommonUser selectOneByEmailIgnoreLogicDelete(String email);
+
+    /**
+     * 根据UID修改用户密码(忽略逻辑删除)
+     * @param uid 用户UID
+     * @param password 加密后的新密码
+     * @return 影响行数
+     */
+    int updatePasswordByUidIgnoreLogicDelete(Long uid, String password);
 }
 
 
