@@ -11,8 +11,8 @@ import lombok.Data;
 public class Result<T> {
     //yu: 定义基础属性
     //返回码
-    @Schema(description = "业务响应码", example = "200")
-    private Integer code;
+    @Schema(description = "业务响应码", example = "00000")
+    private String code;
 
     //返回消息
     @Schema(description = "响应消息")
@@ -33,7 +33,7 @@ public class Result<T> {
 
     //伊格尼尔：你自由补充
 
-    public static <T> Result<T> buildDIY(Integer code, String message, T data) {
+    public static <T> Result<T> buildDIY(String code, String message, T data) {
         Result<T> result = build();
         result.setCode(code);
         result.setMessage(message);
@@ -82,7 +82,7 @@ public class Result<T> {
     }
 
     //lgnier~yu:接收code&message
-    public static <T> Result<T> fail(Integer code, String message, T data) {
+    public static <T> Result<T> fail(String code, String message, T data) {
        return buildDIY(code, message, data);
     }
 }

@@ -25,7 +25,7 @@ public class ForYourselfException extends RuntimeException {
      * 异常状态码
      * 用于标识具体的业务错误类型
      */
-    private Integer code;
+    private String code;
     /**
      * 返回给前端的异常体 Data
      */
@@ -33,14 +33,14 @@ public class ForYourselfException extends RuntimeException {
 
     /**
      * 构造函数 1: 通过状态码和消息直接创建异常
-     * 
+
      * @param code 状态码，例如：500 表示服务器错误，400 表示参数错误
      * @param message 异常描述信息，说明具体错误内容
-     * 
+
      * 使用场景：当你需要自定义状态码和错误消息时使用
      * 示例：new ForYourselfException(400, "用户输入的邮箱格式不正确")
      */
-    public ForYourselfException(Integer code, String message, Object data) {
+    public ForYourselfException(String code, String message, Object data) {
         super(message);  // 调用父类 RuntimeException 的构造函数，将消息传递给异常体系
         this.code = code;  // 初始化本类的 code 字段
         this.data = data;
@@ -50,7 +50,7 @@ public class ForYourselfException extends RuntimeException {
      * 构造函数 2: 通过枚举结果码创建异常
      * 
      * @param resultCodeEnum ResultCodeEnum 枚举对象，预先定义好的状态码和消息组合
-     * 
+
      * 使用场景：当错误是预定义的标准错误时，直接使用枚举更方便
      * 优势：统一管理所有错误码，避免硬编码，便于维护
      * 示例：new ForYourselfException(ResultCodeEnum.PARAM_ERROR)

@@ -42,24 +42,24 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
 
         // 严格校验Bearer格式
         if (authorization == null || authorization.length() <= 7 || !authorization.startsWith("Bearer ")) {
-            return Mono.error(new ForYourselfException(ResultCodeEnum.TOKEN_INVALID, null));
+            return Mono.error(new ForYourselfException(ResultCodeEnum.CAPTCHA_VERIFICATION_FAILED, null));
         }
 
         // 安全提取JWT token（防止数组越界）
         String token = authorization.substring(7); // "Bearer " 长度为7
         if (token.isEmpty()) {
-            return Mono.error(new ForYourselfException(ResultCodeEnum.TOKEN_INVALID, null));
+            return Mono.error(new ForYourselfException(ResultCodeEnum.CAPTCHA_VERIFICATION_FAILED, null));
         }
 
         Map<String, Object> claimsFromToken = JwtUtil.getClaimsFromToken(token); // 解析token,token无效返回null
         if (claimsFromToken == null) {
-            return Mono.error(new ForYourselfException(ResultCodeEnum.TOKEN_INVALID, null));
+            return Mono.error(new ForYourselfException(ResultCodeEnum.CAPTCHA_VERIFICATION_FAILED, null));
         }
 
         // 从 token 中获取用户 UID
         Object uidObj = claimsFromToken.get(AuthConstants.UID_KEY);
         if (uidObj == null) {
-            return Mono.error(new ForYourselfException(ResultCodeEnum.TOKEN_INVALID, "Token 中缺少用户信息"));
+            return Mono.error(new ForYourselfException(ResultCodeEnum.CAPTCHA_VERIFICATION_FAILED, "Token 中缺少用户信息"));
         }
 
         String uid = String.valueOf(uidObj);

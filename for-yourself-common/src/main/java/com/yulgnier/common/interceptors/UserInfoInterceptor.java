@@ -31,7 +31,7 @@ public class UserInfoInterceptor implements HandlerInterceptor {
         String truth = request.getHeader(truthProperties.getTruthKey());
         if (truth == null || !truth.equals(truthProperties.getTruthValue())) {
             log.debug("请求被拦截 - URL(未带请求头'truth'): {}, Method: {}", request.getRequestURI(), request.getMethod());
-            throw new ForYourselfException(ResultCodeEnum.ILLEGAL_REQUEST, null);
+            throw new ForYourselfException(ResultCodeEnum.CAPTCHA_VERIFICATION_FAILED, null);
         }
         // 获取用户uid并存入thread local
 
@@ -40,7 +40,7 @@ public class UserInfoInterceptor implements HandlerInterceptor {
             UserContextUtil.setUid(uid);
         } catch (NumberFormatException e) {
             log.warn("请求被拦截 - URL(未获得uid): {}, Method: {}", request.getRequestURI(), request.getMethod());
-            throw new ForYourselfException(ResultCodeEnum.ILLEGAL_REQUEST, null);
+            throw new ForYourselfException(ResultCodeEnum.CAPTCHA_VERIFICATION_FAILED, null);
         }
         // 放行
         return true;

@@ -63,7 +63,7 @@ public class UserServiceImpl
         log.debug("前端传来cloud flare的token{}", request.getCfTurnstileResponse());
         if (!CloudflareTurnstileUtil.verify(request.getCfTurnstileResponse(), cloudflareProperties.getSecret())) {
             log.warn("邮箱{}：传来无效cloud flare令牌", receiveEmail);
-            throw new ForYourselfException(ResultCodeEnum.ILLEGAL_REQUEST, "别攻击了，用爱发电，真的怕了！");
+            throw new ForYourselfException(ResultCodeEnum.CAPTCHA_VERIFICATION_FAILED, "别攻击了，用爱发电，真的怕了！");
         }
         //  检验邮箱格式是否正确
         if (!ValidateUtil.isValidEmail(receiveEmail)) {
@@ -72,7 +72,7 @@ public class UserServiceImpl
         //  检验业务是否符合参数
         if (request.getBusinessType() == null) {
             log.warn("邮箱{}：业务类型为空", receiveEmail);
-            throw new ForYourselfException(ResultCodeEnum.REQUEST_INCOMPLETE, null);
+            throw new ForYourselfException(ResultCodeEnum.INCOMPLETE_PARAMETERS, null);
         }
         String emailCodeKey = request.getBusinessType().getName() + AuthConstants.SEPARATOR + receiveEmail; //eg: 注册:example@163.com
         String code = generateCode();   // 生成6位随机验证码    あなたのことが大好きです。付き合ってください-愚人节快乐
@@ -83,12 +83,12 @@ public class UserServiceImpl
         Integer needWaitTime = getNeedWaitTime(emailSendCountKey);
         if (needWaitTime > 0) {
             log.debug("邮箱{}：已超过发送限制，请稍后再试", receiveEmail);
-            throw new ForYourselfException(ResultCodeEnum.SMS_SEND_TOO_FREQUENT, needWaitTime);
+            throw new ForYourselfException(ResultCodeEnum.CAPTCHA_REQUEST_TOO_FREQUENT, needWaitTime);
         }
         //  检验验证码是否已经发送
         if (RedisUtil.hasKey(emailCodeKey)) {
             log.debug("邮箱{}：已发送验证码，请勿重复发送", receiveEmail);
-            throw new ForYourselfException(ResultCodeEnum.EMAIL_CODE_SEND_LIMIT, null);
+            throw new ForYourselfException(ResultCodeEnum.CAPTCHA_ALREADY_SENT, null);
         }
 
         //  发送验证码
@@ -97,7 +97,7 @@ public class UserServiceImpl
             RedisUtil.set(emailCodeKey, emailCodeValue, miscellaneousProperties.getEmailExpireMinutes(), TimeUnit.MINUTES); // 保存验证码到缓存，有效期 5 分钟
         } catch (Exception e) {
             log.error("缓存保存失败！", e);
-            throw new ForYourselfException(ResultCodeEnum.SERVICE_ERROR, null);
+            throw new ForYourselfException(ResultCodeEnum.CACHE_SERVICE_ERROR, null);
         }
         log.info("开始向邮箱{}发送验证码", receiveEmail);
         try {
@@ -118,9 +118,9 @@ public class UserServiceImpl
                 RedisUtil.delete(emailCodeKey);
             } catch (Exception ex) {
                 log.error("缓存删除失败！", ex);
-                throw new ForYourselfException(ResultCodeEnum.SERVICE_ERROR, null);
+                throw new ForYourselfException(ResultCodeEnum.CACHE_SERVICE_ERROR, null);
             }
-            throw new ForYourselfException(ResultCodeEnum.VERIFICATION_CODE_NOT_SEND, "❌ 发送失败!!!");
+            throw new ForYourselfException(ResultCodeEnum.THIRD_PARTY_SERVICE_ERROR, "❌ 发送失败!!!");
         }
     }
 
@@ -138,7 +138,7 @@ public class UserServiceImpl
         log.debug("前端传来cloud flare的token{}", request.getCfTurnstileResponse());
         if (!CloudflareTurnstileUtil.verify(request.getCfTurnstileResponse(), cloudflareProperties.getSecret())) {
             log.warn("用户{}：传来无效cloud flare令牌", nickname);
-            throw new ForYourselfException(ResultCodeEnum.TOKEN_INVALID, "别攻击了，用爱发电，真的怕了！");
+            throw new ForYourselfException(ResultCodeEnum.CAPTCHA_VERIFICATION_FAILED, "别攻击了，用爱发电，真的怕了！");
         }
         //  检查昵称格式
         if (!ValidateUtil.isValidUsername(nickname)) {
@@ -149,7 +149,7 @@ public class UserServiceImpl
         CommonUser user = userMapper.selectOneByNicknameIgnoreLogicDelete(nickname);
         if (user != null) {
             log.debug("用户{}：昵称已存在", nickname);
-            throw new ForYourselfException(ResultCodeEnum.USER_ALREADY_EXISTS, null);
+            throw new ForYourselfException(ResultCodeEnum.USERNAME_ALREADY_EXISTS, null);
         }
         //  检验邮箱格式是否正确
         String userEmail = request.getEmail();
@@ -161,7 +161,7 @@ public class UserServiceImpl
         user = userMapper.selectOneByEmailIgnoreLogicDelete(request.getEmail());
         if (user != null) {
             log.debug("用户{}：邮箱已注册", nickname);
-            throw new ForYourselfException(ResultCodeEnum.EMAIL_ALREADY_REGISTERED, null);
+            throw new ForYourselfException(ResultCodeEnum.EMAIL_ALREADY_EXISTS, null);
         }
         //  检查密码
         if (!ValidateUtil.isValidPassword(request.getPassword())) {
@@ -184,7 +184,7 @@ public class UserServiceImpl
         String emailCodeValue = RedisUtil.get(emailCodeKey);
         if (emailCodeValue == null) {
             log.debug("用户{}：验证码已过期，请重新获取", nickname);
-            throw new ForYourselfException(ResultCodeEnum.VERIFICATION_CODE_EXPIRED, null);
+            throw new ForYourselfException(ResultCodeEnum.CAPTCHA_EXPIRED, null);
         }
         String code = null;
         Integer remainTimes = null;
@@ -193,11 +193,11 @@ public class UserServiceImpl
             remainTimes = Integer.parseInt(emailCodeValue.split(AuthConstants.SEPARATOR)[1]);
         } catch (NumberFormatException | ArrayIndexOutOfBoundsException e) {
             log.error("用户{}：Redis缓存格式错误，请检查！", nickname);
-            throw new ForYourselfException(ResultCodeEnum.SERVICE_ERROR, null);
+            throw new ForYourselfException(ResultCodeEnum.CACHE_SERVICE_ERROR, null);
         }
         if (!checkCode(request.getCode(), userEmail, emailCodeKey, code, remainTimes)) {
             log.debug("用户{}：验证码错误", nickname);
-            throw new ForYourselfException(ResultCodeEnum.VERIFICATION_CODE_ERROR, remainTimes - 1);
+            throw new ForYourselfException(ResultCodeEnum.CAPTCHA_ERROR, remainTimes - 1);
         }
         //  录入数据库
         //      生成密码密文
@@ -217,7 +217,7 @@ public class UserServiceImpl
             userMapper.insert(user);
         } catch (Exception e) {
             log.error("用户{}：保存用户失败", nickname, e);
-            throw new ForYourselfException(ResultCodeEnum.SERVICE_ERROR, null);
+            throw new ForYourselfException(ResultCodeEnum.SAVE_USER_FAILED, null);
         }
         //  生成 jwt 令牌
         return generateToken(nickname, uid);
@@ -236,7 +236,7 @@ public class UserServiceImpl
         // 人机检测
         if (!CloudflareTurnstileUtil.verify(request.getCfTurnstileResponse(), cloudflareProperties.getSecret())) {
             log.warn("用户{}：传来无效cloud flare令牌", name);
-            throw new ForYourselfException(ResultCodeEnum.TOKEN_INVALID, "别攻击了，用爱发电，真的怕了！");
+            throw new ForYourselfException(ResultCodeEnum.CAPTCHA_VERIFICATION_FAILED, "别攻击了，用爱发电，真的怕了！");
         }
         // switch 到不同的登录方式
         switch (request.getLoginType()) {
@@ -249,16 +249,16 @@ public class UserServiceImpl
                 CommonUser user = userMapper.selectOneByNicknameIgnoreLogicDelete(name);
                 if (user == null) {
                     log.debug("用户{}：用户名不存在", name);
-                    throw new ForYourselfException(ResultCodeEnum.ACCOUNT_NOT_EXIST, null);
+                    throw new ForYourselfException(ResultCodeEnum.USERNAME_NOT_FOUND, null);
                 }
                 if (!bCryptPasswordEncoder.matches(request.getPw(), user.getPassword())) {
                     log.debug("用户{}：账户或密码错误", name);
-                    throw new ForYourselfException(ResultCodeEnum.ACCOUNT_PASSWORD_ERROR, null);
+                    throw new ForYourselfException(ResultCodeEnum.ACCOUNT_OR_PASSWORD_ERROR, null);
                 }
                 if (user.getIsDeleted() == 1) {
                     log.info("用户{}：账户已注销,正在恢复。。。", name);
                     int i = userMapper.restoreUserIgnoreLogicDelete(user);
-                    if (i == 0) throw new ForYourselfException(ResultCodeEnum.SERVICE_ERROR, null);
+                    if (i == 0) throw new ForYourselfException(ResultCodeEnum.DATABASE_SERVICE_ERROR, null);
                     log.info("用户{}：账户已恢复", name);
                 }
                 return generateToken(name, user.getUid());
@@ -272,16 +272,16 @@ public class UserServiceImpl
                 CommonUser user = userMapper.selectOneByEmailIgnoreLogicDelete(name);
                 if (user == null) {
                     log.debug("用户{}：邮箱不存在", name);
-                    throw new ForYourselfException(ResultCodeEnum.ACCOUNT_NOT_EXIST, null);
+                    throw new ForYourselfException(ResultCodeEnum.EMAIL_NOT_FOUND, null);
                 }
                 if (!bCryptPasswordEncoder.matches(request.getPw(), user.getPassword())) {
                     log.debug("用户{}：账户或密码错误", name);
-                    throw new ForYourselfException(ResultCodeEnum.ACCOUNT_PASSWORD_ERROR, null);
+                    throw new ForYourselfException(ResultCodeEnum.ACCOUNT_OR_PASSWORD_ERROR, null);
                 }
                 if (user.getIsDeleted() == 1) {
                     log.info("用户{}：账户已注销,正在恢复。。。", name);
                     int i = userMapper.restoreUserIgnoreLogicDelete(user);
-                    if (i == 0) throw new ForYourselfException(ResultCodeEnum.SERVICE_ERROR, null);
+                    if (i == 0) throw new ForYourselfException(ResultCodeEnum.DATABASE_SERVICE_ERROR, null);
                     log.info("用户{}：账户已恢复", name);
                 }
                 return generateToken(name, user.getUid());
@@ -290,30 +290,30 @@ public class UserServiceImpl
             case PHONE -> {
                 // TODO
                 log.warn("用户{}：手机号登录未实现", name);
-                throw new ForYourselfException(ResultCodeEnum.FEATURE_NOT_IMPLEMENTED, null);
+                throw new ForYourselfException(ResultCodeEnum.TODO, null);
             }
             // UID 登录
             case UID -> {
                 CommonUser user = userMapper.selectOneByUidIgnoreLogicDelete(Long.valueOf(name));
                 if (user == null) {
                     log.debug("用户{}：UID不存在", name);
-                    throw new ForYourselfException(ResultCodeEnum.ACCOUNT_NOT_EXIST, null);
+                    throw new ForYourselfException(ResultCodeEnum.UID_NOT_FOUND, null);
                 }
                 if (!bCryptPasswordEncoder.matches(request.getPw(), user.getPassword())) {
                     log.debug("用户{}：账户或密码错误", name);
-                    throw new ForYourselfException(ResultCodeEnum.ACCOUNT_PASSWORD_ERROR, null);
+                    throw new ForYourselfException(ResultCodeEnum.ACCOUNT_OR_PASSWORD_ERROR, null);
                 }
                 if (user.getIsDeleted() == 1) {
                     log.info("用户{}：账户已注销,正在恢复。。。", name);
                     int i = userMapper.restoreUserIgnoreLogicDelete(user);
-                    if (i == 0) throw new ForYourselfException(ResultCodeEnum.SERVICE_ERROR, null);
+                    if (i == 0) throw new ForYourselfException(ResultCodeEnum.DATABASE_SERVICE_ERROR, null);
                     log.info("用户{}：账户已恢复", name);
                 }
                 return generateToken(name, user.getUid());
             }
             default -> {
                 log.warn("用户{}：登录方式错误", name);
-                throw new ForYourselfException(ResultCodeEnum.PARAM_ERROR, null);
+                throw new ForYourselfException(ResultCodeEnum.PARAMETER_ERROR, null);
             }
         }
     }
@@ -331,7 +331,7 @@ public class UserServiceImpl
         // 检验是否人机
         if (!CloudflareTurnstileUtil.verify(request.getCfTurnstileResponse(), cloudflareProperties.getSecret())) {
             log.warn("用户{}：传来无效cloud flare令牌", nickname);
-            throw new ForYourselfException(ResultCodeEnum.TOKEN_INVALID, "别攻击了，用爱发电，真的怕了！");
+            throw new ForYourselfException(ResultCodeEnum.CAPTCHA_VERIFICATION_FAILED, "别攻击了，用爱发电，真的怕了！");
         }
         // 检验用户名格式
         if (!ValidateUtil.isValidUsername(nickname)) {
@@ -351,7 +351,7 @@ public class UserServiceImpl
         //   获取value，为null，抛错误
         String value = RedisUtil.get(key);
         if (value == null) {
-            throw new ForYourselfException(ResultCodeEnum.VERIFICATION_CODE_EXPIRED, null);
+            throw new ForYourselfException(ResultCodeEnum.CAPTCHA_EXPIRED, null);
         }
         //   分离验证码和剩余尝试次数
         String code = null;
@@ -361,11 +361,11 @@ public class UserServiceImpl
             remainTimes = Integer.valueOf(value.split(AuthConstants.SEPARATOR)[1]);
         } catch (NumberFormatException | ArrayIndexOutOfBoundsException e) {
             log.error("用户{}：Redis缓存格式错误，请检查！", nickname);
-            throw new ForYourselfException(ResultCodeEnum.SERVICE_ERROR, null);
+            throw new ForYourselfException(ResultCodeEnum.CACHE_SERVICE_ERROR, null);
         }
         //   匹配验证码 (包装成方法，返回布尔值，自动执行减次数等措施)
         if (!checkCode(request.getCode(), request.getEmail(), key, code, remainTimes)) {
-            throw new ForYourselfException(ResultCodeEnum.VERIFICATION_CODE_ERROR, remainTimes - 1);
+            throw new ForYourselfException(ResultCodeEnum.CAPTCHA_ERROR, remainTimes - 1);
         }
         // 构造条件：昵称 + 邮箱 匹配
         LambdaQueryWrapper<CommonUser> lambdaQueryWrapper = new LambdaQueryWrapper<CommonUser>()
@@ -377,12 +377,12 @@ public class UserServiceImpl
 
         // 用户不存在 → 抛异常
         if (user == null) {
-            throw new ForYourselfException(ResultCodeEnum.USERNAME_EMAIL_NOT_MATCH, null);
+            throw new ForYourselfException(ResultCodeEnum.USER_NOT_FOUND, null);
         }
 
         // 校验密码
         if (!bCryptPasswordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new ForYourselfException(ResultCodeEnum.ACCOUNT_PASSWORD_ERROR, null);
+            throw new ForYourselfException(ResultCodeEnum.PASSWORD_ERROR, null);
         }
 
         // 全部匹配 → 执行逻辑删除（自动走 MP 逻辑删除，更新 isDeleted=1）
@@ -403,7 +403,7 @@ public class UserServiceImpl
         // 检验人机
         if (!CloudflareTurnstileUtil.verify(request.getCfTurnstileResponse(), cloudflareProperties.getSecret())) {
             log.warn("用户{}：传来无效cloud flare令牌", email);
-            throw new ForYourselfException(ResultCodeEnum.TOKEN_INVALID, "别攻击了，用爱发电，真的怕了！");
+            throw new ForYourselfException(ResultCodeEnum.CAPTCHA_VERIFICATION_FAILED, "别攻击了，用爱发电，真的怕了！");
         }
         // 检验邮箱格式
         if (!ValidateUtil.isValidEmail(email)) {
@@ -413,7 +413,7 @@ public class UserServiceImpl
         String key = BusinessTypeEnum.FORGET_PASSWORD.getName() + AuthConstants.SEPARATOR + email;
         String value = RedisUtil.get(key);
         if (value == null) {
-            throw new ForYourselfException(ResultCodeEnum.VERIFICATION_CODE_EXPIRED, null);
+            throw new ForYourselfException(ResultCodeEnum.CAPTCHA_EXPIRED, null);
         }
         String code = null;
         Integer remainTimes = null;
@@ -424,12 +424,12 @@ public class UserServiceImpl
             log.error("用户{}：Redis缓存格式错误，请检查！", email);
         }
         if (!checkCode(request.getVerificationCode(), email, key, code, remainTimes)) {
-            throw new ForYourselfException(ResultCodeEnum.VERIFICATION_CODE_ERROR, remainTimes - 1);
+            throw new ForYourselfException(ResultCodeEnum.CACHE_SERVICE_ERROR, remainTimes - 1);
         }
         // 获取用户
         CommonUser user = userMapper.selectOneByEmailIgnoreLogicDelete(email);
         if (user == null) {
-            throw new ForYourselfException(ResultCodeEnum.ACCOUNT_NOT_EXIST, null);
+            throw new ForYourselfException(ResultCodeEnum.USER_NOT_FOUND, null);
         }
         log.info("用户{}：开始找回密码", user.getNickname());
         // 生成随机的密码
@@ -439,7 +439,7 @@ public class UserServiceImpl
         try {
             userMapper.updatePasswordByUidIgnoreLogicDelete(user.getUid(), user.getPassword());
         } catch (Exception e) {
-            throw new ForYourselfException(ResultCodeEnum.SERVICE_ERROR, null);
+            throw new ForYourselfException(ResultCodeEnum.DATABASE_SERVICE_ERROR, null);
         }
         log.info("用户{}：密码重置成功", user.getNickname());
         // 返回密码
@@ -457,18 +457,21 @@ public class UserServiceImpl
         LambdaQueryWrapper<CommonUser> eq = new LambdaQueryWrapper<CommonUser>().eq(CommonUser::getUid, UserContextUtil.getUid());
         CommonUser user = this.getOne(eq);
         if (user == null) {
-            throw new ForYourselfException(ResultCodeEnum.ACCOUNT_EXIST, null);
+            throw new ForYourselfException(ResultCodeEnum.USER_NOT_FOUND, null);
         }
         // 检查昵称
         if (!ValidateUtil.isValidUsername(request.getNickname())) {
             throw new ForYourselfException(ResultCodeEnum.USERNAME_FORMAT_ERROR, null);
         }
         if (this.getOneOpt(new LambdaQueryWrapper<CommonUser>().eq(CommonUser::getNickname, request.getNickname())).isPresent()) {
-            throw new ForYourselfException(ResultCodeEnum.USER_ALREADY_EXISTS, null);
+            throw new ForYourselfException(ResultCodeEnum.USER_NOT_FOUND, null);
         }
         user.setNickname(request.getNickname());
         // 检查生日
-        if (request.getBirthday() != null && request.getBirthday().isBefore(LocalDate.now())) {
+        if (request.getBirthday() != null) {
+            if (request.getBirthday().isAfter(LocalDate.now())) {
+                throw new ForYourselfException(ResultCodeEnum.DATE_FORMAT_ERROR, null);
+            }
             user.setBirthday(request.getBirthday());
         }
         // 检查性别
@@ -511,7 +514,7 @@ public class UserServiceImpl
             return needTime - (int) actualTime;
         } catch (NumberFormatException | ArrayIndexOutOfBoundsException e) {
             log.error("获取剩余冻结时间失败", e);
-            throw new ForYourselfException(ResultCodeEnum.SERVICE_ERROR, null);
+            throw new ForYourselfException(ResultCodeEnum.SYSTEM_EXECUTION_ERROR, null);
         }
     }
 
@@ -568,7 +571,7 @@ public class UserServiceImpl
             return JwtUtil.generateToken(loadHashMap, jwtProperties.getExpireHour(), TimeUnit.HOURS);
         } catch (Exception e) {
             log.error("用户{}：生成jwt令牌失败", nickname, e);
-            throw new ForYourselfException(ResultCodeEnum.SERVICE_ERROR, null);
+            throw new ForYourselfException(ResultCodeEnum.SYSTEM_EXECUTION_ERROR, null);
         }
     }
 

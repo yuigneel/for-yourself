@@ -32,6 +32,6 @@ public class GlobalExceptionHandler {
     @ResponseBody
     public Result handle(MethodArgumentNotValidException e) {
         log.debug("[参数空值异常处理]",e);
-        return Result.fail(ResultCodeEnum.REQUEST_INCOMPLETE.getCode(), ResultCodeEnum.REQUEST_INCOMPLETE.getMessage(), null);
+        return Result.fail(ResultCodeEnum.INCOMPLETE_PARAMETERS.getCode(), ResultCodeEnum.INCOMPLETE_PARAMETERS.getMessage(), null);
     }
 }
