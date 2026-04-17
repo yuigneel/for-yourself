@@ -7,6 +7,7 @@ import com.yulgnier.common.model.result.ResultCodeEnum;
 import com.yulgnier.common.utils.JwtUtil;
 import com.yulgnier.common.config.properties.GateWayProperties;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
@@ -21,6 +22,7 @@ import java.util.Map;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class AuthGlobalFilter implements GlobalFilter, Ordered {
     private final GateWayProperties gateWayProperties;
     private final AntPathMatcher antPathMatcher = new AntPathMatcher();
@@ -34,6 +36,7 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
         ServerHttpRequest request = exchange.getRequest();
         // 判断是否需要拦截
         if (isExcludePath(request.getPath().toString())) {
+            log.debug("请求被放行 - URL: {}", request.getPath());
             return chain.filter(exchange);
         }
         // 校验并解析token
@@ -97,6 +100,7 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
                 return true;
             }
         }
+        log.debug("请求被拦截，URL: {}", path);
         return false;
     }
 }

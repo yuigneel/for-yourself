@@ -7,12 +7,23 @@ spring:
 
 gateway:
   white-list:
+    # Knife4j 接口文档
+    - /doc.html
+    - /webjars/**
+    - /swagger-resources/**
+    - /v3/api-docs/**
+    - /v2/api-docs/**
+    # 浏览器自动请求 + 框架错误页
+    - /.well-known/**
+    - /error
+    - /favicon.ico
+    # 项目用
     - /center-common/user/register
     - /center-common/user/login
     - /center-common/user/getEmailCode
     - /center-common/user/forgetPassword
   routes:
-    goroup: ${your.gateway.routes.goroup}
+    group: ${your.gateway.routes.group}
     data-id: ${your.gateway.routes.data-id}
 
 # JWT 配置
@@ -26,6 +37,12 @@ logging:
     # 把 com.yourproject 改成你项目的**根包名**（启动类所在的包）
     com.yulgnier.gateway: DEBUG            #TODO-----------------------改---------------------
     com.yulgnier.common: DEBUG  # 公共模块（包含全局异常处理器）  #TODO-----------------------改---------------------
+    # 开启网关核心日志（路由匹配、转发）
+    org.springframework.cloud.gateway: debug
+    # 开启CORS跨域日志（OPTIONS预检处理）
+    org.springframework.web.cors: debug
+    # 开启WebFlux请求日志（完整请求流程）
+    org.springframework.web.reactive: debug
 
 truth:
   truth-key: ${your.truth.truth-key}

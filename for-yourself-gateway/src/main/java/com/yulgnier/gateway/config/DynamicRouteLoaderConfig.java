@@ -31,7 +31,7 @@ public class DynamicRouteLoaderConfig {
     public void initRouteConfigListener() throws NacosException {
         log.info("========== 开始初始化动态路由配置 ==========");
         //1.项目启动时，先拉取一次配置，然后监听配置的更新
-        String configInfo = nacosConfigManager.getConfigService().getConfigAndSignListener(dynamicRouteLoaderProperties.getDataId(), dynamicRouteLoaderProperties.getGoroup(), 5000, new Listener() {
+        String configInfo = nacosConfigManager.getConfigService().getConfigAndSignListener(dynamicRouteLoaderProperties.getDataId(), dynamicRouteLoaderProperties.getGroup(), 5000, new Listener() {
             /**
              *  获取线程池 目前用不到
              */

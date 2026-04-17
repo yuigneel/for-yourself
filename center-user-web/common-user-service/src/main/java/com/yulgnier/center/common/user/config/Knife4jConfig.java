@@ -23,9 +23,9 @@ public class Knife4jConfig {
                         .version("v0.0.1")                  // 接口文档版本（遵循语义化版本）
                         .description("整个”ForYourself“生态的普通用户登录界面接口文档")     // 文档描述（写清服务作用、对接说明）
                         .contact(new Contact()
-                                        .name("yulgnier")          // 开发者/团队名称
-                                        .url("https://amis-homepage-main.vercel.app")  // 开发者地址（选填）
-                                        .email("yulgnier@gmail.com")           // 联系邮箱
+                                .name("yulgnier")          // 开发者/团队名称
+                                .url("https://amis-homepage-main.vercel.app")  // 开发者地址（选填）
+                                .email("yulgnier@gmail.com")           // 联系邮箱
                         )
                         // 服务条款地址（可选，标注API的使用规则/协议，无特殊要求可填示例地址）
                         .termsOfService("http://doc.xiaominfo.com")
@@ -35,7 +35,6 @@ public class Knife4jConfig {
                                 .url("http://doc.xiaominfo.com"))   // 许可证官方链接（建议填对应协议的官方地址）
                 );
     }
-
     /**
      * 2. 接口分组配置【业务分组】
      * 企业规范：一个微服务/一个模块 定义一个分组

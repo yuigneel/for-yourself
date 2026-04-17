@@ -190,4 +190,9 @@ public class UserController {
     public String changeEmail() {
         return "换绑邮箱";
     }
+    @Operation(summary = "测试专用")
+    @GetMapping("/test")
+    public String test() {
+        return "测试专用";
+    }
 }

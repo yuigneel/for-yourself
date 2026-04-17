@@ -10,6 +10,6 @@ import org.springframework.stereotype.Component;
 @Component
 @ConfigurationProperties(prefix = "gateway.routes")
 public class DynamicRouteLoaderProperties {
-    private String goroup;
+    private String group;
     private String dataId;
 }
