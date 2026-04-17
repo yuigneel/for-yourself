@@ -1,6 +1,7 @@
 package com.yulgnier.center.common.user.controller;
 
 import com.yulgnier.center.common.user.model.dto.*;
+import com.yulgnier.center.common.user.model.vo.UserInfoResponseVO;
 import com.yulgnier.center.common.user.service.UserService;
 import com.yulgnier.common.model.result.Result;
 import io.swagger.v3.oas.annotations.Operation;
@@ -179,20 +180,32 @@ public class UserController {
        String response = userService.forgetPassword(request);
         return Result.ok(response);
     }
+
     @Operation(summary = "修改用户普通信息")
     @PostMapping("/updateUserInfo")
     public Result<String> updateUserInfo(@Valid @RequestBody UserUpdateInfoRequestDTO request) {
          userService.updateUserInfo(request);
          return Result.ok("修改成功");
     }
+
     @Operation(summary = "换绑邮箱")
     @PostMapping("/changeEmail")
-    public String changeEmail() {
-        return "换绑邮箱";
+    public Result<String> changeEmail(@Valid @RequestBody UserChangeEmailRequestDTO  request) {
+        userService.changeEmail(request);
+        return Result.ok("更改成功");
     }
-    @Operation(summary = "测试专用")
-    @GetMapping("/test")
-    public String test() {
-        return "测试专用";
+
+    @Operation(summary = "获取用户基础信息")
+    @GetMapping("/getUserInfo")
+    public Result<UserInfoResponseVO> getUserInfo() {
+        UserInfoResponseVO response = userService.getUserInfo();
+        return Result.ok(response);
+    }
+    @Operation(summary = "修改用户密码")
+    @PostMapping("/updatePassword")
+    // TODO
+    public Result<String> updatePassword(@Valid @RequestBody UserUpdatePasswordRequestDTO request) {
+        userService.updatePassword(request);
+        return Result.ok("修改成功");
     }
 }

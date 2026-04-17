@@ -7,6 +7,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+/**
+ * Web MVC 配置类
+ * 配置拦截器，用于处理用户信息
+ *
+ * @author yulgnier
+ */
+
 @RequiredArgsConstructor
 @Configuration
 public class WebMVCConfig implements WebMvcConfigurer {

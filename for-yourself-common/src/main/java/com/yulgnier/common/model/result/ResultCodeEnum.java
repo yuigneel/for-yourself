@@ -62,6 +62,8 @@ public enum ResultCodeEnum {
     PASSWORD_ERROR("A0301", "密码错误"),
     CAPTCHA_EXPIRED("A0302", "验证码已过期"),
     ACCOUNT_OR_PASSWORD_ERROR("A0303", "账户或密码错误"),
+    ACCOUNT_BANNED("A0304", "账户已被封禁"),
+    ACCOUNT_CANCELLED("A0305", "账户已注销"),
     // A04xx 用户隐私
     // A05xx 用户资产
     SAVE_USER_FAILED("A0500", "保存用户失败"),

@@ -14,6 +14,7 @@ import com.yulgnier.center.common.user.model.dto.*;
 import com.yulgnier.center.common.user.model.enums.BanLevelEnum;
 import com.yulgnier.center.common.user.model.enums.BusinessTypeEnum;
 import com.yulgnier.center.common.user.model.enums.GenderEnum;
+import com.yulgnier.center.common.user.model.vo.UserInfoResponseVO;
 import com.yulgnier.center.common.user.service.UserService;
 import com.yulgnier.common.config.properties.JwtProperties;
 import com.yulgnier.common.model.constants.AuthConstants;
@@ -30,6 +31,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import java.util.Random;
@@ -424,7 +426,7 @@ public class UserServiceImpl
             log.error("用户{}：Redis缓存格式错误，请检查！", email);
         }
         if (!checkCode(request.getVerificationCode(), email, key, code, remainTimes)) {
-            throw new ForYourselfException(ResultCodeEnum.CACHE_SERVICE_ERROR, remainTimes - 1);
+            throw new ForYourselfException(ResultCodeEnum.CAPTCHA_ERROR, remainTimes - 1);
         }
         // 获取用户
         CommonUser user = userMapper.selectOneByEmailIgnoreLogicDelete(email);
@@ -479,6 +481,64 @@ public class UserServiceImpl
             user.setGender(request.getGenderEnum());
         }
         this.updateById(user);
+    }
+
+    /**
+     * 用户换绑邮箱
+     * <p>校验流程：查询用户 → 新邮箱格式校验 → 验证码校验 → 更新邮箱</p>
+     *
+     * @param request 换绑邮箱请求DTO，包含新邮箱、用户密码和新邮箱验证码
+     */
+    @Override
+    public void changeEmail(UserChangeEmailRequestDTO request) {
+        // TODO
+        CommonUser user = userMapper.selectOneByUidIgnoreLogicDelete(UserContextUtil.getUid());
+        if (user == null) {
+            throw new ForYourselfException(ResultCodeEnum.ACCOUNT_CANCELLED, null);
+        }
+        log.info("用户{}：开始换绑邮箱", user.getNickname());
+        // 检验邮箱格式
+        if (!ValidateUtil.isValidEmail(request.getNewEmail())) {
+            throw new ForYourselfException(ResultCodeEnum.EMAIL_FORMAT_ERROR, null);
+        }
+        // 验证码
+        String key = BusinessTypeEnum.BIND_EMAIL.getName() + AuthConstants.SEPARATOR + request.getNewEmail();
+        String value = RedisUtil.get(key);
+        if (value == null) {
+            throw new ForYourselfException(ResultCodeEnum.CAPTCHA_EXPIRED, null);
+        }
+        String code = null;
+        Integer remainTimes = null;
+        try {
+            code = value.split(AuthConstants.SEPARATOR)[0];
+            remainTimes = Integer.valueOf(value.split(AuthConstants.SEPARATOR)[1]);
+        } catch (NumberFormatException | ArrayIndexOutOfBoundsException e) {
+            log.error("用户{}：Redis缓存格式错误，请检查！", user.getNickname());
+            throw new ForYourselfException(ResultCodeEnum.CACHE_SERVICE_ERROR, null);
+        }
+        if (!checkCode(request.getVerificationCode(), request.getNewEmail(), key, code, remainTimes)) {
+            throw new ForYourselfException(ResultCodeEnum.CACHE_SERVICE_ERROR, remainTimes - 1);
+        }
+        // 更新用户
+        user.setEmail(request.getNewEmail());
+        this.updateById(user);
+        log.info("用户{}：换绑邮箱成功", user.getNickname());
+    }
+
+    /**
+     * 获取用户信息
+     * <p>根据当前登录用户的UID查询并返回用户详细信息</p>
+     *
+     * @return 用户信息响应VO，包含用户的基本信息
+     */
+    @Override
+    public UserInfoResponseVO getUserInfo() {
+        LambdaQueryWrapper<CommonUser> eq = new LambdaQueryWrapper<CommonUser>().eq(CommonUser::getUid, UserContextUtil.getUid());
+        Optional<CommonUser> oneOpt = this.getOneOpt(eq);
+        if (oneOpt.isEmpty())throw new ForYourselfException(ResultCodeEnum.ACCOUNT_CANCELLED, null);
+        UserInfoResponseVO vo = new UserInfoResponseVO();
+        BeanUtil.copyProperties(oneOpt.get(), vo);
+        return vo;
     }
 
     //===================================内部方法===================================

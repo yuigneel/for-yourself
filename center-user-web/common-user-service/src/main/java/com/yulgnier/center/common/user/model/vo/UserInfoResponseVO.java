@@ -1,0 +1,40 @@
+package com.yulgnier.center.common.user.model.vo;
+
+import com.yulgnier.center.common.user.model.enums.GenderEnum;
+import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.Data;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
+/**
+ * 用户基础信息响应 VO
+ *
+ * @author yulgnier
+ * @date 2026-04-17
+ */
+@Data
+@Schema(description = "用户基础信息响应")
+public class UserInfoResponseVO {
+    
+    @Schema(description = "用户唯一业务UID", example = "1234567890")
+    private Long uid;
+    
+    @Schema(description = "用户邮箱", example = "example@163.com")
+    private String email;
+    
+    @Schema(description = "用户昵称", example = "yulgnier")
+    private String nickname;
+    
+    @Schema(description = "性别", example = "UNKNOWN")
+    private GenderEnum gender;
+    
+    @Schema(description = "出生日期", example = "2000-01-01")
+    private LocalDate birthday;
+    
+    @Schema(description = "平台入驻日期", example = "2024-01-01")
+    private LocalDate joinDate;
+    
+    @Schema(description = "账户状态：2-禁用 1-警告 0-正常", example = "0")
+    private Integer accountStatus;
+}
