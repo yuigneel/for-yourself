@@ -4,6 +4,7 @@ package com.yulgnier.center.common.user.service.impl;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.lang.Snowflake;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.yulgnier.center.common.user.config.properties.CloudflareProperties;
 import com.yulgnier.center.common.user.config.properties.MailProperties;
@@ -15,6 +16,7 @@ import com.yulgnier.center.common.user.model.enums.BanLevelEnum;
 import com.yulgnier.center.common.user.model.enums.BusinessTypeEnum;
 import com.yulgnier.center.common.user.model.enums.GenderEnum;
 import com.yulgnier.center.common.user.model.vo.UserInfoResponseVO;
+import com.yulgnier.center.common.user.model.vo.UserLoginResponseVO;
 import com.yulgnier.center.common.user.service.UserService;
 import com.yulgnier.common.config.properties.JwtProperties;
 import com.yulgnier.common.model.constants.AuthConstants;
@@ -232,8 +234,9 @@ public class UserServiceImpl
      * @return jwt 令牌
      */
     @Override
-    public String login(UserLoginRequestDTO request) {
+    public UserLoginResponseVO login(UserLoginRequestDTO request) {
         String name = request.getName();
+        UserLoginResponseVO userLoginResponseVO = new UserLoginResponseVO();
         log.debug("用户{}：开始登录", name);
         // 人机检测
         if (!CloudflareTurnstileUtil.verify(request.getCfTurnstileResponse(), cloudflareProperties.getSecret())) {
@@ -257,13 +260,16 @@ public class UserServiceImpl
                     log.debug("用户{}：账户或密码错误", name);
                     throw new ForYourselfException(ResultCodeEnum.ACCOUNT_OR_PASSWORD_ERROR, null);
                 }
+                userLoginResponseVO.setResultCode(ResultCodeEnum.USER_NORMAL_LOGIN);
                 if (user.getIsDeleted() == 1) {
                     log.info("用户{}：账户已注销,正在恢复。。。", name);
                     int i = userMapper.restoreUserIgnoreLogicDelete(user);
                     if (i == 0) throw new ForYourselfException(ResultCodeEnum.DATABASE_SERVICE_ERROR, null);
                     log.info("用户{}：账户已恢复", name);
+                    userLoginResponseVO.setResultCode(ResultCodeEnum.USER_CANCELLED_UNDO_LOGIN);
                 }
-                return generateToken(name, user.getUid());
+                userLoginResponseVO.setToken(generateToken(name, user.getUid()));
+                return userLoginResponseVO;
             }
             // 邮箱登录
             case EMAIL -> {
@@ -280,13 +286,16 @@ public class UserServiceImpl
                     log.debug("用户{}：账户或密码错误", name);
                     throw new ForYourselfException(ResultCodeEnum.ACCOUNT_OR_PASSWORD_ERROR, null);
                 }
+                userLoginResponseVO.setResultCode(ResultCodeEnum.USER_NORMAL_LOGIN);
                 if (user.getIsDeleted() == 1) {
                     log.info("用户{}：账户已注销,正在恢复。。。", name);
                     int i = userMapper.restoreUserIgnoreLogicDelete(user);
                     if (i == 0) throw new ForYourselfException(ResultCodeEnum.DATABASE_SERVICE_ERROR, null);
                     log.info("用户{}：账户已恢复", name);
+                    userLoginResponseVO.setResultCode(ResultCodeEnum.USER_CANCELLED_UNDO_LOGIN);
                 }
-                return generateToken(name, user.getUid());
+                userLoginResponseVO.setToken(generateToken(name, user.getUid()));
+                return userLoginResponseVO;
             }
             // 手机号登录
             case PHONE -> {
@@ -305,13 +314,15 @@ public class UserServiceImpl
                     log.debug("用户{}：账户或密码错误", name);
                     throw new ForYourselfException(ResultCodeEnum.ACCOUNT_OR_PASSWORD_ERROR, null);
                 }
+                userLoginResponseVO.setResultCode(ResultCodeEnum.USER_NORMAL_LOGIN);
                 if (user.getIsDeleted() == 1) {
                     log.info("用户{}：账户已注销,正在恢复。。。", name);
                     int i = userMapper.restoreUserIgnoreLogicDelete(user);
                     if (i == 0) throw new ForYourselfException(ResultCodeEnum.DATABASE_SERVICE_ERROR, null);
                     log.info("用户{}：账户已恢复", name);
                 }
-                return generateToken(name, user.getUid());
+                userLoginResponseVO.setToken(generateToken(name, user.getUid()));
+                return userLoginResponseVO;
             }
             default -> {
                 log.warn("用户{}：登录方式错误", name);
@@ -461,6 +472,7 @@ public class UserServiceImpl
         if (user == null) {
             throw new ForYourselfException(ResultCodeEnum.USER_NOT_FOUND, null);
         }
+        LambdaUpdateWrapper<CommonUser> yulgnier = new LambdaUpdateWrapper<CommonUser>().eq(CommonUser::getId, user.getId());
         // 检查昵称
         if (!ValidateUtil.isValidUsername(request.getNickname())) {
             throw new ForYourselfException(ResultCodeEnum.USERNAME_FORMAT_ERROR, null);
@@ -468,19 +480,23 @@ public class UserServiceImpl
         if (this.getOneOpt(new LambdaQueryWrapper<CommonUser>().eq(CommonUser::getNickname, request.getNickname())).isPresent()) {
             throw new ForYourselfException(ResultCodeEnum.USER_NOT_FOUND, null);
         }
-        user.setNickname(request.getNickname());
+        yulgnier.set(CommonUser::getNickname, request.getNickname());
         // 检查生日
         if (request.getBirthday() != null) {
             if (request.getBirthday().isAfter(LocalDate.now())) {
                 throw new ForYourselfException(ResultCodeEnum.DATE_FORMAT_ERROR, null);
             }
-            user.setBirthday(request.getBirthday());
+            yulgnier.set(CommonUser::getBirthday, request.getBirthday());
         }
         // 检查性别
         if (request.getGenderEnum() != null) {
-            user.setGender(request.getGenderEnum());
+            yulgnier.set(CommonUser::getGender, request.getGenderEnum().getCode());
         }
-        this.updateById(user);
+        try {
+            this.update(yulgnier);
+        } catch (Exception e) {
+            throw new ForYourselfException(ResultCodeEnum.DATABASE_SERVICE_ERROR, null);
+        }
     }
 
     /**
@@ -491,8 +507,7 @@ public class UserServiceImpl
      */
     @Override
     public void changeEmail(UserChangeEmailRequestDTO request) {
-        // TODO
-        CommonUser user = userMapper.selectOneByUidIgnoreLogicDelete(UserContextUtil.getUid());
+        CommonUser user = this.getOne(new LambdaQueryWrapper<CommonUser>().eq(CommonUser::getUid, UserContextUtil.getUid()));
         if (user == null) {
             throw new ForYourselfException(ResultCodeEnum.ACCOUNT_CANCELLED, null);
         }
@@ -500,6 +515,13 @@ public class UserServiceImpl
         // 检验邮箱格式
         if (!ValidateUtil.isValidEmail(request.getNewEmail())) {
             throw new ForYourselfException(ResultCodeEnum.EMAIL_FORMAT_ERROR, null);
+        }
+        if (user.getEmail().equals(request.getNewEmail())) {
+            throw new ForYourselfException(ResultCodeEnum.PARAMETER_ERROR, null);
+        }
+        // 密码
+        if (!bCryptPasswordEncoder.matches(request.getPassword(), user.getPassword())) {
+            throw new ForYourselfException(ResultCodeEnum.PASSWORD_ERROR, null);
         }
         // 验证码
         String key = BusinessTypeEnum.BIND_EMAIL.getName() + AuthConstants.SEPARATOR + request.getNewEmail();
@@ -520,9 +542,13 @@ public class UserServiceImpl
             throw new ForYourselfException(ResultCodeEnum.CACHE_SERVICE_ERROR, remainTimes - 1);
         }
         // 更新用户
-        user.setEmail(request.getNewEmail());
-        this.updateById(user);
-        log.info("用户{}：换绑邮箱成功", user.getNickname());
+        LambdaUpdateWrapper<CommonUser> set = new LambdaUpdateWrapper<CommonUser>().eq(CommonUser::getId, user.getId()).set(CommonUser::getEmail, request.getNewEmail());
+        try {
+            this.update(set);
+            log.info("用户{}：换绑邮箱成功", user.getNickname());
+        } catch (Exception e) {
+            throw new ForYourselfException(ResultCodeEnum.DATABASE_SERVICE_ERROR, null);
+        }
     }
 
     /**
@@ -535,10 +561,42 @@ public class UserServiceImpl
     public UserInfoResponseVO getUserInfo() {
         LambdaQueryWrapper<CommonUser> eq = new LambdaQueryWrapper<CommonUser>().eq(CommonUser::getUid, UserContextUtil.getUid());
         Optional<CommonUser> oneOpt = this.getOneOpt(eq);
-        if (oneOpt.isEmpty())throw new ForYourselfException(ResultCodeEnum.ACCOUNT_CANCELLED, null);
+        if (oneOpt.isEmpty()) throw new ForYourselfException(ResultCodeEnum.ACCOUNT_CANCELLED, null);
         UserInfoResponseVO vo = new UserInfoResponseVO();
         BeanUtil.copyProperties(oneOpt.get(), vo);
         return vo;
+    }
+
+    /**
+     * 用户修改密码
+     * <p>校验流程：查询用户 → 新旧密码一致性校验 → 原密码验证 → 加密更新密码</p>
+     * <p>使用 LambdaUpdateWrapper 局部更新，避免触发 update_time 自动更新</p>
+     *
+     * @param request 修改密码请求DTO，包含原始密码和新密码
+     */
+    @Override
+    public void updatePassword(UserUpdatePasswordRequestDTO request) {
+        // 获取用户
+        LambdaQueryWrapper<CommonUser> eq = new LambdaQueryWrapper<CommonUser>().eq(CommonUser::getUid, UserContextUtil.getUid());
+        CommonUser commonUser = null;
+        try {
+            commonUser = this.getOneOpt(eq).get();
+        } catch (Exception e) {
+            throw new ForYourselfException(ResultCodeEnum.USER_NOT_FOUND, null);
+        }
+        // 验证密码
+        if (request.getNewPassword().equals(request.getOldPassword()))
+            throw new ForYourselfException(ResultCodeEnum.PARAMETER_ERROR, null);
+        if (!bCryptPasswordEncoder.matches(request.getOldPassword(), commonUser.getPassword())) {
+            throw new ForYourselfException(ResultCodeEnum.PASSWORD_ERROR, null);
+        }
+        // 修改密码
+        LambdaUpdateWrapper<CommonUser> updateWrapper = new LambdaUpdateWrapper<CommonUser>()
+                .eq(CommonUser::getUid, commonUser.getUid()) // 条件：根据UID更新
+                .set(CommonUser::getPassword, bCryptPasswordEncoder.encode(request.getNewPassword())); // 只更新密码
+
+        // 执行局部更新（不会更新create_time/update_time，数据库自动生效！）
+        this.update(updateWrapper);
     }
 
     //===================================内部方法===================================
@@ -624,6 +682,9 @@ public class UserServiceImpl
 
     /**
      * 生成jwt 令牌
+     *
+     * @param nickname 昵称（用于打日志）
+     * @param uid      实际存入信息
      */
     private String generateToken(String nickname, Long uid) {
         HashMap<String, Object> loadHashMap = new HashMap<>(Map.of(AuthConstants.UID_KEY, uid));

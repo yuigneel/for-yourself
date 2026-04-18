@@ -2,6 +2,7 @@ package com.yulgnier.center.common.user.controller;
 
 import com.yulgnier.center.common.user.model.dto.*;
 import com.yulgnier.center.common.user.model.vo.UserInfoResponseVO;
+import com.yulgnier.center.common.user.model.vo.UserLoginResponseVO;
 import com.yulgnier.center.common.user.service.UserService;
 import com.yulgnier.common.model.result.Result;
 import io.swagger.v3.oas.annotations.Operation;
@@ -162,8 +163,8 @@ public class UserController {
 
     @Operation(summary = "用户登录")
     @PostMapping("/login")
-    public Result<String> login( @Valid @RequestBody UserLoginRequestDTO  request) {
-        String response = userService.login(request);
+    public Result<UserLoginResponseVO> login( @Valid @RequestBody UserLoginRequestDTO  request) {
+        UserLoginResponseVO response = userService.login(request);
         return Result.ok(response);
     }
 
@@ -203,7 +204,6 @@ public class UserController {
     }
     @Operation(summary = "修改用户密码")
     @PostMapping("/updatePassword")
-    // TODO
     public Result<String> updatePassword(@Valid @RequestBody UserUpdatePasswordRequestDTO request) {
         userService.updatePassword(request);
         return Result.ok("修改成功");

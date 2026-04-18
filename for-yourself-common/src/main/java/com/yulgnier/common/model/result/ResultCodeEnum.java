@@ -1,5 +1,7 @@
 package com.yulgnier.common.model.result;
 
+import com.fasterxml.jackson.annotation.JsonValue;
+
 /**
  * 统一返回结果状态信息类
  * <p>
@@ -70,6 +72,10 @@ public enum ResultCodeEnum {
     USER_NOT_FOUND("A0501", "用户不存在"),
     // A06xx 传输错误
     // A07xx 用户设备错误
+    // A08xx 用户状态
+    USER_NORMAL_LOGIN("A0800", "用户正常登录"),
+    USER_CANCELLED_UNDO_LOGIN("A0801", "用户取消注销并登录"),
+
     // ====================== B0xxx 系统执行出错 ======================
     SYSTEM_EXECUTION_ERROR("B0001", "系统执行出错"),
 
