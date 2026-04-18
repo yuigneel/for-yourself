@@ -9,6 +9,6 @@
         <version>0.0.1-SNAPSHOT</version>
     </parent>
 
-    <artifactId>admain-user-service</artifactId>
+    <artifactId>admin-user-service</artifactId>
 
 </project>

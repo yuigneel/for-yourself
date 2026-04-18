@@ -7,11 +7,9 @@ import com.yulgnier.common.config.properties.TruthProperties;
 import com.yulgnier.common.exception.GlobalExceptionHandler;
 import com.yulgnier.common.utils.JwtUtil;
 import com.yulgnier.common.utils.RedisUtil;
-import feign.RequestInterceptor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /**
  * Common 通用模块 自动配置类
@@ -32,7 +30,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 // 限定：只有在 SpringMVC Web 项目中才生效（非Web项目不加载，避免无效配置）
 @Import({GlobalExceptionHandler.class, RedisConfig.class, RedisUtil.class, JacksonConfig.class, SecurityConfig.class,
         JwtProperties.class, SnowflakeProperties.class, SnowflakeConfig.class, JwtUtil.class, TruthProperties.class,
-        WebMVCConfig.class, GateWayProperties.class,DefaultFeignClient.class,
+        WebMVCConfig.class, GateWayProperties.class, DefaultFeignClientConfig.class,
 })   // 核心：自动导入全局异常处理器，将其注册到Spring容器中
 public class ForYourselfServletCommonAutoConfiguration {
     /**

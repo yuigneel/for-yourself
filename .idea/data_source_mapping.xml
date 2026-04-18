@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="DataSourcePerFileMappings">
-    <file url="file://$APPLICATION_CONFIG_DIR$/consoles/db/dd155191-255e-4ca6-b122-6bb7f7e444cb/console.sql" value="dd155191-255e-4ca6-b122-6bb7f7e444cb" />
+    <file url="file://$PROJECT_DIR$/center-user-web/docs/mysql-sql/center-user-service.sql" value="16ce04cc-4b2a-4824-8222-1578709fa491" />
   </component>
 </project>

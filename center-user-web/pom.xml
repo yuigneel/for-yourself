@@ -11,7 +11,7 @@
 
     <modules>
         <module>common-user-service</module>
-        <module>admain-user-service</module>
+        <module>admin-user-service</module>
         <module>center-user-api</module>
     </modules>
 
