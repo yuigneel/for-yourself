@@ -105,7 +105,7 @@ public class UserServiceImpl
         }
         log.info("开始向邮箱{}发送验证码", receiveEmail);
         try {
-            //  核心：构建并发送邮件（真实发送！）
+            //  核心：构建并发送邮件
             SimpleMailMessage message = new SimpleMailMessage();
             message.setFrom(mailProperties.getUsername());       // 发件人（你的 163 邮箱）
             message.setTo(receiveEmail);      // 收件人（前端传的真实邮箱）

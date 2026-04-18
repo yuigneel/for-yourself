@@ -1,0 +1,27 @@
+spring:
+  application:
+    name: center-admin-user-service
+  cloud:
+    nacos:
+      server-addr: 127.0.0.1:8848 # nacos地址
+      config:
+        file-extension: yml # 文件后缀名
+        group: FOR_YOURSELF_LOCAL  # 配置文件的分组
+        shared-configs:   # 共享配置
+          - data-id: datasource-common.yml
+            group: FOR_YOURSELF_LOCAL
+          - data-id: redis-common.yml
+            group: FOR_YOURSELF_LOCAL
+          - data-id: logging-common.yml
+            group: FOR_YOURSELF_LOCAL
+          - data-id: jasypt-common.yml
+            group: FOR_YOURSELF_LOCAL
+          - data-id: mybatis-plus-common.yml
+            group: FOR_YOURSELF_LOCAL
+          - data-id: swagger-common.yml
+            group: FOR_YOURSELF_LOCAL
+          - data-id: nacos-common.yml
+            group: FOR_YOURSELF_LOCAL
+
+      discovery:
+        group: FOR_YOURSELF_LOCAL # 服务分组

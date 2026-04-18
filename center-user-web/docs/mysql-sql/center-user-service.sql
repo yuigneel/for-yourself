@@ -42,6 +42,7 @@ CREATE TABLE `t_admin_user` (
                                 `gender` TINYINT DEFAULT 0 COMMENT '性别：0-未知 3-强男 2-男 1-弱男 -1-弱女 -2-女 -3-强女',
                                 `birthday` DATE DEFAULT NULL COMMENT '出生日期',
                                 `join_date` DATE NOT NULL COMMENT '平台入驻日期',
+                                `account_permission` TINYINT NOT NULL DEFAULT 3 COMMENT '账户权限：0-最高权限 数值越大权限越低 当前最低为3',
                                 `account_status` TINYINT NOT NULL DEFAULT 0 COMMENT '账户状态：2-禁用 1-警告 0-正常',
                                 `is_deleted` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '逻辑删除：0-未删除 1-已删除',
                                 `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间(自动生成)',
