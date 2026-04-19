@@ -2,9 +2,8 @@ package com.yulgnier.center.admin.user.service;
 
 import com.yulgnier.center.admin.user.model.domain.AdminUser;
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.yulgnier.center.admin.user.model.dto.EmailCodeRequestDTO;
-import com.yulgnier.center.admin.user.model.dto.UserForgetPasswordRequestDTO;
-import com.yulgnier.center.admin.user.model.dto.UserLoginRequestDTO;
+import com.yulgnier.center.admin.user.model.dto.*;
+import com.yulgnier.center.admin.user.model.vo.AdminUserInfoResponseVO;
 import com.yulgnier.center.admin.user.model.vo.AdminUserLoginResponseVO;
 import jakarta.validation.Valid;
 
@@ -20,4 +19,12 @@ public interface AdminUserService extends IService<AdminUser> {
     String forgetPassword( UserForgetPasswordRequestDTO request);
 
     AdminUserLoginResponseVO login(@Valid UserLoginRequestDTO request);
+
+    void changeEmail(@Valid UserChangeEmailRequestDTO request);
+
+    void updateUserInfo(@Valid UserUpdateInfoRequestDTO request);
+
+    AdminUserInfoResponseVO getUserInfo();
+
+    void updatePassword(@Valid UserUpdatePasswordRequestDTO request);
 }

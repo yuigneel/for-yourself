@@ -13,16 +13,16 @@ import lombok.Data;
 @Data
 @Schema(description = "用户换绑邮箱请求")
 public class UserChangeEmailRequestDTO {
-    
-    @NotBlank(message = "旧邮箱不能为空")
-    @Schema(description = "旧邮箱", example = "old@example.com", requiredMode = Schema.RequiredMode.REQUIRED)
-    private String oldEmail;
-    
+
     @NotBlank(message = "新邮箱不能为空")
-    @Schema(description = "新邮箱", example = "new@example.com", requiredMode = Schema.RequiredMode.REQUIRED)
+    @Schema(description = "新邮箱地址", example = "newemail@163.com", requiredMode = Schema.RequiredMode.REQUIRED)
     private String newEmail;
-    
-    @NotBlank(message = "密码不能为空")
-    @Schema(description = "用户密码", example = "password123", requiredMode = Schema.RequiredMode.REQUIRED)
+
+    @NotBlank(message = "用户密码不能为空")
+    @Schema(description = "用户当前密码", example = "password123", requiredMode = Schema.RequiredMode.REQUIRED)
     private String password;
+
+    @NotBlank(message = "验证码不能为空")
+    @Schema(description = "新邮箱验证码", example = "123456", requiredMode = Schema.RequiredMode.REQUIRED)
+    private String verificationCode;
 }

@@ -1,5 +1,6 @@
 package com.yulgnier.center.admin.user.service.impl;
 
+import cn.hutool.core.bean.BeanUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -7,11 +8,10 @@ import com.yulgnier.center.admin.user.config.properties.CloudflareProperties;
 import com.yulgnier.center.admin.user.config.properties.MailProperties;
 import com.yulgnier.center.admin.user.config.properties.MiscellaneousProperties;
 import com.yulgnier.center.admin.user.model.domain.AdminUser;
-import com.yulgnier.center.admin.user.model.dto.EmailCodeRequestDTO;
-import com.yulgnier.center.admin.user.model.dto.UserForgetPasswordRequestDTO;
-import com.yulgnier.center.admin.user.model.dto.UserLoginRequestDTO;
+import com.yulgnier.center.admin.user.model.dto.*;
 import com.yulgnier.center.admin.user.model.enums.BanLevelEnum;
 import com.yulgnier.center.admin.user.model.enums.BusinessTypeEnum;
+import com.yulgnier.center.admin.user.model.vo.AdminUserInfoResponseVO;
 import com.yulgnier.center.admin.user.model.vo.AdminUserLoginResponseVO;
 import com.yulgnier.center.admin.user.service.AdminUserService;
 import com.yulgnier.center.admin.user.mapper.AdminUserMapper;
@@ -19,10 +19,7 @@ import com.yulgnier.common.config.properties.JwtProperties;
 import com.yulgnier.common.exception.ForYourselfException;
 import com.yulgnier.common.model.constants.AuthConstants;
 import com.yulgnier.common.model.result.ResultCodeEnum;
-import com.yulgnier.common.utils.CloudflareTurnstileUtil;
-import com.yulgnier.common.utils.JwtUtil;
-import com.yulgnier.common.utils.RedisUtil;
-import com.yulgnier.common.utils.ValidateUtil;
+import com.yulgnier.common.utils.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.mail.SimpleMailMessage;
@@ -88,6 +85,9 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
             log.warn("邮箱{}：传来无效cloud flare令牌", receiveEmail);
             throw new ForYourselfException(ResultCodeEnum.CAPTCHA_VERIFICATION_FAILED, "别攻击了，用爱发电，真的怕了！");
         }
+        // 检查业务类型（为空已经判断过了，还有不能为0）
+        if (request.getBusinessType() == BusinessTypeEnum.SEND_EMAIL)
+            throw new ForYourselfException(ResultCodeEnum.PARAMETER_ERROR, null);
         // 检查邮箱
         //    检查邮箱格式
         if (!ValidateUtil.isValidEmail(receiveEmail)) {
@@ -237,7 +237,7 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
                 }
                 LambdaQueryWrapper<AdminUser> eq = new LambdaQueryWrapper<AdminUser>().eq(AdminUser::getNickname, name);
                 AdminUser adminUser = this.getOne(eq);
-                if (adminUser == null) throw new ForYourselfException(ResultCodeEnum.USER_NOT_FOUND, null);
+                if (adminUser == null) throw new ForYourselfException(ResultCodeEnum.USER_NOT_FOUND_OR_CANCELLED, null);
                 if (!bCryptPasswordEncoder.matches(request.getPassword(), adminUser.getPassword()))
                     throw new ForYourselfException(ResultCodeEnum.PASSWORD_ERROR, null);
                 String token = generateToken(adminUser.getNickname(), adminUser.getUid());
@@ -249,7 +249,7 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
                     throw new ForYourselfException(ResultCodeEnum.EMAIL_FORMAT_ERROR, null);
                 LambdaQueryWrapper<AdminUser> eq = new LambdaQueryWrapper<AdminUser>().eq(AdminUser::getEmail, name);
                 AdminUser adminUser = this.getOne(eq);
-                if (adminUser == null) throw new ForYourselfException(ResultCodeEnum.USER_NOT_FOUND, null);
+                if (adminUser == null) throw new ForYourselfException(ResultCodeEnum.USER_NOT_FOUND_OR_CANCELLED, null);
                 if (!bCryptPasswordEncoder.matches(request.getPassword(), adminUser.getPassword()))
                     throw new ForYourselfException(ResultCodeEnum.PASSWORD_ERROR, null);
                 String token = generateToken(adminUser.getNickname(), adminUser.getUid());
@@ -264,7 +264,7 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
             case UID -> {
                 LambdaQueryWrapper<AdminUser> eq = new LambdaQueryWrapper<AdminUser>().eq(AdminUser::getUid, name);
                 AdminUser adminUser = this.getOne(eq);
-                if (adminUser == null) throw new ForYourselfException(ResultCodeEnum.USER_NOT_FOUND, null);
+                if (adminUser == null) throw new ForYourselfException(ResultCodeEnum.USER_NOT_FOUND_OR_CANCELLED, null);
                 if (!bCryptPasswordEncoder.matches(request.getPassword(), adminUser.getPassword()))
                     throw new ForYourselfException(ResultCodeEnum.PASSWORD_ERROR, null);
                 String token = generateToken(adminUser.getNickname(), adminUser.getUid());
@@ -272,6 +272,210 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
             }
             default -> throw new ForYourselfException(ResultCodeEnum.PARAMETER_ERROR, null);
         }
+    }
+
+    /**
+     * 管理员换绑邮箱
+     * <p>校验流程：新邮箱格式 → 密码验证 → 验证码验证 → 更新数据库</p>
+     *
+     * @param request 换绑邮箱请求参数，包含新邮箱、密码、验证码
+     * @throws ForYourselfException 账户已注销、邮箱格式错误、参数错误、密码格式错误、密码错误、验证码过期、缓存服务异常、验证码错误、数据库写入失败
+     */
+    @Override
+    public void changeEmail(UserChangeEmailRequestDTO request) {
+        // 获取用户
+        AdminUser adminUser = this.getOne(new LambdaQueryWrapper<AdminUser>().eq(AdminUser::getUid, UserContextUtil.getUid()));
+        if (adminUser == null) throw new ForYourselfException(ResultCodeEnum.USER_NOT_FOUND_OR_CANCELLED, null);
+        log.info("用户{}：正在换绑邮箱", adminUser.getNickname());
+        // 检验邮箱
+        if (!ValidateUtil.isValidEmail(request.getNewEmail()))
+            throw new ForYourselfException(ResultCodeEnum.EMAIL_FORMAT_ERROR, null);
+        if (request.getNewEmail().equals(adminUser.getEmail()))
+            throw new ForYourselfException(ResultCodeEnum.PARAMETER_ERROR, null);
+        // 检验密码
+        if (!ValidateUtil.isValidPassword(request.getPassword()))
+            throw new ForYourselfException(ResultCodeEnum.PASSWORD_FORMAT_ERROR, null);
+        if (!bCryptPasswordEncoder.matches(request.getPassword(), adminUser.getPassword()))
+            throw new ForYourselfException(ResultCodeEnum.PASSWORD_ERROR, null);
+        // 检验验证码
+        String emailCodeKey = BusinessTypeEnum.BIND_EMAIL + AuthConstants.SEPARATOR + adminUser.getEmail();
+        String emailCode = null;
+        Integer tryTimes = null;
+        try {
+            String emailCodeValue = RedisUtil.get(emailCodeKey);
+            if (emailCodeValue == null) throw new ForYourselfException(ResultCodeEnum.CAPTCHA_EXPIRED, null);
+            emailCode = emailCodeValue.split(AuthConstants.SEPARATOR)[0];
+            tryTimes = Integer.valueOf(emailCodeValue.split(AuthConstants.SEPARATOR)[1]);
+        } catch (Exception e) {
+            log.error("用户{}：验证码获取失败", adminUser.getNickname());
+            throw new ForYourselfException(ResultCodeEnum.CACHE_SERVICE_ERROR, null);
+        }
+        if (!checkCode(request.getVerificationCode(), request.getNewEmail(), emailCodeKey, emailCode, tryTimes))
+            throw new ForYourselfException(ResultCodeEnum.CAPTCHA_ERROR, null);
+        // 换绑邮箱
+        LambdaUpdateWrapper<AdminUser> set = new LambdaUpdateWrapper<AdminUser>().eq(AdminUser::getId, adminUser.getId()).set(AdminUser::getEmail, request.getNewEmail());
+        try {
+            this.update(set);
+            log.info("用户{}：换绑邮箱成功", adminUser.getNickname());
+        } catch (Exception e) {
+            log.error("用户{}：数据库写入失败", adminUser.getNickname());
+            throw new ForYourselfException(ResultCodeEnum.DATABASE_SERVICE_ERROR, null);
+        }
+    }
+
+    /**
+     * 更新管理员用户信息
+     * <p>业务流程：</p>
+     * <ol>
+     *   <li>校验昵称格式是否符合规范（2-20位，不能包含首尾空格，不能是敏感用户名）</li>
+     *   <li>从上下文获取当前登录用户的UID并查询用户信息</li>
+     *   <li>检查是否有实际更新项（昵称、性别、生日至少有一项与数据库不同）</li>
+     *   <li>校验生日是否合法（不能是未来日期）</li>
+     *   <li>构建更新条件并执行数据库更新操作</li>
+     * </ol>
+     *
+     * @param request 用户信息更新请求参数，包含昵称（必填）、性别（可选）、生日（可选）
+     * @throws ForYourselfException 当出现以下情况时抛出：
+     *                              <ul>
+     *                                <li>{@link ResultCodeEnum#USERNAME_FORMAT_ERROR} - 昵称格式不符合规范</li>
+     *                                <li>{@link ResultCodeEnum#USER_NOT_FOUND_OR_CANCELLED} - 用户不存在或已注销（防御性编程）</li>
+     *                                <li>{@link ResultCodeEnum#PARAMETER_ERROR} - 没有任何字段发生变化</li>
+     *                                <li>{@link ResultCodeEnum#DATE_FORMAT_ERROR} - 生日不能是未来日期</li>
+     *                                <li>{@link ResultCodeEnum#DATABASE_SERVICE_ERROR} - 数据库更新失败</li>
+     *                              </ul>
+     */
+    @Override
+    public void updateUserInfo(UserUpdateInfoRequestDTO request) {
+        // 1. 检查昵称是否符合规范
+        if (!ValidateUtil.isValidUsername(request.getNickname())) {
+            throw new ForYourselfException(ResultCodeEnum.USERNAME_FORMAT_ERROR, null);
+        }
+
+        // 2. 获取当前登录用户
+        AdminUser adminUser = this.getOne(new LambdaQueryWrapper<AdminUser>().eq(AdminUser::getUid, UserContextUtil.getUid()));
+        if (adminUser == null) {
+            throw new ForYourselfException(ResultCodeEnum.USER_NOT_FOUND_OR_CANCELLED, null);
+        }
+
+        // 3. 检查是否有更新项（不能一个都不更新和数据库一样）
+        boolean hasChanges = false;
+
+        // 检查昵称是否变化
+        if (!request.getNickname().equals(adminUser.getNickname())) {
+            hasChanges = true;
+        }
+
+        // 检查性别是否变化（只有传入了才比较）
+        if (request.getGender() != null && !request.getGender().getCode().equals(adminUser.getGender())) {
+            hasChanges = true;
+        }
+
+        // 检查生日是否变化（只有传入了才比较）
+        if (request.getBirthday() != null && !request.getBirthday().equals(adminUser.getBirthday())) {
+            hasChanges = true;
+        }
+
+        // 如果没有任何变化，抛出异常
+        if (!hasChanges) {
+            throw new ForYourselfException(ResultCodeEnum.PARAMETER_ERROR, null);
+        }
+
+        // 4. 构建更新条件
+        LambdaUpdateWrapper<AdminUser> updateWrapper = new LambdaUpdateWrapper<AdminUser>()
+                .eq(AdminUser::getId, adminUser.getId());
+        
+        // 设置昵称（必填）
+        updateWrapper.set(AdminUser::getNickname, request.getNickname());
+        
+        // 设置生日（可选，需校验）
+        if (request.getBirthday() != null) {
+            if (request.getBirthday().isAfter(java.time.LocalDate.now())) {
+                throw new ForYourselfException(ResultCodeEnum.DATE_FORMAT_ERROR, null);
+            }
+            updateWrapper.set(AdminUser::getBirthday, request.getBirthday());
+        }
+        
+        // 设置性别（可选）
+        if (request.getGender() != null) {
+            updateWrapper.set(AdminUser::getGender, request.getGender().getCode());
+        }
+        
+        // 5. 执行更新
+        try {
+            this.update(updateWrapper);
+        } catch (Exception e) {
+            log.error("管理员{}：数据库写入失败", adminUser.getNickname(), e);
+            throw new ForYourselfException(ResultCodeEnum.DATABASE_SERVICE_ERROR, null);
+        }
+    }
+
+    /**
+     * 获取管理员用户信息
+     * <p>根据当前登录管理员的UID查询并返回用户详细信息</p>
+     *
+     * @return 管理员用户信息响应VO，包含用户的基本信息
+     * @throws ForYourselfException 当账户不存在或已注销时抛出 {@link ResultCodeEnum#USER_NOT_FOUND_OR_CANCELLED}
+     */
+    @Override
+    public AdminUserInfoResponseVO getUserInfo() {
+        // 获取用户
+        AdminUser adminUser = this.getOne(new LambdaQueryWrapper<AdminUser>()
+                .eq(AdminUser::getUid, UserContextUtil.getUid()));
+        
+        if (adminUser == null) {
+            throw new ForYourselfException(ResultCodeEnum.USER_NOT_FOUND_OR_CANCELLED, null);
+        }
+        
+        // 用Hutool工具包拷贝到VO
+        AdminUserInfoResponseVO responseVO = BeanUtil.copyProperties(adminUser, AdminUserInfoResponseVO.class);
+        
+        // 返回用户信息
+        return responseVO;
+    }
+
+
+    /**
+     * 管理员修改密码
+     * <p>校验流程：新旧密码一致性校验 → 查询用户 → 原密码验证 → 加密更新密码</p>
+     * <p>使用 LambdaUpdateWrapper 局部更新，避免触发 update_time 自动更新</p>
+     *
+     * @param request 修改密码请求DTO，包含原始密码和新密码
+     * @throws ForYourselfException 当出现以下情况时抛出：
+     *                              <ul>
+     *                                <li>{@link ResultCodeEnum#PARAMETER_ERROR} - 新旧密码相同</li>
+     *                                <li>{@link ResultCodeEnum#USER_NOT_FOUND_OR_CANCELLED} - 账户不存在或已注销</li>
+     *                                <li>{@link ResultCodeEnum#PASSWORD_ERROR} - 原密码错误</li>
+     *                              </ul>
+     */
+    @Override
+    public void updatePassword(UserUpdatePasswordRequestDTO request) {
+        // 先验证新旧密码是否相同（避免不必要的数据库查询）
+        if (request.getNewPassword().equals(request.getOldPassword())) {
+            throw new ForYourselfException(ResultCodeEnum.PARAMETER_ERROR, null);
+        }
+        
+        // 获取用户
+        AdminUser adminUser = this.getOne(new LambdaQueryWrapper<AdminUser>()
+                .eq(AdminUser::getUid, UserContextUtil.getUid()));
+        
+        if (adminUser == null) {
+            throw new ForYourselfException(ResultCodeEnum.USER_NOT_FOUND_OR_CANCELLED, null);
+        }
+        // 验证原密码
+        if (!bCryptPasswordEncoder.matches(request.getOldPassword(), adminUser.getPassword())) {
+            throw new ForYourselfException(ResultCodeEnum.PASSWORD_ERROR, null);
+        }
+        
+        log.info("管理员{}：开始修改密码", adminUser.getNickname());
+        
+        // 修改密码
+        LambdaUpdateWrapper<AdminUser> updateWrapper = new LambdaUpdateWrapper<AdminUser>()
+                .eq(AdminUser::getUid, adminUser.getUid()) // 条件：根据UID更新
+                .set(AdminUser::getPassword, bCryptPasswordEncoder.encode(request.getNewPassword())); // 只更新密码
+        
+        // 执行局部更新（不会更新create_time/update_time，数据库自动生效！）
+        this.update(updateWrapper);
+        log.info("管理员{}：修改密码成功", adminUser.getNickname());
     }
 
 

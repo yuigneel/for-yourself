@@ -54,7 +54,7 @@ public class CommonUser extends BaseDomain{
     private LocalDate joinDate;
 
     /**
-     * 账户状态：2-禁用 1-警告 0-正常(默认0)
+     * 账户状态：3- 强制删除 2-禁用 1-警告 0-正常(默认0)
      */
     private Integer accountStatus;
 }

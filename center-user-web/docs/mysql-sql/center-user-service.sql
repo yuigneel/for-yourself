@@ -19,7 +19,7 @@ CREATE TABLE `t_common_user` (
                                  `birthday` DATE DEFAULT NULL COMMENT '出生日期',
     -- 🔥通用字段，不绑定业务
                                  `join_date` DATE NOT NULL COMMENT '平台入驻日期',
-                                 `account_status` TINYINT NOT NULL DEFAULT 0 COMMENT '账户状态：2-禁用 1-警告 0-正常',
+                                 `account_status` TINYINT NOT NULL DEFAULT 0 COMMENT '账户状态：3-强制销号 2-禁用 1-警告 0-正常',
                                  `is_deleted` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '逻辑删除：0-未删除 1-已删除',
                                  `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间(自动生成)',
                                  `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间(自动更新)',
@@ -43,7 +43,7 @@ CREATE TABLE `t_admin_user` (
                                 `birthday` DATE DEFAULT NULL COMMENT '出生日期',
                                 `join_date` DATE NOT NULL COMMENT '平台入驻日期',
                                 `account_permission` TINYINT NOT NULL DEFAULT 3 COMMENT '账户权限：0-最高权限 数值越大权限越低 当前最低为3',
-                                `account_status` TINYINT NOT NULL DEFAULT 0 COMMENT '账户状态：2-禁用 1-警告 0-正常',
+                                `account_status` TINYINT NOT NULL DEFAULT 0 COMMENT '账户状态：3-强制销号 2-禁用 1-警告 0-正常',
                                 `is_deleted` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '逻辑删除：0-未删除 1-已删除',
                                 `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间(自动生成)',
                                 `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间(自动更新)',
@@ -55,6 +55,10 @@ CREATE TABLE `t_admin_user` (
                                 UNIQUE KEY `uk_email` (`email`),
                                 UNIQUE KEY `uk_nickname` (`nickname`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='管理员用户基础信息表';
+
+-- 插入初始管理员账号（最高权限）
+INSERT INTO `t_admin_user` (`uid`, `email`, `nickname`, `password`, `join_date`, `account_permission`)
+VALUES (2043953017778077696, 'yu_lgnier@outlook.com', 'admin', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', CURDATE(), 0);
 
 
 

@@ -1,6 +1,7 @@
 package com.yulgnier.center.admin.user.controller;
 
 import com.yulgnier.center.admin.user.model.dto.*;
+import com.yulgnier.center.admin.user.model.vo.AdminUserInfoResponseVO;
 import com.yulgnier.center.admin.user.model.vo.AdminUserLoginResponseVO;
 import com.yulgnier.center.admin.user.service.AdminUserService;
 import com.yulgnier.common.model.result.Result;
@@ -44,6 +45,7 @@ public class UserController {
         userService.changeEmail(request);
         return Result.ok("更改成功");
     }
+
     @Operation(summary = "修改用户普通信息")
     @PostMapping("/updateUserInfo")
     public Result<String> updateUserInfo(@Valid @RequestBody UserUpdateInfoRequestDTO request) {
@@ -52,8 +54,8 @@ public class UserController {
     }
     @Operation(summary = "获取用户基础信息")
     @GetMapping("/getUserInfo")
-    public Result<UserInfoResponseVO> getUserInfo() {
-        UserInfoResponseVO response = userService.getUserInfo();
+    public Result<AdminUserInfoResponseVO> getUserInfo() {
+        AdminUserInfoResponseVO response = userService.getUserInfo();
         return Result.ok(response);
     }
     @Operation(summary = "修改用户密码")

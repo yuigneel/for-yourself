@@ -81,6 +81,7 @@ public class UserServiceImpl
             log.warn("邮箱{}：业务类型为空", receiveEmail);
             throw new ForYourselfException(ResultCodeEnum.INCOMPLETE_PARAMETERS, null);
         }
+        if(request.getBusinessType()==BusinessTypeEnum.SEND_EMAIL)throw new ForYourselfException(ResultCodeEnum.PARAMETER_ERROR, null);
         String emailCodeKey = request.getBusinessType().getName() + AuthConstants.SEPARATOR + receiveEmail; //eg: 注册:example@163.com
         String code = generateCode();   // 生成6位随机验证码    あなたのことが大好きです。付き合ってください-愚人节快乐
         String emailCodeValue = code + AuthConstants.SEPARATOR + miscellaneousProperties.getEmailTryTimes(); //eg: 123456:6
@@ -396,7 +397,7 @@ public class UserServiceImpl
 
         // 用户不存在 → 抛异常
         if (user == null) {
-            throw new ForYourselfException(ResultCodeEnum.USER_NOT_FOUND, null);
+            throw new ForYourselfException(ResultCodeEnum.USER_NOT_FOUND_OR_CANCELLED, null);
         }
 
         // 校验密码
@@ -449,7 +450,7 @@ public class UserServiceImpl
         // 获取用户
         CommonUser user = userMapper.selectOneByEmailIgnoreLogicDelete(email);
         if (user == null) {
-            throw new ForYourselfException(ResultCodeEnum.USER_NOT_FOUND, null);
+            throw new ForYourselfException(ResultCodeEnum.USER_NOT_FOUND_OR_CANCELLED, null);
         }
         log.info("用户{}：开始找回密码", user.getNickname());
         // 生成随机的密码
@@ -477,16 +478,36 @@ public class UserServiceImpl
         LambdaQueryWrapper<CommonUser> eq = new LambdaQueryWrapper<CommonUser>().eq(CommonUser::getUid, UserContextUtil.getUid());
         CommonUser user = this.getOne(eq);
         if (user == null) {
-            throw new ForYourselfException(ResultCodeEnum.USER_NOT_FOUND, null);
+            throw new ForYourselfException(ResultCodeEnum.USER_NOT_FOUND_OR_CANCELLED, null);
         }
         log.info("用户{}：开始更新用户信息", user.getNickname());
+        // 检查传入参数与数据库是否完全一致（只检查实际传入的参数）
+        boolean hasChanges = false;
+        
+        // 检查昵称是否变化
+        if (!request.getNickname().equals(user.getNickname())) {
+            hasChanges = true;
+        }
+        
+        // 检查性别是否变化（只有传入了才比较）
+        if (request.getGenderEnum() != null && !request.getGenderEnum().equals(user.getGender())) {
+            hasChanges = true;
+        }
+        
+        // 检查生日是否变化（只有传入了才比较）
+        if (request.getBirthday() != null && !request.getBirthday().equals(user.getBirthday())) {
+            hasChanges = true;
+        }
+        
+        // 如果没有任何变化，抛出异常
+        if (!hasChanges) {
+            throw new ForYourselfException(ResultCodeEnum.PARAMETER_ERROR, null);
+        }
+        
         LambdaUpdateWrapper<CommonUser> yulgnier = new LambdaUpdateWrapper<CommonUser>().eq(CommonUser::getId, user.getId());
         // 检查昵称
         if (!ValidateUtil.isValidUsername(request.getNickname())) {
             throw new ForYourselfException(ResultCodeEnum.USERNAME_FORMAT_ERROR, null);
-        }
-        if (this.getOneOpt(new LambdaQueryWrapper<CommonUser>().eq(CommonUser::getNickname, request.getNickname())).isPresent()) {
-            throw new ForYourselfException(ResultCodeEnum.USER_NOT_FOUND, null);
         }
         yulgnier.set(CommonUser::getNickname, request.getNickname());
         // 检查生日
@@ -518,7 +539,7 @@ public class UserServiceImpl
     public void changeEmail(UserChangeEmailRequestDTO request) {
         CommonUser user = this.getOne(new LambdaQueryWrapper<CommonUser>().eq(CommonUser::getUid, UserContextUtil.getUid()));
         if (user == null) {
-            throw new ForYourselfException(ResultCodeEnum.ACCOUNT_CANCELLED, null);
+            throw new ForYourselfException(ResultCodeEnum.USER_NOT_FOUND_OR_CANCELLED, null);
         }
         log.info("用户{}：开始换绑邮箱", user.getNickname());
         // 检验邮箱格式
@@ -548,7 +569,7 @@ public class UserServiceImpl
             throw new ForYourselfException(ResultCodeEnum.CACHE_SERVICE_ERROR, null);
         }
         if (!checkCode(request.getVerificationCode(), request.getNewEmail(), key, code, remainTimes)) {
-            throw new ForYourselfException(ResultCodeEnum.CACHE_SERVICE_ERROR, remainTimes - 1);
+            throw new ForYourselfException(ResultCodeEnum.CAPTCHA_ERROR, remainTimes - 1);
         }
         // 更新用户
         LambdaUpdateWrapper<CommonUser> set = new LambdaUpdateWrapper<CommonUser>().eq(CommonUser::getId, user.getId()).set(CommonUser::getEmail, request.getNewEmail());
@@ -570,10 +591,9 @@ public class UserServiceImpl
     public UserInfoResponseVO getUserInfo() {
         LambdaQueryWrapper<CommonUser> eq = new LambdaQueryWrapper<CommonUser>().eq(CommonUser::getUid, UserContextUtil.getUid());
         Optional<CommonUser> oneOpt = this.getOneOpt(eq);
-        if (oneOpt.isEmpty()) throw new ForYourselfException(ResultCodeEnum.ACCOUNT_CANCELLED, null);
-        UserInfoResponseVO vo = new UserInfoResponseVO();
-        BeanUtil.copyProperties(oneOpt.get(), vo);
-        return vo;
+        if (oneOpt.isEmpty()) throw new ForYourselfException(ResultCodeEnum.USER_NOT_FOUND_OR_CANCELLED, null);
+        // 用Hutool工具包拷贝到VO
+        return BeanUtil.copyProperties(oneOpt.get(), UserInfoResponseVO.class);
     }
 
     /**
@@ -591,7 +611,7 @@ public class UserServiceImpl
         try {
             commonUser = this.getOneOpt(eq).get();
         } catch (Exception e) {
-            throw new ForYourselfException(ResultCodeEnum.USER_NOT_FOUND, null);
+            throw new ForYourselfException(ResultCodeEnum.USER_NOT_FOUND_OR_CANCELLED, null);
         }
         log.info("用户{}：开始修改密码", commonUser.getNickname());
         // 验证密码
