@@ -4,6 +4,8 @@ import com.yulgnier.center.admin.user.model.domain.AdminUser;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.yulgnier.center.admin.user.model.dto.EmailCodeRequestDTO;
 import com.yulgnier.center.admin.user.model.dto.UserForgetPasswordRequestDTO;
+import com.yulgnier.center.admin.user.model.dto.UserLoginRequestDTO;
+import com.yulgnier.center.admin.user.model.vo.AdminUserLoginResponseVO;
 import jakarta.validation.Valid;
 
 /**
@@ -16,4 +18,6 @@ public interface AdminUserService extends IService<AdminUser> {
     String getEmailCode( EmailCodeRequestDTO request);
 
     String forgetPassword( UserForgetPasswordRequestDTO request);
+
+    AdminUserLoginResponseVO login(@Valid UserLoginRequestDTO request);
 }

@@ -1,6 +1,7 @@
 package com.yulgnier.center.admin.user.controller;
 
 import com.yulgnier.center.admin.user.model.dto.*;
+import com.yulgnier.center.admin.user.model.vo.AdminUserLoginResponseVO;
 import com.yulgnier.center.admin.user.service.AdminUserService;
 import com.yulgnier.common.model.result.Result;
 import io.swagger.v3.oas.annotations.Operation;
@@ -30,12 +31,13 @@ public class UserController {
         String response = userService.forgetPassword(request);
         return Result.ok(response);
     }
-    @Operation(summary = "用户登录")
+    @Operation(summary = "管理员登录")
     @PostMapping("/login")
-    public Result<UserLoginResponseVO> login( @Valid @RequestBody UserLoginRequestDTO request) {
-        UserLoginResponseVO response = userService.login(request);
-        return Result.ok(response);
+    public Result<String> login( @Valid @RequestBody UserLoginRequestDTO request) {
+        AdminUserLoginResponseVO response = userService.login(request);
+        return Result.ok(response.getResultCodeENum(),response.getToken());
     }
+
     @Operation(summary = "换绑邮箱")
     @PostMapping("/changeEmail")
     public Result<String> changeEmail(@Valid @RequestBody UserChangeEmailRequestDTO request) {

@@ -1,6 +1,5 @@
 package com.yulgnier.center.common.user.service.impl;
 
-
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.lang.Snowflake;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -29,15 +28,19 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
-
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
-
 import java.util.Random;
 
+/**
+ * 用户服务实现类
+ *
+ * @author yulgnier
+ * @since 2023-09-05
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -113,7 +116,7 @@ public class UserServiceImpl
             message.setText("您的验证码是：" + code + "，" + miscellaneousProperties.getEmailExpireMinutes() + "分钟内有效！"); // 邮件内容
             //  执行发送！！！
             javaMailSender.send(message);
-            log.debug("验证码发送成功！邮箱：{}，验证码：{}", receiveEmail, code);
+            log.info("验证码发送成功！邮箱：{}", receiveEmail);
             return "✅ 发送成功！验证码已发送至邮箱：" + receiveEmail;
         } catch (Exception e) {
             log.error("邮件发送失败！", e);
@@ -219,6 +222,7 @@ public class UserServiceImpl
         //      保存用户
         try {
             userMapper.insert(user);
+            log.info("用户{}：保存用户成功", nickname);
         } catch (Exception e) {
             log.error("用户{}：保存用户失败", nickname, e);
             throw new ForYourselfException(ResultCodeEnum.SAVE_USER_FAILED, null);
@@ -260,13 +264,13 @@ public class UserServiceImpl
                     log.debug("用户{}：账户或密码错误", name);
                     throw new ForYourselfException(ResultCodeEnum.ACCOUNT_OR_PASSWORD_ERROR, null);
                 }
-                userLoginResponseVO.setResultCode(ResultCodeEnum.USER_NORMAL_LOGIN);
+                userLoginResponseVO.setResultCodeEnum(ResultCodeEnum.USER_NORMAL_LOGIN);
                 if (user.getIsDeleted() == 1) {
                     log.info("用户{}：账户已注销,正在恢复。。。", name);
                     int i = userMapper.restoreUserIgnoreLogicDelete(user);
                     if (i == 0) throw new ForYourselfException(ResultCodeEnum.DATABASE_SERVICE_ERROR, null);
                     log.info("用户{}：账户已恢复", name);
-                    userLoginResponseVO.setResultCode(ResultCodeEnum.USER_CANCELLED_UNDO_LOGIN);
+                    userLoginResponseVO.setResultCodeEnum(ResultCodeEnum.USER_CANCELLED_UNDO_LOGIN);
                 }
                 userLoginResponseVO.setToken(generateToken(name, user.getUid()));
                 return userLoginResponseVO;
@@ -286,13 +290,13 @@ public class UserServiceImpl
                     log.debug("用户{}：账户或密码错误", name);
                     throw new ForYourselfException(ResultCodeEnum.ACCOUNT_OR_PASSWORD_ERROR, null);
                 }
-                userLoginResponseVO.setResultCode(ResultCodeEnum.USER_NORMAL_LOGIN);
+                userLoginResponseVO.setResultCodeEnum(ResultCodeEnum.USER_NORMAL_LOGIN);
                 if (user.getIsDeleted() == 1) {
                     log.info("用户{}：账户已注销,正在恢复。。。", name);
                     int i = userMapper.restoreUserIgnoreLogicDelete(user);
                     if (i == 0) throw new ForYourselfException(ResultCodeEnum.DATABASE_SERVICE_ERROR, null);
                     log.info("用户{}：账户已恢复", name);
-                    userLoginResponseVO.setResultCode(ResultCodeEnum.USER_CANCELLED_UNDO_LOGIN);
+                    userLoginResponseVO.setResultCodeEnum(ResultCodeEnum.USER_CANCELLED_UNDO_LOGIN);
                 }
                 userLoginResponseVO.setToken(generateToken(name, user.getUid()));
                 return userLoginResponseVO;
@@ -314,16 +318,18 @@ public class UserServiceImpl
                     log.debug("用户{}：账户或密码错误", name);
                     throw new ForYourselfException(ResultCodeEnum.ACCOUNT_OR_PASSWORD_ERROR, null);
                 }
-                userLoginResponseVO.setResultCode(ResultCodeEnum.USER_NORMAL_LOGIN);
+                userLoginResponseVO.setResultCodeEnum(ResultCodeEnum.USER_NORMAL_LOGIN);
                 if (user.getIsDeleted() == 1) {
                     log.info("用户{}：账户已注销,正在恢复。。。", name);
                     int i = userMapper.restoreUserIgnoreLogicDelete(user);
                     if (i == 0) throw new ForYourselfException(ResultCodeEnum.DATABASE_SERVICE_ERROR, null);
                     log.info("用户{}：账户已恢复", name);
+                    userLoginResponseVO.setResultCodeEnum(ResultCodeEnum.USER_CANCELLED_UNDO_LOGIN);
                 }
                 userLoginResponseVO.setToken(generateToken(name, user.getUid()));
                 return userLoginResponseVO;
             }
+
             default -> {
                 log.warn("用户{}：登录方式错误", name);
                 throw new ForYourselfException(ResultCodeEnum.PARAMETER_ERROR, null);
@@ -400,6 +406,7 @@ public class UserServiceImpl
 
         // 全部匹配 → 执行逻辑删除（自动走 MP 逻辑删除，更新 isDeleted=1）
         this.remove(lambdaQueryWrapper);
+        log.info("用户{}：注销成功！", nickname);
     }
 
     /**
@@ -472,6 +479,7 @@ public class UserServiceImpl
         if (user == null) {
             throw new ForYourselfException(ResultCodeEnum.USER_NOT_FOUND, null);
         }
+        log.info("用户{}：开始更新用户信息", user.getNickname());
         LambdaUpdateWrapper<CommonUser> yulgnier = new LambdaUpdateWrapper<CommonUser>().eq(CommonUser::getId, user.getId());
         // 检查昵称
         if (!ValidateUtil.isValidUsername(request.getNickname())) {
@@ -494,6 +502,7 @@ public class UserServiceImpl
         }
         try {
             this.update(yulgnier);
+            log.info("用户{}：更新用户信息成功", user.getNickname());
         } catch (Exception e) {
             throw new ForYourselfException(ResultCodeEnum.DATABASE_SERVICE_ERROR, null);
         }
@@ -584,6 +593,7 @@ public class UserServiceImpl
         } catch (Exception e) {
             throw new ForYourselfException(ResultCodeEnum.USER_NOT_FOUND, null);
         }
+        log.info("用户{}：开始修改密码", commonUser.getNickname());
         // 验证密码
         if (request.getNewPassword().equals(request.getOldPassword()))
             throw new ForYourselfException(ResultCodeEnum.PARAMETER_ERROR, null);
@@ -597,6 +607,7 @@ public class UserServiceImpl
 
         // 执行局部更新（不会更新create_time/update_time，数据库自动生效！）
         this.update(updateWrapper);
+        log.info("用户{}：修改密码成功", commonUser.getNickname());
     }
 
     //===================================内部方法===================================

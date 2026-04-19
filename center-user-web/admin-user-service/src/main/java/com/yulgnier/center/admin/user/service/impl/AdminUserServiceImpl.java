@@ -1,5 +1,6 @@
 package com.yulgnier.center.admin.user.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.yulgnier.center.admin.user.config.properties.CloudflareProperties;
@@ -8,8 +9,10 @@ import com.yulgnier.center.admin.user.config.properties.MiscellaneousProperties;
 import com.yulgnier.center.admin.user.model.domain.AdminUser;
 import com.yulgnier.center.admin.user.model.dto.EmailCodeRequestDTO;
 import com.yulgnier.center.admin.user.model.dto.UserForgetPasswordRequestDTO;
+import com.yulgnier.center.admin.user.model.dto.UserLoginRequestDTO;
 import com.yulgnier.center.admin.user.model.enums.BanLevelEnum;
 import com.yulgnier.center.admin.user.model.enums.BusinessTypeEnum;
+import com.yulgnier.center.admin.user.model.vo.AdminUserLoginResponseVO;
 import com.yulgnier.center.admin.user.service.AdminUserService;
 import com.yulgnier.center.admin.user.mapper.AdminUserMapper;
 import com.yulgnier.common.config.properties.JwtProperties;
@@ -79,6 +82,7 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
     @Override
     public String getEmailCode(EmailCodeRequestDTO request) {
         String receiveEmail = request.getEmail();
+        log.info("用户申请获取邮箱验证码：email={}, businessType={}", receiveEmail, request.getBusinessType());
         // 检查人机
         if (!CloudflareTurnstileUtil.verify(request.getCfTurnstileResponse(), cloudflareProperties.getSecret())) {
             log.warn("邮箱{}：传来无效cloud flare令牌", receiveEmail);
@@ -90,7 +94,7 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
             throw new ForYourselfException(ResultCodeEnum.EMAIL_FORMAT_ERROR, null);
         }
         //    检查邮箱是否允许发送验证码
-        String sendEmailKey = BusinessTypeEnum.SEND_EMAIL.getName()+ AuthConstants.SEPARATOR + receiveEmail;
+        String sendEmailKey = BusinessTypeEnum.SEND_EMAIL.getName() + AuthConstants.SEPARATOR + receiveEmail;
         if (getNeedWaitTime(sendEmailKey) > 0) {
             throw new ForYourselfException(ResultCodeEnum.CAPTCHA_REQUEST_TOO_FREQUENT, null);
         }
@@ -100,7 +104,7 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
         }
         // 发送验证码
         //    创建key和value
-        String emailCodeKey = request.getBusinessType().getName()+ AuthConstants.SEPARATOR + receiveEmail;
+        String emailCodeKey = request.getBusinessType().getName() + AuthConstants.SEPARATOR + receiveEmail;
         String emailCode = generateCode();
         String emailCodeValue = emailCode + AuthConstants.SEPARATOR + miscellaneousProperties.getEmailTryTimes();
         //    存入缓存
@@ -119,7 +123,7 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
             message.setText("您的验证码是：" + emailCode + "，" + miscellaneousProperties.getEmailExpireMinutes() + "分钟内有效！"); // 邮件内容
             //  执行发送！！！
             javaMailSender.send(message);
-            log.info("{}邮件发送成功！业务类型；{}",receiveEmail, request.getBusinessType().getName());
+            log.info("{}邮件发送成功！业务类型；{}", receiveEmail, request.getBusinessType().getName());
             return "✅ 发送成功！验证码已发送至邮箱：" + receiveEmail;
         } catch (Exception e) {
             log.error("邮件发送失败！", e);
@@ -166,6 +170,7 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
     @Override
     public String forgetPassword(UserForgetPasswordRequestDTO request) {
         String receiveEmail = request.getEmail();
+        log.info("{}：开始忘记密码重置", receiveEmail);
         // 检查人机
         if (!CloudflareTurnstileUtil.verify(request.getCfTurnstileResponse(), cloudflareProperties.getSecret())) {
             log.warn("邮箱{}：传来无效cloud flare令牌", receiveEmail);
@@ -180,7 +185,7 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
         String emailCodeKey = BusinessTypeEnum.FORGET_PASSWORD.getName() + AuthConstants.SEPARATOR + receiveEmail;
         String emailCodeValue = RedisUtil.get(emailCodeKey);
         if (emailCodeValue == null) {
-            throw new ForYourselfException(ResultCodeEnum. CAPTCHA_EXPIRED, null);
+            throw new ForYourselfException(ResultCodeEnum.CAPTCHA_EXPIRED, null);
         }
         String code = null;
         Integer remainTimes = null;
@@ -192,15 +197,81 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
             throw new ForYourselfException(ResultCodeEnum.CACHE_SERVICE_ERROR, null);
         }
         // 检验验证码
-        if (!checkCode(request.getVerificationCode(), receiveEmail, emailCodeKey,code ,remainTimes )) {
-            throw new ForYourselfException(ResultCodeEnum.CAPTCHA_ERROR, remainTimes-1);
+        if (!checkCode(request.getVerificationCode(), receiveEmail, emailCodeKey, code, remainTimes)) {
+            throw new ForYourselfException(ResultCodeEnum.CAPTCHA_ERROR, remainTimes - 1);
         }
         // 修改密码
-        String newPlaintext = generateCode();
+        String newPlaintext = generateRandomPassword(16);
         String newCiphertext = bCryptPasswordEncoder.encode(newPlaintext);
-        new LambdaUpdateWrapper<AdminUser>().eq(AdminUser::getEmail, receiveEmail).set(AdminUser::getPassword, newCiphertext);
-        log.info("{}修改密码成功！", receiveEmail);
+        LambdaUpdateWrapper<AdminUser> set = new LambdaUpdateWrapper<AdminUser>().eq(AdminUser::getEmail, receiveEmail).set(AdminUser::getPassword, newCiphertext);
+        boolean update = this.update(set);
+        if (!update) {
+            log.error("用户{}：密码修改失败！", receiveEmail);
+            throw new ForYourselfException(ResultCodeEnum.THIRD_PARTY_SERVICE_ERROR, "密码修改失败！");
+        }
+        log.info("{}重置密码成功！", receiveEmail);
         return newPlaintext;
+    }
+
+    /**
+     * 管理员用户登录
+     * 支持用户名、邮箱、手机号三种登录方式，使用 Cloudflare Turnstile 进行人机验证
+     *
+     * @param request 登录请求参数，包含登录类型、账号、密码和 Cloudflare 验证令牌
+     * @return 登录响应，包含 JWT Token 和结果码
+     * @throws ForYourselfException 当验证码验证失败、格式错误、用户不存在或密码错误时抛出
+     */
+    @Override
+    public AdminUserLoginResponseVO login(UserLoginRequestDTO request) {
+        String name = request.getName();
+        if (!CloudflareTurnstileUtil.verify(request.getCfTurnstileResponse(), cloudflareProperties.getSecret())) {
+            log.warn("用户{}：传来无效cloud flare令牌", name);
+            throw new ForYourselfException(ResultCodeEnum.CAPTCHA_VERIFICATION_FAILED, "别攻击了，用爱发电，真的怕了！");
+        }
+        switch (request.getLoginType()) {
+            // 用户名登录
+            case USERNAME -> {
+                // 检验名字是否符合格式
+                if (!ValidateUtil.isValidUsername(name)) {
+                    throw new ForYourselfException(ResultCodeEnum.USERNAME_FORMAT_ERROR, null);
+                }
+                LambdaQueryWrapper<AdminUser> eq = new LambdaQueryWrapper<AdminUser>().eq(AdminUser::getNickname, name);
+                AdminUser adminUser = this.getOne(eq);
+                if (adminUser == null) throw new ForYourselfException(ResultCodeEnum.USER_NOT_FOUND, null);
+                if (!bCryptPasswordEncoder.matches(request.getPassword(), adminUser.getPassword()))
+                    throw new ForYourselfException(ResultCodeEnum.PASSWORD_ERROR, null);
+                String token = generateToken(adminUser.getNickname(), adminUser.getUid());
+                return new AdminUserLoginResponseVO(token, ResultCodeEnum.USER_NORMAL_LOGIN);
+            }
+            // 邮箱登录
+            case EMAIL -> {
+                if (!ValidateUtil.isValidEmail(name))
+                    throw new ForYourselfException(ResultCodeEnum.EMAIL_FORMAT_ERROR, null);
+                LambdaQueryWrapper<AdminUser> eq = new LambdaQueryWrapper<AdminUser>().eq(AdminUser::getEmail, name);
+                AdminUser adminUser = this.getOne(eq);
+                if (adminUser == null) throw new ForYourselfException(ResultCodeEnum.USER_NOT_FOUND, null);
+                if (!bCryptPasswordEncoder.matches(request.getPassword(), adminUser.getPassword()))
+                    throw new ForYourselfException(ResultCodeEnum.PASSWORD_ERROR, null);
+                String token = generateToken(adminUser.getNickname(), adminUser.getUid());
+                return new AdminUserLoginResponseVO(token, ResultCodeEnum.USER_NORMAL_LOGIN);
+            }
+            // 手机号登录
+            case PHONE -> {
+                //TODO
+                throw new ForYourselfException(ResultCodeEnum.TODO, null);
+            }
+            // UID登录
+            case UID -> {
+                LambdaQueryWrapper<AdminUser> eq = new LambdaQueryWrapper<AdminUser>().eq(AdminUser::getUid, name);
+                AdminUser adminUser = this.getOne(eq);
+                if (adminUser == null) throw new ForYourselfException(ResultCodeEnum.USER_NOT_FOUND, null);
+                if (!bCryptPasswordEncoder.matches(request.getPassword(), adminUser.getPassword()))
+                    throw new ForYourselfException(ResultCodeEnum.PASSWORD_ERROR, null);
+                String token = generateToken(adminUser.getNickname(), adminUser.getUid());
+                return new AdminUserLoginResponseVO(token, ResultCodeEnum.USER_NORMAL_LOGIN);
+            }
+            default -> throw new ForYourselfException(ResultCodeEnum.PARAMETER_ERROR, null);
+        }
     }
 
 

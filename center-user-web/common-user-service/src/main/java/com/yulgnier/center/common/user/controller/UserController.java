@@ -5,6 +5,7 @@ import com.yulgnier.center.common.user.model.vo.UserInfoResponseVO;
 import com.yulgnier.center.common.user.model.vo.UserLoginResponseVO;
 import com.yulgnier.center.common.user.service.UserService;
 import com.yulgnier.common.model.result.Result;
+import com.yulgnier.common.model.result.ResultCodeEnum;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
@@ -25,6 +26,7 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     private final UserService userService;
+
     // 这里只是试一试这个功能，太麻烦了，个人开发就不写了
     @ApiResponses(value = {
             // 1. 【成功】发送验证码成功
@@ -35,12 +37,12 @@ public class UserController {
                             schema = @Schema(implementation = Result.class),
                             examples = @ExampleObject(
                                     value = """
-                {
-                  "code": 200,
-                  "message": "操作成功",
-                  "data": "✅ 发送成功！验证码已发送至邮箱：example@email.com"
-                }
-                """
+                                            {
+                                              "code": 200,
+                                              "message": "操作成功",
+                                              "data": "✅ 发送成功！验证码已发送至邮箱：example@email.com"
+                                            }
+                                            """
                             )
                     )
             ),
@@ -52,12 +54,12 @@ public class UserController {
                             schema = @Schema(implementation = Result.class),
                             examples = @ExampleObject(
                                     value = """
-                {
-                  "code": 401,
-                  "message": "请求信息不完整",
-                  "data": null
-                }
-                """
+                                            {
+                                              "code": 401,
+                                              "message": "请求信息不完整",
+                                              "data": null
+                                            }
+                                            """
                             )
                     )
             ),
@@ -69,12 +71,12 @@ public class UserController {
                             schema = @Schema(implementation = Result.class),
                             examples = @ExampleObject(
                                     value = """
-                {
-                  "code": 402,
-                  "message": "非法请求",
-                  "data": "别攻击了，用爱发电，真的怕了！"
-                }
-                """
+                                            {
+                                              "code": 402,
+                                              "message": "非法请求",
+                                              "data": "别攻击了，用爱发电，真的怕了！"
+                                            }
+                                            """
                             )
                     )
             ),
@@ -86,12 +88,12 @@ public class UserController {
                             schema = @Schema(implementation = Result.class),
                             examples = @ExampleObject(
                                     value = """
-                {
-                  "code": 415,
-                  "message": "邮箱格式不正确",
-                  "data": null
-                }
-                """
+                                            {
+                                              "code": 415,
+                                              "message": "邮箱格式不正确",
+                                              "data": null
+                                            }
+                                            """
                             )
                     )
             ),
@@ -103,12 +105,12 @@ public class UserController {
                             schema = @Schema(implementation = Result.class),
                             examples = @ExampleObject(
                                     value = """
-                {
-                  "code": 451,
-                  "message": "邮箱验证码已发送，请勿重复操作",
-                  "data": null
-                }
-                """
+                                            {
+                                              "code": 451,
+                                              "message": "邮箱验证码已发送，请勿重复操作",
+                                              "data": null
+                                            }
+                                            """
                             )
                     )
             ),
@@ -120,12 +122,12 @@ public class UserController {
                             schema = @Schema(implementation = Result.class),
                             examples = @ExampleObject(
                                     value = """
-                {
-                  "code": 450,
-                  "message": "操作频繁，请稍后重试",
-                  "data": 60
-                }
-                """
+                                            {
+                                              "code": 450,
+                                              "message": "操作频繁，请稍后重试",
+                                              "data": 60
+                                            }
+                                            """
                             )
                     )
             ),
@@ -137,12 +139,12 @@ public class UserController {
                             schema = @Schema(implementation = Result.class),
                             examples = @ExampleObject(
                                     value = """
-                {
-                  "code": 700,
-                  "message": "服务异常，请稍后重试",
-                  "data": null
-                }
-                """
+                                            {
+                                              "code": 700,
+                                              "message": "服务异常，请稍后重试",
+                                              "data": null
+                                            }
+                                            """
                             )
                     )
             )
@@ -163,35 +165,37 @@ public class UserController {
 
     @Operation(summary = "用户登录")
     @PostMapping("/login")
-    public Result<UserLoginResponseVO> login( @Valid @RequestBody UserLoginRequestDTO  request) {
+    public Result<String> login(@Valid @RequestBody UserLoginRequestDTO request) {
         UserLoginResponseVO response = userService.login(request);
-        return Result.ok(response);
+        ResultCodeEnum resultCodeEnum = response.getResultCodeEnum();
+        String token = response.getToken();
+        return Result.ok(resultCodeEnum, token);
     }
 
     @Operation(summary = "用户注销")
     @PostMapping("/cancel")
     public Result<String> cancel(@Valid @RequestBody UserCancelRequestDTO request) {
         userService.cancel(request);
-        return Result.ok("注销成功") ;
+        return Result.ok("注销成功");
     }
 
     @Operation(summary = "找回密码")
     @PostMapping("/forgetPassword")
     public Result<String> forgetPassword(@Valid @RequestBody UserForgetPasswordRequestDTO request) {
-       String response = userService.forgetPassword(request);
+        String response = userService.forgetPassword(request);
         return Result.ok(response);
     }
 
     @Operation(summary = "修改用户普通信息")
     @PostMapping("/updateUserInfo")
     public Result<String> updateUserInfo(@Valid @RequestBody UserUpdateInfoRequestDTO request) {
-         userService.updateUserInfo(request);
-         return Result.ok("修改成功");
+        userService.updateUserInfo(request);
+        return Result.ok("修改成功");
     }
 
     @Operation(summary = "换绑邮箱")
     @PostMapping("/changeEmail")
-    public Result<String> changeEmail(@Valid @RequestBody UserChangeEmailRequestDTO  request) {
+    public Result<String> changeEmail(@Valid @RequestBody UserChangeEmailRequestDTO request) {
         userService.changeEmail(request);
         return Result.ok("更改成功");
     }
@@ -202,6 +206,7 @@ public class UserController {
         UserInfoResponseVO response = userService.getUserInfo();
         return Result.ok(response);
     }
+
     @Operation(summary = "修改用户密码")
     @PostMapping("/updatePassword")
     public Result<String> updatePassword(@Valid @RequestBody UserUpdatePasswordRequestDTO request) {
