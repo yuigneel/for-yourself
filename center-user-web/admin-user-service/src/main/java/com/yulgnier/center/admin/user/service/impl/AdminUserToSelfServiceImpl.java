@@ -34,10 +34,12 @@ import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 /**
+ * 管理员用户自助服务实现类
+ * <p>针对表【t_admin_user(管理员用户基础信息表)】的数据库操作Service实现</p>
+ * <p>注意：管理员账户被逻辑删除后，不允许像普通用户那样靠登录来恢复，因此不需要自定义Mapper，使用MyBatis-Plus默认方法即可</p>
+ *
  * @author Yu_Lgnier
- * @description 针对表【t_admin_user(管理员用户基础信息表)】的数据库操作Service实现
- * @createDate 2026-04-18 16:37:15
- * 这个类被逻辑删除后，并不允许像普通用户那样靠登录来取消，所以不需要自己构建mapper，用MybatisPlus默认的方法就行
+ * @since 2026-04-18
  */
 @Slf4j
 @Service
