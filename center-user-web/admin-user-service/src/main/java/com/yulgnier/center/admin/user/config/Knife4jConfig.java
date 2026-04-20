@@ -46,8 +46,8 @@ public class Knife4jConfig {
         return GroupedOpenApi.builder()
                 .group("根管理员接口")       // 分组名称（页面显示用）
                 .pathsToMatch(      // 接口路径匹配规则 /* 表示匹配所有单级路径 /** 表示匹配所有多级路径
-                        "/center-admin/userself/**"
-
+                        "/center-admin/userself/**",
+                        "/center-admin/user-to-admin/**"
                 )
                 .build();
     }

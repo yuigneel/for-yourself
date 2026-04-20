@@ -3,7 +3,7 @@ package com.yulgnier.center.admin.user.controller;
 import com.yulgnier.center.admin.user.model.dto.*;
 import com.yulgnier.center.admin.user.model.vo.AdminUserInfoResponseVO;
 import com.yulgnier.center.admin.user.model.vo.AdminUserLoginResponseVO;
-import com.yulgnier.center.admin.user.service.AdminUserToSelfService;
+import com.yulgnier.center.admin.user.service.AdminUserService;
 import com.yulgnier.common.model.result.Result;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -14,11 +14,11 @@ import org.springframework.web.bind.annotation.*;
 
 @Slf4j
 @RestController
-@RequestMapping("/center-admin/userself")
-@Tag(name = "管理员主账号", description = "关联其它模块的核心账号：管理员登录等接口")
 @RequiredArgsConstructor
+@RequestMapping("/center-admin/userself")
+@Tag(name = "管理员对接自己主账号", description = "主要是管理员自己对自己账号的接口")
 public class AdminUserToSelfController {
-    private final AdminUserToSelfService userService;
+    private final AdminUserService userService;
     @Operation(summary = "获取邮箱验证码")
     @PostMapping("/getEmailCode")
     public Result<String> getEmailCode(@Valid @RequestBody EmailCodeRequestDTO request) {

@@ -2,6 +2,8 @@ package com.yulgnier.center.admin.user.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.yulgnier.center.admin.user.config.properties.CloudflareProperties;
@@ -14,7 +16,7 @@ import com.yulgnier.center.admin.user.model.enums.BusinessTypeEnum;
 import com.yulgnier.center.admin.user.model.vo.AdminUserInfoResponseVO;
 import com.yulgnier.center.admin.user.model.vo.AdminUserLoginResponseVO;
 import com.yulgnier.center.admin.user.mapper.AdminUserMapper;
-import com.yulgnier.center.admin.user.service.AdminUserToSelfService;
+import com.yulgnier.center.admin.user.service.AdminUserService;
 import com.yulgnier.common.config.properties.JwtProperties;
 import com.yulgnier.common.exception.ForYourselfException;
 import com.yulgnier.common.model.constants.AuthConstants;
@@ -44,8 +46,8 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class AdminUserToSelfServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser>
-        implements AdminUserToSelfService {
+public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser>
+        implements AdminUserService {
 
     private final CloudflareProperties cloudflareProperties;
     private final MailProperties mailProperties;
@@ -496,6 +498,100 @@ public class AdminUserToSelfServiceImpl extends ServiceImpl<AdminUserMapper, Adm
         // 执行局部更新（不会更新create_time/update_time，数据库自动生效！）
         this.update(updateWrapper);
         log.info("管理员{}：修改密码成功", adminUser.getNickname());
+    }
+
+
+    /**
+     * 分页查询管理员用户列表
+     * <p>支持条件：排除自己、时间范围、逻辑删除状态、账户权限、账户状态、关键词搜索</p>
+     *
+     * @param query 分页查询请求参数
+     * @return 分页结果，包含管理员用户信息列表
+     */
+    @Override
+    public IPage<AdminUserInfoResponseVO> pageUsers(AdminUserPageQueryDTO query) {
+        // 1. 创建分页对象
+        Page<AdminUser> page = new Page<>(query.getCurrent(), query.getSize());
+
+        // 2. 构建查询条件
+        LambdaQueryWrapper<AdminUser> wrapper = new LambdaQueryWrapper<>();
+
+        // 2.1 排除当前登录用户
+        if (Boolean.TRUE.equals(query.getExcludeSelf())) {
+            Long currentUid = UserContextUtil.getUid();
+            wrapper.ne(AdminUser::getUid, currentUid);
+        }
+
+        // 2.2 时间范围查询（创建时间）
+        if (query.getStartTime() != null && query.getEndTime() != null) {
+            // 情况1：开始时间和截止时间都有 → 查询区间 [startTime 00:00:00, endTime 23:59:59]
+            wrapper.between(
+                    AdminUser::getCreateTime,  // 数据库字段：create_time
+                    query.getStartTime().atStartOfDay(),  // LocalDate → LocalDateTime (当天 00:00:00)
+                    query.getEndTime().atTime(23, 59, 59) // LocalDate → LocalDateTime (当天 23:59:59)
+            );
+            // 生成的 SQL: WHERE create_time BETWEEN '2024-01-01 00:00:00' AND '2024-12-31 23:59:59'
+        } else if (query.getStartTime() != null) {
+            // 情况2：只有开始时间 → 从开始时间到现在 [startTime 00:00:00, 现在]
+            wrapper.ge(
+                    AdminUser::getCreateTime,  // ge = Greater or Equal (大于等于)
+                    query.getStartTime().atStartOfDay()  // 当天 00:00:00
+            );
+            // 生成的 SQL: WHERE create_time >= '2024-01-01 00:00:00'
+        } else if (query.getEndTime() != null) {
+            // 情况3：只有截止时间 → 从头到截止时间 [很久以前, endTime 23:59:59]
+            wrapper.le(
+                    AdminUser::getCreateTime,  // le = Less or Equal (小于等于)
+                    query.getEndTime().atTime(23, 59, 59)  // 当天 23:59:59
+            );
+            // 生成的 SQL: WHERE create_time <= '2024-12-31 23:59:59'
+        }
+
+        // 2.3 逻辑删除状态筛选
+        if (query.getIsDeleted() != null) {
+            wrapper.eq(AdminUser::getIsDeleted, query.getIsDeleted());
+        }
+
+        // 2.4 账户权限筛选
+        if (query.getAccountPermission() != null) {
+            wrapper.eq(AdminUser::getAccountPermission, query.getAccountPermission());
+        }
+
+        // 2.5 账户状态筛选
+        if (query.getAccountStatus() != null) {
+            wrapper.eq(AdminUser::getAccountStatus, query.getAccountStatus());
+        }
+
+        // 2.6 关键词模糊查询（昵称或邮箱）
+        if (query.getKeyword() != null && !query.getKeyword().isBlank()) {
+            wrapper.and(w -> w.like(AdminUser::getNickname, query.getKeyword())
+                    .or()
+                    .like(AdminUser::getEmail, query.getKeyword()));
+        }
+
+        // 2.7 排序
+        String orderBy = query.getOrderBy() != null ? query.getOrderBy() : "createTime";
+        String orderDirection = query.getOrderDirection() != null ? query.getOrderDirection() : "desc";
+
+        if ("asc".equalsIgnoreCase(orderDirection)) {
+            if ("nickname".equals(orderBy)) {
+                wrapper.orderByAsc(AdminUser::getNickname);
+            } else {
+                wrapper.orderByAsc(AdminUser::getCreateTime);
+            }
+        } else {
+            if ("nickname".equals(orderBy)) {
+                wrapper.orderByDesc(AdminUser::getNickname);
+            } else {
+                wrapper.orderByDesc(AdminUser::getCreateTime);
+            }
+        }
+
+        // 3. 执行分页查询
+        IPage<AdminUser> userPage = this.page(page, wrapper);
+
+        // 4. 转换为 VO（使用 convert 方法自动保留分页信息，只转换数据列表）
+        return userPage.convert(user -> BeanUtil.copyProperties(user, AdminUserInfoResponseVO.class));
     }
 
 
