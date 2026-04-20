@@ -3,7 +3,7 @@ package com.yulgnier.center.admin.user.controller;
 import com.yulgnier.center.admin.user.model.dto.*;
 import com.yulgnier.center.admin.user.model.vo.AdminUserInfoResponseVO;
 import com.yulgnier.center.admin.user.model.vo.AdminUserLoginResponseVO;
-import com.yulgnier.center.admin.user.service.AdminUserService;
+import com.yulgnier.center.admin.user.service.AdminUserToSelfService;
 import com.yulgnier.common.model.result.Result;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -17,8 +17,8 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/center-admin/userself")
 @Tag(name = "管理员主账号", description = "关联其它模块的核心账号：管理员登录等接口")
 @RequiredArgsConstructor
-public class UserController {
-    private final AdminUserService userService;
+public class AdminUserToSelfController {
+    private final AdminUserToSelfService userService;
     @Operation(summary = "获取邮箱验证码")
     @PostMapping("/getEmailCode")
     public Result<String> getEmailCode(@Valid @RequestBody EmailCodeRequestDTO request) {
@@ -32,6 +32,7 @@ public class UserController {
         String response = userService.forgetPassword(request);
         return Result.ok(response);
     }
+
     @Operation(summary = "管理员登录")
     @PostMapping("/login")
     public Result<String> login( @Valid @RequestBody UserLoginRequestDTO request) {

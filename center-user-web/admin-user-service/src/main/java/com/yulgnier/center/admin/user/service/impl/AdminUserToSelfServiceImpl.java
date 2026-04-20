@@ -13,8 +13,8 @@ import com.yulgnier.center.admin.user.model.enums.BanLevelEnum;
 import com.yulgnier.center.admin.user.model.enums.BusinessTypeEnum;
 import com.yulgnier.center.admin.user.model.vo.AdminUserInfoResponseVO;
 import com.yulgnier.center.admin.user.model.vo.AdminUserLoginResponseVO;
-import com.yulgnier.center.admin.user.service.AdminUserService;
 import com.yulgnier.center.admin.user.mapper.AdminUserMapper;
+import com.yulgnier.center.admin.user.service.AdminUserToSelfService;
 import com.yulgnier.common.config.properties.JwtProperties;
 import com.yulgnier.common.exception.ForYourselfException;
 import com.yulgnier.common.model.constants.AuthConstants;
@@ -27,6 +27,7 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -41,8 +42,8 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser>
-        implements AdminUserService {
+public class AdminUserToSelfServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser>
+        implements AdminUserToSelfService {
 
     private final CloudflareProperties cloudflareProperties;
     private final MailProperties mailProperties;
@@ -99,12 +100,13 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
             throw new ForYourselfException(ResultCodeEnum.CAPTCHA_REQUEST_TOO_FREQUENT, null);
         }
         //    检查是否已经发送了验证码
-        if (RedisUtil.get(sendEmailKey) != null) {
+        //      创建key
+        String emailCodeKey = request.getBusinessType().getName() + AuthConstants.SEPARATOR + receiveEmail;
+        if (RedisUtil.get(emailCodeKey) != null) {
             throw new ForYourselfException(ResultCodeEnum.CAPTCHA_ALREADY_SENT, null);
         }
         // 发送验证码
-        //    创建key和value
-        String emailCodeKey = request.getBusinessType().getName() + AuthConstants.SEPARATOR + receiveEmail;
+        //    创建value
         String emailCode = generateCode();
         String emailCodeValue = emailCode + AuthConstants.SEPARATOR + miscellaneousProperties.getEmailTryTimes();
         //    存入缓存
@@ -228,6 +230,8 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
             log.warn("用户{}：传来无效cloud flare令牌", name);
             throw new ForYourselfException(ResultCodeEnum.CAPTCHA_VERIFICATION_FAILED, "别攻击了，用爱发电，真的怕了！");
         }
+        // 检验密码格式
+        if (!ValidateUtil.isValidPassword(request.getPassword())) throw new ForYourselfException(ResultCodeEnum.PASSWORD_FORMAT_ERROR, null);
         switch (request.getLoginType()) {
             // 用户名登录
             case USERNAME -> {
@@ -298,20 +302,24 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
         if (!bCryptPasswordEncoder.matches(request.getPassword(), adminUser.getPassword()))
             throw new ForYourselfException(ResultCodeEnum.PASSWORD_ERROR, null);
         // 检验验证码
-        String emailCodeKey = BusinessTypeEnum.BIND_EMAIL + AuthConstants.SEPARATOR + adminUser.getEmail();
-        String emailCode = null;
-        Integer tryTimes = null;
+        String emailCodeKey = BusinessTypeEnum.BIND_EMAIL.getName() + AuthConstants.SEPARATOR + request.getNewEmail();
+        String emailCodeValue = RedisUtil.get(emailCodeKey);
+        
+        if (emailCodeValue == null) {
+            throw new ForYourselfException(ResultCodeEnum.CAPTCHA_EXPIRED, null);
+        }
+        
+        String emailCode;
+        Integer tryTimes;
         try {
-            String emailCodeValue = RedisUtil.get(emailCodeKey);
-            if (emailCodeValue == null) throw new ForYourselfException(ResultCodeEnum.CAPTCHA_EXPIRED, null);
             emailCode = emailCodeValue.split(AuthConstants.SEPARATOR)[0];
             tryTimes = Integer.valueOf(emailCodeValue.split(AuthConstants.SEPARATOR)[1]);
-        } catch (Exception e) {
-            log.error("用户{}：验证码获取失败", adminUser.getNickname());
+        } catch (NumberFormatException | ArrayIndexOutOfBoundsException e) {
+            log.error("用户{}：Redis缓存格式错误", adminUser.getNickname(), e);
             throw new ForYourselfException(ResultCodeEnum.CACHE_SERVICE_ERROR, null);
         }
         if (!checkCode(request.getVerificationCode(), request.getNewEmail(), emailCodeKey, emailCode, tryTimes))
-            throw new ForYourselfException(ResultCodeEnum.CAPTCHA_ERROR, null);
+            throw new ForYourselfException(ResultCodeEnum.CAPTCHA_ERROR, tryTimes-1);
         // 换绑邮箱
         LambdaUpdateWrapper<AdminUser> set = new LambdaUpdateWrapper<AdminUser>().eq(AdminUser::getId, adminUser.getId()).set(AdminUser::getEmail, request.getNewEmail());
         try {
@@ -346,33 +354,54 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
      */
     @Override
     public void updateUserInfo(UserUpdateInfoRequestDTO request) {
-        // 1. 检查昵称是否符合规范
+        // 检查昵称是否符合规范
         if (!ValidateUtil.isValidUsername(request.getNickname())) {
             throw new ForYourselfException(ResultCodeEnum.USERNAME_FORMAT_ERROR, null);
         }
-
-        // 2. 获取当前登录用户
+        // 检查生日格式
+        if (request.getBirthday() != null) {
+            if (request.getBirthday().isAfter(LocalDate.now())) {
+                throw new ForYourselfException(ResultCodeEnum.DATE_FORMAT_ERROR, null);
+            }
+        }
+        // 获取当前登录用户
         AdminUser adminUser = this.getOne(new LambdaQueryWrapper<AdminUser>().eq(AdminUser::getUid, UserContextUtil.getUid()));
         if (adminUser == null) {
             throw new ForYourselfException(ResultCodeEnum.USER_NOT_FOUND_OR_CANCELLED, null);
         }
 
-        // 3. 检查是否有更新项（不能一个都不更新和数据库一样）
+        // 检查是否有更新项（不能一个都不更新和数据库一样）
         boolean hasChanges = false;
 
-        // 检查昵称是否变化
+        // 检查昵称是否变化（必填字段，直接比较）
         if (!request.getNickname().equals(adminUser.getNickname())) {
             hasChanges = true;
         }
 
-        // 检查性别是否变化（只有传入了才比较）
-        if (request.getGender() != null && !request.getGender().getCode().equals(adminUser.getGender())) {
-            hasChanges = true;
+        // 检查性别是否变化（可选字段）
+        if (request.getGender() == null) {
+            // 前端没传性别，但数据库有值 → 用户想清空性别
+            if (adminUser.getGender() != null) {
+                hasChanges = true;
+            }
+        } else {
+            // 前端传了性别，比较值是否不同
+            if (!request.getGender().equals(adminUser.getGender())) {
+                hasChanges = true;
+            }
         }
 
-        // 检查生日是否变化（只有传入了才比较）
-        if (request.getBirthday() != null && !request.getBirthday().equals(adminUser.getBirthday())) {
-            hasChanges = true;
+        // 检查生日是否变化（可选字段）
+        if (request.getBirthday() == null) {
+            // 前端没传生日，但数据库有值 → 用户想清空生日
+            if (adminUser.getBirthday() != null) {
+                hasChanges = true;
+            }
+        } else {
+            // 前端传了生日，比较值是否不同
+            if (!request.getBirthday().equals(adminUser.getBirthday())) {
+                hasChanges = true;
+            }
         }
 
         // 如果没有任何变化，抛出异常
@@ -380,27 +409,13 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
             throw new ForYourselfException(ResultCodeEnum.PARAMETER_ERROR, null);
         }
 
-        // 4. 构建更新条件
+        // 构建更新条件
         LambdaUpdateWrapper<AdminUser> updateWrapper = new LambdaUpdateWrapper<AdminUser>()
-                .eq(AdminUser::getId, adminUser.getId());
-        
-        // 设置昵称（必填）
-        updateWrapper.set(AdminUser::getNickname, request.getNickname());
-        
-        // 设置生日（可选，需校验）
-        if (request.getBirthday() != null) {
-            if (request.getBirthday().isAfter(java.time.LocalDate.now())) {
-                throw new ForYourselfException(ResultCodeEnum.DATE_FORMAT_ERROR, null);
-            }
-            updateWrapper.set(AdminUser::getBirthday, request.getBirthday());
-        }
-        
-        // 设置性别（可选）
-        if (request.getGender() != null) {
-            updateWrapper.set(AdminUser::getGender, request.getGender().getCode());
-        }
-        
-        // 5. 执行更新
+                .eq(AdminUser::getId, adminUser.getId())
+                .set(AdminUser::getNickname, request.getNickname())
+                .set(AdminUser::getBirthday, request.getBirthday())
+                .set(AdminUser::getGender, request.getGender().getCode());
+        // 执行更新
         try {
             this.update(updateWrapper);
         } catch (Exception e) {
@@ -421,14 +436,14 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
         // 获取用户
         AdminUser adminUser = this.getOne(new LambdaQueryWrapper<AdminUser>()
                 .eq(AdminUser::getUid, UserContextUtil.getUid()));
-        
+
         if (adminUser == null) {
             throw new ForYourselfException(ResultCodeEnum.USER_NOT_FOUND_OR_CANCELLED, null);
         }
-        
+
         // 用Hutool工具包拷贝到VO
         AdminUserInfoResponseVO responseVO = BeanUtil.copyProperties(adminUser, AdminUserInfoResponseVO.class);
-        
+
         // 返回用户信息
         return responseVO;
     }
@@ -453,11 +468,14 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
         if (request.getNewPassword().equals(request.getOldPassword())) {
             throw new ForYourselfException(ResultCodeEnum.PARAMETER_ERROR, null);
         }
-        
+        // 验证两个密码是否符合规范
+        if (!ValidateUtil.isValidPassword(request.getNewPassword()) || !ValidateUtil.isValidPassword(request.getOldPassword())) {
+            throw new ForYourselfException(ResultCodeEnum.PASSWORD_FORMAT_ERROR, null);
+        }
         // 获取用户
         AdminUser adminUser = this.getOne(new LambdaQueryWrapper<AdminUser>()
                 .eq(AdminUser::getUid, UserContextUtil.getUid()));
-        
+
         if (adminUser == null) {
             throw new ForYourselfException(ResultCodeEnum.USER_NOT_FOUND_OR_CANCELLED, null);
         }
@@ -465,14 +483,14 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
         if (!bCryptPasswordEncoder.matches(request.getOldPassword(), adminUser.getPassword())) {
             throw new ForYourselfException(ResultCodeEnum.PASSWORD_ERROR, null);
         }
-        
+
         log.info("管理员{}：开始修改密码", adminUser.getNickname());
-        
+
         // 修改密码
         LambdaUpdateWrapper<AdminUser> updateWrapper = new LambdaUpdateWrapper<AdminUser>()
                 .eq(AdminUser::getUid, adminUser.getUid()) // 条件：根据UID更新
                 .set(AdminUser::getPassword, bCryptPasswordEncoder.encode(request.getNewPassword())); // 只更新密码
-        
+
         // 执行局部更新（不会更新create_time/update_time，数据库自动生效！）
         this.update(updateWrapper);
         log.info("管理员{}：修改密码成功", adminUser.getNickname());

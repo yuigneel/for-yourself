@@ -28,6 +28,7 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
@@ -81,7 +82,8 @@ public class UserServiceImpl
             log.warn("邮箱{}：业务类型为空", receiveEmail);
             throw new ForYourselfException(ResultCodeEnum.INCOMPLETE_PARAMETERS, null);
         }
-        if(request.getBusinessType()==BusinessTypeEnum.SEND_EMAIL)throw new ForYourselfException(ResultCodeEnum.PARAMETER_ERROR, null);
+        if (request.getBusinessType() == BusinessTypeEnum.SEND_EMAIL)
+            throw new ForYourselfException(ResultCodeEnum.PARAMETER_ERROR, null);
         String emailCodeKey = request.getBusinessType().getName() + AuthConstants.SEPARATOR + receiveEmail; //eg: 注册:example@163.com
         String code = generateCode();   // 生成6位随机验证码    あなたのことが大好きです。付き合ってください-愚人节快乐
         String emailCodeValue = code + AuthConstants.SEPARATOR + miscellaneousProperties.getEmailTryTimes(); //eg: 123456:6
@@ -248,6 +250,8 @@ public class UserServiceImpl
             log.warn("用户{}：传来无效cloud flare令牌", name);
             throw new ForYourselfException(ResultCodeEnum.CAPTCHA_VERIFICATION_FAILED, "别攻击了，用爱发电，真的怕了！");
         }
+        // 检验密码格式
+        if (!ValidateUtil.isValidPassword(request.getPw())) throw new ForYourselfException(ResultCodeEnum.PASSWORD_FORMAT_ERROR, null);
         // switch 到不同的登录方式
         switch (request.getLoginType()) {
             // 用户名登录
@@ -474,53 +478,68 @@ public class UserServiceImpl
      */
     @Override
     public void updateUserInfo(UserUpdateInfoRequestDTO request) {
+        // 检查昵称格式
+        if (!ValidateUtil.isValidUsername(request.getNickname())) {
+            throw new ForYourselfException(ResultCodeEnum.USERNAME_FORMAT_ERROR, null);
+        }
+        // 检查生日格式
+        if (request.getBirthday() != null) {
+            if (request.getBirthday().isAfter(LocalDate.now())) {
+                throw new ForYourselfException(ResultCodeEnum.DATE_FORMAT_ERROR, null);
+            }
+        }
         // 获取用户
         LambdaQueryWrapper<CommonUser> eq = new LambdaQueryWrapper<CommonUser>().eq(CommonUser::getUid, UserContextUtil.getUid());
         CommonUser user = this.getOne(eq);
         if (user == null) {
             throw new ForYourselfException(ResultCodeEnum.USER_NOT_FOUND_OR_CANCELLED, null);
         }
-        log.info("用户{}：开始更新用户信息", user.getNickname());
-        // 检查传入参数与数据库是否完全一致（只检查实际传入的参数）
+
+        // 检查是否有更新项（不能一个都不更新和数据库一样）
         boolean hasChanges = false;
-        
-        // 检查昵称是否变化
+
+        // 检查昵称是否变化（必填字段，直接比较）
         if (!request.getNickname().equals(user.getNickname())) {
             hasChanges = true;
         }
-        
-        // 检查性别是否变化（只有传入了才比较）
-        if (request.getGenderEnum() != null && !request.getGenderEnum().equals(user.getGender())) {
-            hasChanges = true;
+
+        // 检查性别是否变化（可选字段）
+        if (request.getGenderEnum() == null) {
+            // 前端没传性别，但数据库有值 → 用户想清空性别
+            if (user.getGender() != null) {
+                hasChanges = true;
+            }
+        } else {
+            // 前端传了性别，比较值是否不同
+            if (!request.getGenderEnum().equals(user.getGender())) {
+                hasChanges = true;
+            }
         }
-        
-        // 检查生日是否变化（只有传入了才比较）
-        if (request.getBirthday() != null && !request.getBirthday().equals(user.getBirthday())) {
-            hasChanges = true;
+
+        // 检查生日是否变化（可选字段）
+        if (request.getBirthday() == null) {
+            // 前端没传生日，但数据库有值 → 用户想清空生日
+            if (user.getBirthday() != null) {
+                hasChanges = true;
+            }
+        } else {
+            // 前端传了生日，比较值是否不同
+            if (!request.getBirthday().equals(user.getBirthday())) {
+                hasChanges = true;
+            }
         }
-        
+
         // 如果没有任何变化，抛出异常
         if (!hasChanges) {
             throw new ForYourselfException(ResultCodeEnum.PARAMETER_ERROR, null);
         }
-        
-        LambdaUpdateWrapper<CommonUser> yulgnier = new LambdaUpdateWrapper<CommonUser>().eq(CommonUser::getId, user.getId());
-        // 检查昵称
-        if (!ValidateUtil.isValidUsername(request.getNickname())) {
-            throw new ForYourselfException(ResultCodeEnum.USERNAME_FORMAT_ERROR, null);
-        }
-        yulgnier.set(CommonUser::getNickname, request.getNickname());
-        // 检查生日
-        if (request.getBirthday() != null) {
-            if (request.getBirthday().isAfter(LocalDate.now())) {
-                throw new ForYourselfException(ResultCodeEnum.DATE_FORMAT_ERROR, null);
-            }
-            yulgnier.set(CommonUser::getBirthday, request.getBirthday());
-        }
-        // 检查性别
-        if (request.getGenderEnum() != null) {
-            yulgnier.set(CommonUser::getGender, request.getGenderEnum().getCode());
-        }
+
+        log.info("用户{}：开始更新用户信息", user.getNickname());
+
+        LambdaUpdateWrapper<CommonUser> yulgnier = new LambdaUpdateWrapper<CommonUser>().eq(CommonUser::getId, user.getId())
+                .set(CommonUser::getNickname, request.getNickname())
+                .set(CommonUser::getBirthday, request.getBirthday())
+                .set(CommonUser::getGender, request.getGenderEnum().getCode());
         try {
             this.update(yulgnier);
             log.info("用户{}：更新用户信息成功", user.getNickname());
@@ -598,28 +617,38 @@ public class UserServiceImpl
 
     /**
      * 用户修改密码
-     * <p>校验流程：查询用户 → 新旧密码一致性校验 → 原密码验证 → 加密更新密码</p>
+     * <p>校验流程：新旧密码一致性校验 → 密码格式校验 → 查询用户 → 原密码验证 → 加密更新密码</p>
      * <p>使用 LambdaUpdateWrapper 局部更新，避免触发 update_time 自动更新</p>
      *
      * @param request 修改密码请求DTO，包含原始密码和新密码
      */
     @Override
     public void updatePassword(UserUpdatePasswordRequestDTO request) {
+        // 先验证新旧密码是否相同（避免不必要的数据库查询）
+        if (request.getNewPassword().equals(request.getOldPassword())) {
+            throw new ForYourselfException(ResultCodeEnum.PARAMETER_ERROR, null);
+        }
+
+        // 验证两个密码是否符合规范
+        if (!ValidateUtil.isValidPassword(request.getNewPassword()) || !ValidateUtil.isValidPassword(request.getOldPassword())) {
+            throw new ForYourselfException(ResultCodeEnum.PASSWORD_FORMAT_ERROR, null);
+        }
+
         // 获取用户
-        LambdaQueryWrapper<CommonUser> eq = new LambdaQueryWrapper<CommonUser>().eq(CommonUser::getUid, UserContextUtil.getUid());
-        CommonUser commonUser = null;
-        try {
-            commonUser = this.getOneOpt(eq).get();
-        } catch (Exception e) {
+        CommonUser commonUser = this.getOne(new LambdaQueryWrapper<CommonUser>()
+                .eq(CommonUser::getUid, UserContextUtil.getUid()));
+
+        if (commonUser == null) {
             throw new ForYourselfException(ResultCodeEnum.USER_NOT_FOUND_OR_CANCELLED, null);
         }
-        log.info("用户{}：开始修改密码", commonUser.getNickname());
-        // 验证密码
-        if (request.getNewPassword().equals(request.getOldPassword()))
-            throw new ForYourselfException(ResultCodeEnum.PARAMETER_ERROR, null);
+
+        // 验证原密码
         if (!bCryptPasswordEncoder.matches(request.getOldPassword(), commonUser.getPassword())) {
             throw new ForYourselfException(ResultCodeEnum.PASSWORD_ERROR, null);
         }
+
+        log.info("用户{}：开始修改密码", commonUser.getNickname());
+
         // 修改密码
         LambdaUpdateWrapper<CommonUser> updateWrapper = new LambdaUpdateWrapper<CommonUser>()
                 .eq(CommonUser::getUid, commonUser.getUid()) // 条件：根据UID更新

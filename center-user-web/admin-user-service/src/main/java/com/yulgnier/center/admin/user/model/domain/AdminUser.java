@@ -6,6 +6,8 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+
+import com.yulgnier.center.admin.user.model.enums.GenderEnum;
 import lombok.Data;
 
 /**
@@ -45,7 +47,7 @@ public class AdminUser extends BaseDomain {
      * 性别：0-未知 3-强男 2-男 1-弱男 -1-弱女 -2-女 -3-强女
      */
     @TableField(value = "gender")
-    private Integer gender;
+    private GenderEnum gender;
 
     /**
      * 出生日期

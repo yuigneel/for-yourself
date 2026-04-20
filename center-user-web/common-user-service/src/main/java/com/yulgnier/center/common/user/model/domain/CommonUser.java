@@ -1,5 +1,6 @@
 package com.yulgnier.center.common.user.model.domain;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import java.time.LocalDate;
 
@@ -20,41 +21,49 @@ public class CommonUser extends BaseDomain{
     /**
      * 用户唯一业务UID
      */
+    @TableField(value = "uid")
     private Long uid;
 
     /**
      * 登录邮箱(唯一)
      */
+    @TableField(value = "email")
     private String email;
 
     /**
      * 用户昵称(唯一)
      */
+    @TableField(value = "nickname")
     private String nickname;
 
     /**
      * BCrypt加密后的密码
      */
     @JsonIgnore // 忽略 JSON化此字段
+    @TableField(value = "password")
     private String password;
 
     /**
      * 性别：0-未知 3-强男 2-男 1-弱男 -1-弱女 -2-女 -3-强女
      */
+    @TableField(value = "gender")
     private GenderEnum gender;
 
     /**
      * 出生日期
      */
+    @TableField(value = "birthday")
     private LocalDate birthday;
 
     /**
      * 平台入驻日期
      */
+    @TableField(value = "join_date")
     private LocalDate joinDate;
 
     /**
      * 账户状态：3- 强制删除 2-禁用 1-警告 0-正常(默认0)
      */
+    @TableField(value = "account_status")
     private Integer accountStatus;
 }

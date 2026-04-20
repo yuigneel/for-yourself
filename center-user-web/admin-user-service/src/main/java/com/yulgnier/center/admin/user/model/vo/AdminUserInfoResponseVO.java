@@ -1,5 +1,6 @@
 package com.yulgnier.center.admin.user.model.vo;
 
+import com.yulgnier.center.admin.user.model.enums.GenderEnum;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -27,7 +28,7 @@ public class AdminUserInfoResponseVO {
     private String nickname;
     
     @Schema(description = "性别：0-未知 3-强男 2-男 1-弱男 -1-弱女 -2-女 -3-强女", example = "0")
-    private Integer gender;
+    private GenderEnum gender;
     
     @Schema(description = "出生日期", example = "1990-01-01")
     private LocalDate birthday;
