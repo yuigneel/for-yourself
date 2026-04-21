@@ -15,24 +15,30 @@ import lombok.Getter;
 @AllArgsConstructor
 public enum BusinessTypeEnum implements BaseEnum {
     /**
+     * 发送验证码业务
+     */
+    SEND_EMAIL(0,"验证码发送"),
+
+    /**
      * 注册业务
      */
     REGISTER(1, "注册"),
-    
+
     /**
      * 找回密码业务
      */
     FORGET_PASSWORD(2, "找回密码"),
-    
+
     /**
      * 绑定邮箱业务
      */
     BIND_EMAIL(3, "绑定邮箱"),
 
     /**
-     * 发送验证码业务
+     * 用户注销业务
      */
-    SEND_EMAIL(0,"验证码发送");
+    CANCEL_USER(4, "用户注销");
+
 
     /**
      * MyBatis Plus: 数据库存储/读取时使用 code 值

@@ -25,6 +25,11 @@
                     <groupId>org.springframework.boot</groupId>
                     <artifactId>spring-boot-starter-web</artifactId>
                 </exclusion>
+                <!-- 排除 MyBatis-Plus，网关不需要数据库 -->
+                <exclusion>
+                    <groupId>com.baomidou</groupId>
+                    <artifactId>mybatis-plus-boot-starter</artifactId>
+                </exclusion>
             </exclusions>
         </dependency>
         <!-- Spring Cloud Gateway 核心依赖（必须） -->

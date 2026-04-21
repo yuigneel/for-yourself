@@ -43,6 +43,8 @@ logging:
     org.springframework.web.cors: debug
     # 开启WebFlux请求日志（完整请求流程）
     org.springframework.web.reactive: debug
+  file:
+    path: ${your.logging.file.path}
 
 truth:
   truth-key: ${your.truth.truth-key}

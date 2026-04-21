@@ -1,7 +1,11 @@
 package com.yulgnier.center.common.user.mapper;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.yulgnier.center.common.user.model.domain.CommonUser;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.yulgnier.center.user.api.model.dto.CommonUserPageQueryDTO;
+import org.apache.ibatis.annotations.Param;
 
 /**
 * @author Yu_Lgnier
@@ -46,6 +50,16 @@ public interface UserMapper extends BaseMapper<CommonUser> {
      * @return 影响行数
      */
     int restoreUserIgnoreLogicDelete(CommonUser user);
+
+    /**
+     * 分页查询普通用户列表（支持动态条件）
+     * <p>通过 XML 手写 SQL 实现复杂查询逻辑</p>
+     *
+     * @param page  分页对象（MyBatis-Plus 自动注入 LIMIT/OFFSET）
+     * @param query 查询条件
+     * @return 分页结果
+     */
+    IPage<CommonUser> selectPageByCondition(Page<CommonUser> page, @Param("query") CommonUserPageQueryDTO query);
 
 
 }

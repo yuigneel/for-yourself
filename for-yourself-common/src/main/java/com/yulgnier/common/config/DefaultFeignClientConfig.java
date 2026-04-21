@@ -35,7 +35,7 @@ public class DefaultFeignClientConfig {
     private final TruthProperties truthProperties;
 
     /**
-     * Feign 请求拦截器：自动添加 truth 和 uid 请求头
+     * Feign 请求拦截器：自动添加 truth、uid、identity 和 admin_level 请求头
      *
      * @return RequestInterceptor
      */
@@ -51,6 +51,20 @@ public class DefaultFeignClientConfig {
                 Long uid = UserContextUtil.getUid();
                 if (uid != null) {
                     template.header(AuthConstants.UID_KEY, String.valueOf(uid));
+                }
+
+                // 添加 identity 请求头（从 ThreadLocal 中获取当前用户身份）
+                String identity = UserContextUtil.getIdentity();
+                if (identity != null && !identity.isEmpty()) {
+                    template.header(AuthConstants.IDENTITY_KEY, identity);
+                }
+
+                // 如果是管理员，添加 admin_level 请求头（从 ThreadLocal 中获取权限等级）
+                if (AuthConstants.IDENTITY_ADMIN_USER_VALUE.equals(identity)) {
+                    Integer adminLevel = UserContextUtil.getAdminLevel();
+                    if (adminLevel != null) {
+                        template.header(AuthConstants.ADMIN_LEVEL_KEY, String.valueOf(adminLevel));
+                    }
                 }
             }
         };

@@ -4,6 +4,8 @@ import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.lang.Snowflake;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.yulgnier.center.common.user.config.properties.CloudflareProperties;
 import com.yulgnier.center.common.user.config.properties.MailProperties;
@@ -11,12 +13,14 @@ import com.yulgnier.center.common.user.config.properties.MiscellaneousProperties
 import com.yulgnier.center.common.user.mapper.UserMapper;
 import com.yulgnier.center.common.user.model.domain.CommonUser;
 import com.yulgnier.center.common.user.model.dto.*;
-import com.yulgnier.center.common.user.model.enums.BanLevelEnum;
-import com.yulgnier.center.common.user.model.enums.BusinessTypeEnum;
-import com.yulgnier.center.common.user.model.enums.GenderEnum;
-import com.yulgnier.center.common.user.model.vo.UserInfoResponseVO;
+import com.yulgnier.center.user.api.model.dto.EmailCodeRequestDTO;
+import com.yulgnier.center.user.api.model.enums.BanLevelEnum;
+import com.yulgnier.center.user.api.model.enums.BusinessTypeEnum;
+import com.yulgnier.center.user.api.model.enums.GenderEnum;
 import com.yulgnier.center.common.user.model.vo.UserLoginResponseVO;
 import com.yulgnier.center.common.user.service.UserService;
+import com.yulgnier.center.user.api.model.dto.CommonUserPageQueryDTO;
+import com.yulgnier.center.user.api.model.vo.CommonUserInfoResponseVO;
 import com.yulgnier.common.config.properties.JwtProperties;
 import com.yulgnier.common.model.constants.AuthConstants;
 import com.yulgnier.common.utils.*;
@@ -607,12 +611,12 @@ public class UserServiceImpl
      * @return 用户信息响应VO，包含用户的基本信息
      */
     @Override
-    public UserInfoResponseVO getUserInfo() {
+    public CommonUserInfoResponseVO getUserInfo() {
         LambdaQueryWrapper<CommonUser> eq = new LambdaQueryWrapper<CommonUser>().eq(CommonUser::getUid, UserContextUtil.getUid());
         Optional<CommonUser> oneOpt = this.getOneOpt(eq);
         if (oneOpt.isEmpty()) throw new ForYourselfException(ResultCodeEnum.USER_NOT_FOUND_OR_CANCELLED, null);
         // 用Hutool工具包拷贝到VO
-        return BeanUtil.copyProperties(oneOpt.get(), UserInfoResponseVO.class);
+        return BeanUtil.copyProperties(oneOpt.get(), CommonUserInfoResponseVO.class);
     }
 
     /**
@@ -829,6 +833,38 @@ public class UserServiceImpl
             passwordArray[j] = temp;
         }
         return new String(passwordArray);
+    }
+
+    /**
+     * 分页查询普通用户列表（仅管理员可调用）
+     * <p>内部会校验调用者身份，非管理员直接拒绝</p>
+     *
+     * @param query 查询参数
+     * @return 分页结果
+     */
+    @Override
+    public IPage<CommonUserInfoResponseVO> pageUsers(CommonUserPageQueryDTO query) {
+        // 1. 身份校验：必须是管理员且有权限等级
+        String identity = UserContextUtil.getIdentity();
+        if (!AuthConstants.IDENTITY_ADMIN_USER_VALUE.equals(identity)) {
+            log.warn("非法访问：管理员缺少权限等级信息, uid: {}", UserContextUtil.getUid());
+            throw new ForYourselfException(ResultCodeEnum.ILLEGAL_ACCESS, "仅管理员可访问");
+        }
+
+        Integer adminLevel = UserContextUtil.getAdminLevel();
+        if (adminLevel == null) {
+            log.warn("非法访问：管理员缺少权限等级信息, uid: {}", UserContextUtil.getUid());
+            throw new ForYourselfException(ResultCodeEnum.ILLEGAL_ACCESS, "管理员身份信息不完整");
+        }
+
+        // 2. 创建分页对象
+        Page<CommonUser> page = new Page<>(query.getCurrent(), query.getSize());
+
+        // 3. 调用 Mapper 的分页查询方法（MyBatis-Plus 自动处理分页）
+        IPage<CommonUser> userPage = userMapper.selectPageByCondition(page, query);
+
+        // 4. 转换为 VO
+        return userPage.convert(user -> BeanUtil.copyProperties(user, CommonUserInfoResponseVO.class));
     }
 
 }

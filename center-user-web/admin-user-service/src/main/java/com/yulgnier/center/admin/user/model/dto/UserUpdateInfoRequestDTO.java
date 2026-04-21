@@ -1,6 +1,6 @@
 package com.yulgnier.center.admin.user.model.dto;
 
-import com.yulgnier.center.admin.user.model.enums.GenderEnum;
+import com.yulgnier.center.user.api.model.enums.GenderEnum;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;

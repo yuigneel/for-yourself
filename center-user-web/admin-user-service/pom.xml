@@ -10,5 +10,11 @@
     </parent>
 
     <artifactId>admin-user-service</artifactId>
+    <dependencies>
+        <dependency>
+            <groupId>com.yulgnier.centeruserweb</groupId>
+            <artifactId>center-user-api</artifactId>
+        </dependency>
+    </dependencies>
 
 </project>

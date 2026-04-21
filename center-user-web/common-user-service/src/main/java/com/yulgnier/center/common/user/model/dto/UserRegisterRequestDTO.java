@@ -1,7 +1,7 @@
 package com.yulgnier.center.common.user.model.dto;
 
 
-import com.yulgnier.center.common.user.model.enums.GenderEnum;
+import com.yulgnier.center.user.api.model.enums.GenderEnum;
 import io.swagger.v3.oas.annotations.media.Schema;import lombok.Data;import java.time.LocalDate; /**
  * 用户注册请求 DTO
  */

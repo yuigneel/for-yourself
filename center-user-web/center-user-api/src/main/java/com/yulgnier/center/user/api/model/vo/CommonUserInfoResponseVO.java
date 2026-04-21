@@ -1,11 +1,10 @@
-package com.yulgnier.center.common.user.model.vo;
+package com.yulgnier.center.user.api.model.vo;
 
-import com.yulgnier.center.common.user.model.enums.GenderEnum;
+import com.yulgnier.center.user.api.model.enums.GenderEnum;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 /**
  * 用户基础信息响应 VO
@@ -15,7 +14,7 @@ import java.time.LocalDateTime;
  */
 @Data
 @Schema(description = "用户基础信息响应")
-public class UserInfoResponseVO {
+public class CommonUserInfoResponseVO {
     
     @Schema(description = "用户唯一业务UID", example = "1234567890")
     private Long uid;
@@ -26,7 +25,7 @@ public class UserInfoResponseVO {
     @Schema(description = "用户昵称", example = "yulgnier")
     private String nickname;
     
-    @Schema(description = "性别", example = "UNKNOWN")
+    @Schema(description = "性别", example = "MALE")
     private GenderEnum gender;
     
     @Schema(description = "出生日期", example = "2000-01-01")

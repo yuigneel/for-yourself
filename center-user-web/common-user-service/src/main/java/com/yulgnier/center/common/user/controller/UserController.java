@@ -1,9 +1,12 @@
 package com.yulgnier.center.common.user.controller;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.yulgnier.center.common.user.model.dto.*;
-import com.yulgnier.center.common.user.model.vo.UserInfoResponseVO;
 import com.yulgnier.center.common.user.model.vo.UserLoginResponseVO;
 import com.yulgnier.center.common.user.service.UserService;
+import com.yulgnier.center.user.api.model.dto.CommonUserPageQueryDTO;
+import com.yulgnier.center.user.api.model.dto.EmailCodeRequestDTO;
+import com.yulgnier.center.user.api.model.vo.CommonUserInfoResponseVO;
 import com.yulgnier.common.model.result.Result;
 import com.yulgnier.common.model.result.ResultCodeEnum;
 import io.swagger.v3.oas.annotations.Operation;
@@ -202,8 +205,8 @@ public class UserController {
 
     @Operation(summary = "获取用户基础信息")
     @GetMapping("/getUserInfo")
-    public Result<UserInfoResponseVO> getUserInfo() {
-        UserInfoResponseVO response = userService.getUserInfo();
+    public Result<CommonUserInfoResponseVO> getUserInfo() {
+        CommonUserInfoResponseVO response = userService.getUserInfo();
         return Result.ok(response);
     }
 
@@ -212,5 +215,19 @@ public class UserController {
     public Result<String> updatePassword(@Valid @RequestBody UserUpdatePasswordRequestDTO request) {
         userService.updatePassword(request);
         return Result.ok("修改成功");
+    }
+    
+    /**
+     * 分页查询普通用户列表
+     * <p>仅管理员可调用，内部会校验身份</p>
+     *
+     * @param query 查询参数
+     * @return 分页结果
+     */
+    @GetMapping("/page")
+    @Operation(summary = "分页查询普通用户列表", description = "仅管理员可调用，支持时间范围、状态、关键词等条件筛选")
+    public Result<IPage<CommonUserInfoResponseVO>> pageUsers(CommonUserPageQueryDTO query) {
+        IPage<CommonUserInfoResponseVO> page = userService.pageUsers(query);
+        return Result.ok(page);
     }
 }

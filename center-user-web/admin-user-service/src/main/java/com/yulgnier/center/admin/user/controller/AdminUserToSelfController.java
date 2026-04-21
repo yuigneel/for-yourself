@@ -4,6 +4,7 @@ import com.yulgnier.center.admin.user.model.dto.*;
 import com.yulgnier.center.admin.user.model.vo.AdminUserInfoResponseVO;
 import com.yulgnier.center.admin.user.model.vo.AdminUserLoginResponseVO;
 import com.yulgnier.center.admin.user.service.AdminUserService;
+import com.yulgnier.center.user.api.model.dto.EmailCodeRequestDTO;
 import com.yulgnier.common.model.result.Result;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

@@ -51,7 +51,7 @@ public class UserInfoInterceptor implements HandlerInterceptor {
         UserContextUtil.setIdentity(identity);
 
         // 如果是管理员，获取等级并存入thread local
-        if (AuthConstants.IDENTITY_ADMIN_USER_VALUE_.equals(identity)) {
+        if (AuthConstants.IDENTITY_ADMIN_USER_VALUE.equals(identity)) {
             String adminLevelStr = request.getHeader(AuthConstants.ADMIN_LEVEL_KEY);
             if (adminLevelStr == null || adminLevelStr.isEmpty()) {
                 log.warn("请求被拦截 - URL(管理员未获得admin_level): {}, Method: {}", request.getRequestURI(), request.getMethod());

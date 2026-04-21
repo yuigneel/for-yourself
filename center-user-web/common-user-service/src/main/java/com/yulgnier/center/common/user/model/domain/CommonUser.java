@@ -5,7 +5,7 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import java.time.LocalDate;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.yulgnier.center.common.user.model.enums.GenderEnum;
+import com.yulgnier.center.user.api.model.enums.GenderEnum;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 

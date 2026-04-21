@@ -15,8 +15,8 @@ public final class AuthConstants {
      * JWT 中声明用户身份的key和value
      */
     public static final String IDENTITY_KEY = "identity";
-    public static final String IDENTITY_COMMON_USER_VALUE_= "common_user";
-    public static final String IDENTITY_ADMIN_USER_VALUE_= "admin_user";
+    public static final String IDENTITY_COMMON_USER_VALUE= "common_user";
+    public static final String IDENTITY_ADMIN_USER_VALUE= "admin_user";
 
     /**
      * JWT 中封装的admin权限等级的key和value

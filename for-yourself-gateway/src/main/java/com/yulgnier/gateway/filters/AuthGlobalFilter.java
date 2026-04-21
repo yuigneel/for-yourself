@@ -73,7 +73,7 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
         String identity = String.valueOf(identityObj);
 
         // 如果是管理员，需要验证权限等级是否存在
-        if (AuthConstants.IDENTITY_ADMIN_USER_VALUE_.equals(identity)) {
+        if (AuthConstants.IDENTITY_ADMIN_USER_VALUE.equals(identity)) {
             Object adminLevelObj = claimsFromToken.get(AuthConstants.ADMIN_LEVEL_KEY);
             if (adminLevelObj == null) {
                 return Mono.error(new ForYourselfException(ResultCodeEnum.CAPTCHA_VERIFICATION_FAILED, "管理员 Token 中缺少权限等级信息"));
@@ -88,7 +88,7 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
                 .build();
 
         // 如果是管理员，需要重新构建请求添加权限等级
-        if (AuthConstants.IDENTITY_ADMIN_USER_VALUE_.equals(identity)) {
+        if (AuthConstants.IDENTITY_ADMIN_USER_VALUE.equals(identity)) {
             mutatedRequest = mutatedRequest.mutate()
                     .header(AuthConstants.ADMIN_LEVEL_KEY, String.valueOf(claimsFromToken.get(AuthConstants.ADMIN_LEVEL_KEY)))
                     .build();

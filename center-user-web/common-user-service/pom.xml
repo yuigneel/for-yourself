@@ -13,6 +13,10 @@
     <packaging>jar</packaging>
 
     <dependencies>
+        <dependency>
+            <groupId>com.yulgnier.centeruserweb</groupId>
+            <artifactId>center-user-api</artifactId>
+        </dependency>
     </dependencies>
 
 </project>

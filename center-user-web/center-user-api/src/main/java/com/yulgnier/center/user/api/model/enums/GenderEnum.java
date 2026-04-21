@@ -1,7 +1,8 @@
-package com.yulgnier.center.admin.user.model.enums;
+package com.yulgnier.center.user.api.model.enums;
 
 import com.baomidou.mybatisplus.annotation.EnumValue;
 import com.fasterxml.jackson.annotation.JsonValue;
+
 
 public enum GenderEnum implements BaseEnum {
     /**

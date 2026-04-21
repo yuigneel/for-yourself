@@ -6,7 +6,7 @@
         1. 读取application.yml里的日志存储路径
       “context”存入上下文方便${}引用 名字就叫 "LOG_PATH" source是你yml中的属性也就是日志输出路径 默认值是defaultValue
          ========================================== -->
-    <springProperty scope="context" name="LOG_PATH" source="logging.file.path" defaultValue="logs/center-common-user-service"/>
+    <springProperty scope="context" name="LOG_PATH" source="logging.file.path" defaultValue="logs/default"/>
 
     <!-- ==========================================
         2. 控制台输出配置（开发时看日志用）

@@ -1,13 +1,10 @@
 package com.yulgnier.center.admin.user.model.domain;
 
-import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
-import com.yulgnier.center.admin.user.model.enums.GenderEnum;
+import com.yulgnier.center.user.api.model.enums.GenderEnum;
 import lombok.Data;
 
 /**

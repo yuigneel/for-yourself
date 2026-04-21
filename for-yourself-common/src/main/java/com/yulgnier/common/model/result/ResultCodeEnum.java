@@ -41,6 +41,7 @@ public enum ResultCodeEnum {
     CAPTCHA_VERIFICATION_FAILED("A0100", "人机验证失败"),
     CAPTCHA_REQUEST_TOO_FREQUENT("A0101", "验证码请求过于频繁"),
     CAPTCHA_ALREADY_SENT("A0102", "验证码已发送"),
+    ILLEGAL_ACCESS("A0103", "非法访问"),
     // A02xx 请求参数错误
     INCOMPLETE_PARAMETERS("A0200", "请求参数不完整"),
     PARAMETER_ERROR("A0201", "请求参数错误"),
