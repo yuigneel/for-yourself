@@ -50,9 +50,6 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
 
         // 安全提取JWT token（防止数组越界）
         String token = authorization.substring(7); // "Bearer " 长度为7
-        if (token.isEmpty()) {
-            return Mono.error(new ForYourselfException(ResultCodeEnum.CAPTCHA_VERIFICATION_FAILED, null));
-        }
 
         Map<String, Object> claimsFromToken = JwtUtil.getClaimsFromToken(token); // 解析token,token无效返回null
         if (claimsFromToken == null) {
@@ -67,15 +64,47 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
 
         String uid = String.valueOf(uidObj);
 
-        // 将修改后的请求传递到过滤器链（Lambda 风格，更简洁）
-        return chain.filter(exchange.mutate()
-                .request(builder -> builder
-                        .headers(h -> h.remove(HttpHeaders.AUTHORIZATION))       // ① 删除 JWT Token 头
-                        .header(AuthConstants.UID_KEY, uid)                      // ② 添加用户 UID
-                        .header(truthProperties.getTruthKey(), truthProperties.getTruthValue()) // ③ 添加特殊请求头
-                )
-                .build()
-        );
+        // 从 token 中获取用户身份
+        Object identityObj = claimsFromToken.get(AuthConstants.IDENTITY_KEY);
+        if (identityObj == null) {
+            return Mono.error(new ForYourselfException(ResultCodeEnum.CAPTCHA_VERIFICATION_FAILED, "Token 中缺少用户身份信息"));
+        }
+
+        String identity = String.valueOf(identityObj);
+
+        // 如果是管理员，需要验证权限等级是否存在
+        if (AuthConstants.IDENTITY_ADMIN_USER_VALUE_.equals(identity)) {
+            Object adminLevelObj = claimsFromToken.get(AuthConstants.ADMIN_LEVEL_KEY);
+            if (adminLevelObj == null) {
+                return Mono.error(new ForYourselfException(ResultCodeEnum.CAPTCHA_VERIFICATION_FAILED, "管理员 Token 中缺少权限等级信息"));
+            }
+        }
+
+        // 构建修改后的请求
+        ServerHttpRequest mutatedRequest = request.mutate()
+                .headers(h -> h.remove(HttpHeaders.AUTHORIZATION))       // ① 删除 JWT Token 头
+                .header(AuthConstants.UID_KEY, uid)                      // ② 添加用户 UID
+                .header(AuthConstants.IDENTITY_KEY, identity)            // ③ 添加用户身份
+                .build();
+
+        // 如果是管理员，需要重新构建请求添加权限等级
+        if (AuthConstants.IDENTITY_ADMIN_USER_VALUE_.equals(identity)) {
+            mutatedRequest = mutatedRequest.mutate()
+                    .header(AuthConstants.ADMIN_LEVEL_KEY, String.valueOf(claimsFromToken.get(AuthConstants.ADMIN_LEVEL_KEY)))
+                    .build();
+        }
+
+        // 添加特殊请求头
+        mutatedRequest = mutatedRequest.mutate()
+                .header(truthProperties.getTruthKey(), truthProperties.getTruthValue())
+                .build();
+
+        // 将修改后的请求传递到过滤器链
+        // exchange.mutate() - 创建 ServerWebExchange 的构建器（不可变对象的修改模式）
+        // .request(mutatedRequest) - 替换原始请求为修改后的请求对象
+        // .build() - 构建新的 ServerWebExchange 实例
+        // chain.filter() - 将新的 exchange 传递给下一个过滤器继续处理
+        return chain.filter(exchange.mutate().request(mutatedRequest).build());
     }
 
     /**

@@ -34,7 +34,6 @@ public class UserInfoInterceptor implements HandlerInterceptor {
             throw new ForYourselfException(ResultCodeEnum.CAPTCHA_VERIFICATION_FAILED, null);
         }
         // 获取用户uid并存入thread local
-
         try {
             Long uid = Long.valueOf(request.getHeader(AuthConstants.UID_KEY));
             UserContextUtil.setUid(uid);
@@ -42,6 +41,31 @@ public class UserInfoInterceptor implements HandlerInterceptor {
             log.warn("请求被拦截 - URL(未获得uid): {}, Method: {}", request.getRequestURI(), request.getMethod());
             throw new ForYourselfException(ResultCodeEnum.CAPTCHA_VERIFICATION_FAILED, null);
         }
+
+        // 获取用户身份并存入thread local
+        String identity = request.getHeader(AuthConstants.IDENTITY_KEY);
+        if (identity == null || identity.isEmpty()) {
+            log.warn("请求被拦截 - URL(未获得identity): {}, Method: {}", request.getRequestURI(), request.getMethod());
+            throw new ForYourselfException(ResultCodeEnum.CAPTCHA_VERIFICATION_FAILED, null);
+        }
+        UserContextUtil.setIdentity(identity);
+
+        // 如果是管理员，获取等级并存入thread local
+        if (AuthConstants.IDENTITY_ADMIN_USER_VALUE_.equals(identity)) {
+            String adminLevelStr = request.getHeader(AuthConstants.ADMIN_LEVEL_KEY);
+            if (adminLevelStr == null || adminLevelStr.isEmpty()) {
+                log.warn("请求被拦截 - URL(管理员未获得admin_level): {}, Method: {}", request.getRequestURI(), request.getMethod());
+                throw new ForYourselfException(ResultCodeEnum.CAPTCHA_VERIFICATION_FAILED, null);
+            }
+            try {
+                Integer adminLevel = Integer.valueOf(adminLevelStr);
+                UserContextUtil.setAdminLevel(adminLevel);
+            } catch (NumberFormatException e) {
+                log.warn("请求被拦截 - URL(admin_level格式错误): {}, Method: {}", request.getRequestURI(), request.getMethod());
+                throw new ForYourselfException(ResultCodeEnum.CAPTCHA_VERIFICATION_FAILED, null);
+            }
+        }
+
         // 放行
         return true;
     }
