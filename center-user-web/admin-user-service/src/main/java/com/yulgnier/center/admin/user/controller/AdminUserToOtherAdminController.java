@@ -24,7 +24,6 @@ import org.springframework.web.bind.annotation.RestController;
 public class AdminUserToOtherAdminController {
 
     private final AdminUserService adminUserService;
-    private final CommonUserClient commonUserClient;
 
     /**
      * 分页查询管理员用户列表
@@ -37,20 +36,6 @@ public class AdminUserToOtherAdminController {
     @Operation(summary = "分页查询管理员列表", description = "支持排除自己、时间范围、权限、状态、删除状态、关键词等条件筛选")
     public Result<IPage<AdminUserInfoResponseVO>> pageUsers(AdminUserPageQueryDTO query) {
         IPage<AdminUserInfoResponseVO> page = adminUserService.pageUsers(query);
-        return Result.ok(page);
-    }
-
-    /**
-     * 分页查询普通用户列表
-     * <p>通过 Feign 调用 common-user-service，无需额外权限校验（Gateway 已确保是管理员）</p>
-     *
-     * @param query 查询参数
-     * @return 分页结果
-     */
-    @GetMapping("/common-users/page")
-    @Operation(summary = "分页查询普通用户列表", description = "通过 Feign 调用普通用户服务")
-    public Result<IPage<CommonUserInfoResponseVO>> pageCommonUsers(CommonUserPageQueryDTO query) {
-        IPage<CommonUserInfoResponseVO> page = commonUserClient.pageUsers(query).getData();
         return Result.ok(page);
     }
 }

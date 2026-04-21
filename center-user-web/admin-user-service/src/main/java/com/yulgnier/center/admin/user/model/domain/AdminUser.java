@@ -6,13 +6,15 @@ import java.time.LocalDate;
 
 import com.yulgnier.center.user.api.model.enums.GenderEnum;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 /**
  * 管理员用户基础信息表
  * @TableName t_admin_user
  */
-@TableName(value ="t_admin_user")
 @Data
+@TableName(value ="t_admin_user")
+@EqualsAndHashCode(callSuper = true)
 public class AdminUser extends BaseDomain {
 
 

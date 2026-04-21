@@ -28,6 +28,15 @@ public final class AuthConstants {
     public static final Integer ADMIN_LEVEL_LOW_VALUE = 3;      //（低级管理员）
 
     /**
+     *  JWT 中封装的账号状态的key和value(0正常 1警告 2锁定 3强制注销 )
+     */
+    public static final String ACCOUNT_STATUS_KEY = "account_status";
+    public static final Integer ACCOUNT_STATUS_NORMAL_VALUE = 0;  //正常
+    public static final Integer ACCOUNT_STATUS_WARNING_VALUE = 1; //警告
+    public static final Integer ACCOUNT_STATUS_LOCKED_VALUE = 2;  //锁定
+    public static final Integer ACCOUNT_STATUS_FORCE_LOGOUT_VALUE = 3; //强制注销
+
+    /**
      * 项目中字段的分隔符
      * key                             value
      * 业务类型（name）+分隔符+邮箱            验证码+分隔符+尝试次数
