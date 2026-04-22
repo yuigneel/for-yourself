@@ -58,7 +58,7 @@ CREATE TABLE `t_admin_user` (
 
 -- 插入初始管理员账号（最高权限）
 INSERT INTO `t_admin_user` (`uid`, `email`, `nickname`, `password`, `join_date`, `account_permission`)
-VALUES (2043953017778077696, 'yu_lgnier@outlook.com', 'admin', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', CURDATE(), 0);
+VALUES (2043953017778077696, 'yu_lgnier@outlook.com', '小白', '$2a$10$pY9kwEJJB99zylONtPXgyeo8JFVjyOYk6LlZCkAmE2HpiRhNvFmQ6', CURDATE(), 0);
 
 
 

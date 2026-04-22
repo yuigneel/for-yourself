@@ -1,18 +1,20 @@
 package com.yulgnier.center.admin.user.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.yulgnier.center.admin.user.model.dto.AdminUserCreateRequestDTO;
 import com.yulgnier.center.admin.user.model.dto.AdminUserPageQueryDTO;
+import com.yulgnier.center.admin.user.model.vo.AdminUserCreateResponseVO;
 import com.yulgnier.center.admin.user.model.vo.AdminUserInfoResponseVO;
 import com.yulgnier.center.admin.user.service.AdminUserService;
-import com.yulgnier.center.user.api.client.CommonUserClient;
-import com.yulgnier.center.user.api.model.dto.CommonUserPageQueryDTO;
-import com.yulgnier.center.user.api.model.vo.CommonUserInfoResponseVO;
 import com.yulgnier.common.model.result.Result;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -37,5 +39,19 @@ public class AdminUserToOtherAdminController {
     public Result<IPage<AdminUserInfoResponseVO>> pageUsers(AdminUserPageQueryDTO query) {
         IPage<AdminUserInfoResponseVO> page = adminUserService.pageUsers(query);
         return Result.ok(page);
+    }
+
+    /**
+     * 创建新的管理员账号
+     * <p>系统会自动生成账户昵称和原始密码，并在响应中返回</p>
+     *
+     * @param request 创建请求参数，包含邮箱和权限等级
+     * @return 创建的账户信息，包含账户昵称和原始密码
+     */
+    @PostMapping("/create")
+    @Operation(summary = "创建管理员账号", description = "创建新的管理员账号，系统自动生成昵称和初始密码")
+    public Result<AdminUserCreateResponseVO> createAdmin(@Valid @RequestBody AdminUserCreateRequestDTO request) {
+        AdminUserCreateResponseVO response = adminUserService.createAdmin(request);
+        return Result.ok(response);
     }
 }

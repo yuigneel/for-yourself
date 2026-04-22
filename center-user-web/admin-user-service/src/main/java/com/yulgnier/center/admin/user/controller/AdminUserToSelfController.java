@@ -66,4 +66,10 @@ public class AdminUserToSelfController {
         userService.updatePassword(request);
         return Result.ok("修改成功");
     }
+    @Operation(summary = "管理员用户注销")
+    @PostMapping("/logout")
+    public Result<String> logout(@Valid @RequestBody AdminUserLogoutRequestDTO request) {
+        userService.logout(request);
+        return Result.ok("注销成功");
+    }
 }

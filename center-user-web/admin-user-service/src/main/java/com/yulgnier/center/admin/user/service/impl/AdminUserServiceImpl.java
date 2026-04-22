@@ -7,10 +7,14 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.yulgnier.center.admin.user.config.properties.CloudflareProperties;
+import com.yulgnier.center.admin.user.config.properties.LinkProperties;
 import com.yulgnier.center.admin.user.config.properties.MailProperties;
 import com.yulgnier.center.admin.user.config.properties.MiscellaneousProperties;
 import com.yulgnier.center.admin.user.model.domain.AdminUser;
 import com.yulgnier.center.admin.user.model.dto.*;
+import com.yulgnier.center.admin.user.model.vo.AdminUserCreateResponseVO;
+import com.yulgnier.center.user.api.client.CommonUserClient;
+import com.yulgnier.center.user.api.model.dto.CommonUserPageQueryDTO;
 import com.yulgnier.center.user.api.model.dto.EmailCodeRequestDTO;
 import com.yulgnier.center.user.api.model.enums.BanLevelEnum;
 import com.yulgnier.center.admin.user.model.vo.AdminUserInfoResponseVO;
@@ -18,9 +22,11 @@ import com.yulgnier.center.admin.user.model.vo.AdminUserLoginResponseVO;
 import com.yulgnier.center.admin.user.mapper.AdminUserMapper;
 import com.yulgnier.center.admin.user.service.AdminUserService;
 import com.yulgnier.center.user.api.model.enums.BusinessTypeEnum;
+import com.yulgnier.center.user.api.model.vo.CommonUserInfoResponseVO;
 import com.yulgnier.common.config.properties.JwtProperties;
 import com.yulgnier.common.exception.ForYourselfException;
 import com.yulgnier.common.model.constants.AuthConstants;
+import com.yulgnier.common.model.result.Result;
 import com.yulgnier.common.model.result.ResultCodeEnum;
 import com.yulgnier.common.utils.*;
 import lombok.RequiredArgsConstructor;
@@ -56,6 +62,8 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
     private final JavaMailSender javaMailSender;
     private final BCryptPasswordEncoder bCryptPasswordEncoder;
     private final JwtProperties jwtProperties;
+    private final LinkProperties linkProperties;
+    private final CommonUserClient commonUserClient;
 
     /**
      * 获取邮箱验证码
@@ -236,7 +244,8 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
             throw new ForYourselfException(ResultCodeEnum.CAPTCHA_VERIFICATION_FAILED, "别攻击了，用爱发电，真的怕了！");
         }
         // 检验密码格式
-        if (!ValidateUtil.isValidPassword(request.getPassword())) throw new ForYourselfException(ResultCodeEnum.PASSWORD_FORMAT_ERROR, null);
+        if (!ValidateUtil.isValidPassword(request.getPassword()))
+            throw new ForYourselfException(ResultCodeEnum.PASSWORD_FORMAT_ERROR, null);
         switch (request.getLoginType()) {
             // 用户名登录
             case USERNAME -> {
@@ -309,11 +318,11 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
         // 检验验证码
         String emailCodeKey = BusinessTypeEnum.BIND_EMAIL.getName() + AuthConstants.SEPARATOR + request.getNewEmail();
         String emailCodeValue = RedisUtil.get(emailCodeKey);
-        
+
         if (emailCodeValue == null) {
             throw new ForYourselfException(ResultCodeEnum.CAPTCHA_EXPIRED, null);
         }
-        
+
         String emailCode;
         Integer tryTimes;
         try {
@@ -324,7 +333,7 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
             throw new ForYourselfException(ResultCodeEnum.CACHE_SERVICE_ERROR, null);
         }
         if (!checkCode(request.getVerificationCode(), request.getNewEmail(), emailCodeKey, emailCode, tryTimes))
-            throw new ForYourselfException(ResultCodeEnum.CAPTCHA_ERROR, tryTimes-1);
+            throw new ForYourselfException(ResultCodeEnum.CAPTCHA_ERROR, tryTimes - 1);
         // 换绑邮箱
         LambdaUpdateWrapper<AdminUser> set = new LambdaUpdateWrapper<AdminUser>().eq(AdminUser::getId, adminUser.getId()).set(AdminUser::getEmail, request.getNewEmail());
         try {
@@ -593,6 +602,99 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
 
         // 4. 转换为 VO（使用 convert 方法自动保留分页信息，只转换数据列表）
         return userPage.convert(user -> BeanUtil.copyProperties(user, AdminUserInfoResponseVO.class));
+    }
+
+    /**
+     * 管理员用户注销（账号逻辑删除）
+     * <p>业务流程：</p>
+     * <ol>
+     *   <li>验证 Cloudflare Turnstile 人机验证令牌</li>
+     *   <li>校验用户昵称、邮箱、密码格式合法性</li>
+     *   <li>从Redis中获取该邮箱对应的验证码信息（验证码+剩余尝试次数）</li>
+     *   <li>验证用户输入的验证码是否正确</li>
+     *   <li>验证用户密码是否与数据库中存储的密码匹配</li>
+     *   <li>执行逻辑删除操作，将管理员账号标记为已注销</li>
+     * </ol>
+     * <p>安全机制：</p>
+     * <ul>
+     *   <li>验证码错误会递减剩余尝试次数，达到0次后触发邮箱冻结机制</li>
+     *   <li>使用BCrypt算法验证密码，确保密码安全性</li>
+     *   <li>逻辑删除而非物理删除，保留数据完整性</li>
+     *   <li>注意：管理员账户被逻辑删除后，不允许像普通用户那样靠登录来恢复</li>
+     * </ul>
+     *
+     * @param request 用户注销请求参数，包含用户昵称、邮箱、密码、验证码、Cloudflare验证响应
+     * @throws ForYourselfException 当出现以下情况时抛出：
+     *                              <ul>
+     *                                <li>{@link ResultCodeEnum#CAPTCHA_VERIFICATION_FAILED} - 人机验证失败或验证码错误</li>
+     *                                <li>{@link ResultCodeEnum#USERNAME_FORMAT_ERROR} - 用户名格式错误</li>
+     *                                <li>{@link ResultCodeEnum#EMAIL_FORMAT_ERROR} - 邮箱格式错误</li>
+     *                                <li>{@link ResultCodeEnum#PASSWORD_FORMAT_ERROR} - 密码格式错误</li>
+     *                                <li>{@link ResultCodeEnum#CAPTCHA_EXPIRED} - 验证码不存在或已过期</li>
+     *                                <li>{@link ResultCodeEnum#CACHE_SERVICE_ERROR} - Redis缓存数据格式错误或缓存服务异常</li>
+     *                                <li>{@link ResultCodeEnum#USER_NOT_FOUND_OR_CANCELLED} - 用户不存在或已被注销</li>
+     *                                <li>{@link ResultCodeEnum#PASSWORD_ERROR} - 密码错误</li>
+     *                                <li>{@link ResultCodeEnum#DATABASE_SERVICE_ERROR} - 数据库服务异常</li>
+     *                              </ul>
+     */
+    @Override
+    public void logout(AdminUserLogoutRequestDTO request) {
+        String nickname = request.getNickname();
+        // 验证人机
+        if (!CloudflareTurnstileUtil.verify(request.getCfTurnstileResponse(), cloudflareProperties.getSecret())) {
+            log.warn("用户{}：传来无效cloud flare令牌", nickname);
+            throw new ForYourselfException(ResultCodeEnum.CAPTCHA_VERIFICATION_FAILED, "别攻击了，用爱发电，真的怕了！");
+        }
+        // 验证格式
+        if (!ValidateUtil.isValidUsername(nickname))
+            throw new ForYourselfException(ResultCodeEnum.USERNAME_FORMAT_ERROR, "用户名格式错误");
+        if (!ValidateUtil.isValidEmail(request.getEmail()))
+            throw new ForYourselfException(ResultCodeEnum.EMAIL_FORMAT_ERROR, "邮箱格式错误");
+        if (!ValidateUtil.isValidPassword(request.getPassword()))
+            throw new ForYourselfException(ResultCodeEnum.PASSWORD_FORMAT_ERROR, "密码格式错误");
+        // 验证验证码
+        String emailCodeKey = BusinessTypeEnum.CANCEL_USER.getName() + AuthConstants.SEPARATOR + request.getEmail();
+        String emailCodeValue = RedisUtil.get(emailCodeKey);
+        if (emailCodeValue == null) throw new ForYourselfException(ResultCodeEnum.CAPTCHA_EXPIRED, "验证码已过期");
+        String rdEmailCode;
+        Integer rdRemainTimes;
+        try {
+            rdEmailCode = emailCodeValue.split(AuthConstants.SEPARATOR)[0];
+            rdRemainTimes = Integer.valueOf(emailCodeValue.split(AuthConstants.SEPARATOR)[1]);
+        } catch (NumberFormatException | ArrayIndexOutOfBoundsException e) {
+            log.error("用户{}：Redis缓存格式错误，请检查！", nickname);
+            throw new ForYourselfException(ResultCodeEnum.CACHE_SERVICE_ERROR, null);
+        }
+        if (!checkCode(request.getCode(), request.getEmail(), emailCodeKey, rdEmailCode, rdRemainTimes))
+            throw new ForYourselfException(ResultCodeEnum.CAPTCHA_VERIFICATION_FAILED, "验证码错误");
+        // 验证密码
+        AdminUser user = this.getOne(new LambdaQueryWrapper<AdminUser>().eq(AdminUser::getEmail, request.getEmail()));
+        if (user == null) throw new ForYourselfException(ResultCodeEnum.USER_NOT_FOUND_OR_CANCELLED, null);
+        if (!bCryptPasswordEncoder.matches(request.getPassword(), user.getPassword()))
+            throw new ForYourselfException(ResultCodeEnum.PASSWORD_ERROR, null);
+        // 逻辑删除
+        try {
+            this.remove(new LambdaUpdateWrapper<AdminUser>().eq(AdminUser::getEmail, user.getEmail()));
+        } catch (Exception e) {
+            log.error("用户{}：数据库服务异常，请检查！", nickname);
+            throw new ForYourselfException(ResultCodeEnum.DATABASE_SERVICE_ERROR, null);
+        }
+    }
+
+    @Override
+    public IPage<CommonUserInfoResponseVO> getCommonPages(CommonUserPageQueryDTO query) {
+        String token = InnerFlexibleTokenSecurityUtil.generateToken(linkProperties.getAdminCommon().getSecretKey(), linkProperties.getAdminCommon().getExpireMilliseconds());
+        UserContextUtil.setLink(token);
+        Result<IPage<CommonUserInfoResponseVO>> iPageResult = commonUserClient.pageUsers(query);
+        IPage<CommonUserInfoResponseVO> data = iPageResult.getData();
+        if (data == null) throw new ForYourselfException(ResultCodeEnum.REMOTE_RESPONSE_ERROR, null);
+        return data;
+    }
+
+    @Override
+    public AdminUserCreateResponseVO createAdmin(AdminUserCreateRequestDTO request) {
+        //TODO
+        return null;
     }
 
 

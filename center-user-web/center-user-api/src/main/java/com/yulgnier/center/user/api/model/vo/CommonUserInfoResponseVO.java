@@ -1,6 +1,7 @@
 package com.yulgnier.center.user.api.model.vo;
 
 import com.yulgnier.center.user.api.model.enums.GenderEnum;
+import com.yulgnier.common.model.enums.AccountStatusEnum;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -34,6 +35,6 @@ public class CommonUserInfoResponseVO {
     @Schema(description = "平台入驻日期", example = "2024-01-01")
     private LocalDate joinDate;
     
-    @Schema(description = "账户状态：2-禁用 1-警告 0-正常", example = "0")
-    private Integer accountStatus;
+    @Schema(description = "账户状态", example = "ACCOUNT_STATUS_NORMAL")
+    private AccountStatusEnum accountStatus;
 }

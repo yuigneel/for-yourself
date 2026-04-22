@@ -25,4 +25,10 @@ public class BaseDomain {
      */
     @TableField(value = "update_time")
     private LocalDateTime updateTime;
+
+    /**
+     * 最后更新人 ID
+     */
+    @TableField(value = "update_by")
+    private Long updateBy;
 }

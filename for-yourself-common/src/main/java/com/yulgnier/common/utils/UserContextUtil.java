@@ -13,15 +13,12 @@ public class UserContextUtil {
      */
     private static final ThreadLocal<Long> uid = new ThreadLocal<>();
 
-    /**
-     * 线程本地变量，存储当前用户的身份类型
-     */
-    private static final ThreadLocal<String> identity = new ThreadLocal<>();
 
     /**
-     * 线程本地变量，存储当前用户的管理员权限等级
+     * 线程本地变量，存储link验证token
      */
-    private static final ThreadLocal<Integer> adminLevel = new ThreadLocal<>();
+    private static final ThreadLocal<String> link = new ThreadLocal<>();
+
 
     /**
      * 设置当前用户ID
@@ -42,47 +39,29 @@ public class UserContextUtil {
     }
 
     /**
-     * 设置当前用户身份
+     * 设置link验证token
      *
-     * @param identity 用户身份类型
+     * @param token link验证token
      */
-    public static void setIdentity(String identity) {
-        UserContextUtil.identity.set(identity);
+    public static void setLink(String token) {
+        link.set(token);
     }
 
     /**
-     * 获取当前用户身份
+     * 获取link验证token
      *
-     * @return 用户身份类型，未设置时返回null
+     * @return link验证token，未设置时返回null
      */
-    public static String getIdentity() {
-        return identity.get();
+    public static String getLink() {
+        return link.get();
     }
 
-    /**
-     * 设置当前用户的管理员权限等级
-     *
-     * @param adminLevel 管理员权限等级
-     */
-    public static void setAdminLevel(Integer adminLevel) {
-        UserContextUtil.adminLevel.set(adminLevel);
-    }
-
-    /**
-     * 获取当前用户的管理员权限等级
-     *
-     * @return 管理员权限等级，未设置时返回null
-     */
-    public static Integer getAdminLevel() {
-        return adminLevel.get();
-    }
 
     /**
      * 清除当前线程的用户信息，防止内存泄漏
      */
     public static void clear() {
         uid.remove();
-        identity.remove();
-        adminLevel.remove();
+        link.remove();
     }
 }

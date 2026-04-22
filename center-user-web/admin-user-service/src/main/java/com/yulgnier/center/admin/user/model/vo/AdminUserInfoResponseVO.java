@@ -1,6 +1,8 @@
 package com.yulgnier.center.admin.user.model.vo;
 
 import com.yulgnier.center.user.api.model.enums.GenderEnum;
+import com.yulgnier.common.model.enums.AccountStatusEnum;
+import com.yulgnier.common.model.enums.AdminPermissionsEnum;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -35,11 +37,11 @@ public class AdminUserInfoResponseVO {
     @Schema(description = "平台入驻日期", example = "2024-01-01")
     private LocalDate joinDate;
     
-    @Schema(description = "账户权限：0-最高权限 数值越大权限越低 当前最低为3", example = "0")
-    private Integer accountPermission;
+    @Schema(description = "账户权限", example = "ADMIN_LEVEL_ROOT")
+    private AdminPermissionsEnum accountPermission;
     
-    @Schema(description = "账户状态：3-强制删除 2-禁用 1-警告 0-正常", example = "0")
-    private Integer accountStatus;
+    @Schema(description = "账户状态", example = "ACCOUNT_STATUS_NORMAL")
+    private AccountStatusEnum accountStatus;
 
 
 }

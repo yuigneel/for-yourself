@@ -1,11 +1,13 @@
 package com.yulgnier.center.admin.user.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.yulgnier.center.admin.user.config.properties.LinkProperties;
 import com.yulgnier.center.admin.user.service.AdminUserService;
 import com.yulgnier.center.user.api.client.CommonUserClient;
 import com.yulgnier.center.user.api.model.dto.CommonUserPageQueryDTO;
 import com.yulgnier.center.user.api.model.vo.CommonUserInfoResponseVO;
 import com.yulgnier.common.model.result.Result;
+import com.yulgnier.common.utils.InnerFlexibleTokenSecurityUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class AdminUserToOtherCommonController {
 
     private final AdminUserService adminUserService;
-    private final CommonUserClient commonUserClient;
+
 
     /**
      * 分页查询普通用户列表
@@ -34,7 +36,8 @@ public class AdminUserToOtherCommonController {
     @GetMapping("/page")
     @Operation(summary = "分页查询普通用户列表", description = "通过 Feign 调用普通用户服务")
     public Result<IPage<CommonUserInfoResponseVO>> pageCommonUsers(CommonUserPageQueryDTO query) {
-        IPage<CommonUserInfoResponseVO> page = commonUserClient.pageUsers(query).getData();
+        IPage<CommonUserInfoResponseVO> page = adminUserService.getCommonPages(query);
         return Result.ok(page);
     }
 }
+

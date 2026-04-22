@@ -6,6 +6,7 @@ import java.time.LocalDate;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.yulgnier.center.user.api.model.enums.GenderEnum;
+import com.yulgnier.common.model.enums.AccountStatusEnum;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -65,5 +66,5 @@ public class CommonUser extends BaseDomain{
      * 账户状态：3- 强制删除 2-禁用 1-警告 0-正常(默认0)
      */
     @TableField(value = "account_status")
-    private Integer accountStatus;
+    private AccountStatusEnum accountStatus;
 }

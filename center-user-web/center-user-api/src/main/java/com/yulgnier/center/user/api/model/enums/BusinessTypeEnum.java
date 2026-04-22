@@ -11,7 +11,6 @@ import lombok.Getter;
  * @author yulgnier
  * @date 2026-04-01
  */
-@Getter
 @AllArgsConstructor
 public enum BusinessTypeEnum implements BaseEnum {
     /**

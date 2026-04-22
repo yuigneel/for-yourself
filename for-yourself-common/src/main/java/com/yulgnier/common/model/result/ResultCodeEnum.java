@@ -73,6 +73,8 @@ public enum ResultCodeEnum {
     SAVE_USER_FAILED("A0500", "保存用户失败"),
     USER_NOT_FOUND("A0501", "用户不存在"),
     // A06xx 传输错误
+    FEIGN_CLIENT_CALL_ERROR("A0600", "FeignClient调用异常"),
+    REMOTE_RESPONSE_ERROR("A0601", "远程返回结果错误"),
     // A07xx 用户设备错误
     // A08xx 用户状态
     USER_NORMAL_LOGIN("A0800", "用户正常登录"),

@@ -1,5 +1,7 @@
 package com.yulgnier.center.admin.user.model.dto;
 
+import com.yulgnier.common.model.enums.AccountStatusEnum;
+import com.yulgnier.common.model.enums.AdminPermissionsEnum;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -33,11 +35,11 @@ public class AdminUserPageQueryDTO {
     @Schema(description = "逻辑删除状态（0-未删除，1-已删除，null-全部）", example = "0")
     private Integer isDeleted;
 
-    @Schema(description = "账户权限（0-最高权限，数值越大权限越低，null-全部）", example = "0")
-    private Integer accountPermission;
+    @Schema(description = "账户权限（null-全部）", example = "ADMIN_LEVEL_ROOT")
+    private AdminPermissionsEnum accountPermission;
 
-    @Schema(description = "账户状态（0-正常，1-警告，2-禁用，3-强制删除，null-全部）", example = "0")
-    private Integer accountStatus;
+    @Schema(description = "账户状态（null-全部）", example = "ACCOUNT_STATUS_NORMAL")
+    private AccountStatusEnum accountStatus;
 
     @Schema(description = "昵称或邮箱关键词（模糊查询）", example = "admin")
     private String keyword;

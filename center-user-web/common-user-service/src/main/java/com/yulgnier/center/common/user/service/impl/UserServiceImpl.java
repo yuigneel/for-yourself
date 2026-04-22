@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.yulgnier.center.common.user.config.properties.CloudflareProperties;
+import com.yulgnier.center.common.user.config.properties.LinkProperties;
 import com.yulgnier.center.common.user.config.properties.MailProperties;
 import com.yulgnier.center.common.user.config.properties.MiscellaneousProperties;
 import com.yulgnier.center.common.user.mapper.UserMapper;
@@ -61,6 +62,7 @@ public class UserServiceImpl
     private final Snowflake snowflake;
     private final UserMapper userMapper;
     private final JwtProperties jwtProperties;
+    private final LinkProperties linkProperties;
 
     /**
      * 获取邮箱验证码
@@ -255,7 +257,8 @@ public class UserServiceImpl
             throw new ForYourselfException(ResultCodeEnum.CAPTCHA_VERIFICATION_FAILED, "别攻击了，用爱发电，真的怕了！");
         }
         // 检验密码格式
-        if (!ValidateUtil.isValidPassword(request.getPw())) throw new ForYourselfException(ResultCodeEnum.PASSWORD_FORMAT_ERROR, null);
+        if (!ValidateUtil.isValidPassword(request.getPw()))
+            throw new ForYourselfException(ResultCodeEnum.PASSWORD_FORMAT_ERROR, null);
         // switch 到不同的登录方式
         switch (request.getLoginType()) {
             // 用户名登录
@@ -844,19 +847,11 @@ public class UserServiceImpl
      */
     @Override
     public IPage<CommonUserInfoResponseVO> pageUsers(CommonUserPageQueryDTO query) {
-        // 1. 身份校验：必须是管理员且有权限等级
-        String identity = UserContextUtil.getIdentity();
-        if (!AuthConstants.IDENTITY_ADMIN_USER_VALUE.equals(identity)) {
-            log.warn("非法访问：管理员缺少权限等级信息, uid: {}", UserContextUtil.getUid());
-            throw new ForYourselfException(ResultCodeEnum.ILLEGAL_ACCESS, "仅管理员可访问");
-        }
-
-        Integer adminLevel = UserContextUtil.getAdminLevel();
-        if (adminLevel == null) {
-            log.warn("非法访问：管理员缺少权限等级信息, uid: {}", UserContextUtil.getUid());
-            throw new ForYourselfException(ResultCodeEnum.ILLEGAL_ACCESS, "管理员身份信息不完整");
-        }
-
+        //1. 身份校验，必须是admin传来的请求
+        String token = UserContextUtil.getLink();
+        if (token == null) throw new ForYourselfException(ResultCodeEnum.ILLEGAL_ACCESS, "我容易吗我，go out!");
+        if (!InnerFlexibleTokenSecurityUtil.verifyToken(linkProperties.getAdminCommon().getSecretKey(), linkProperties.getAdminCommon().getExpireMilliseconds(), token))
+            throw new ForYourselfException(ResultCodeEnum.ILLEGAL_ACCESS, "我容易吗我，go out!");
         // 2. 创建分页对象
         Page<CommonUser> page = new Page<>(query.getCurrent(), query.getSize());
 

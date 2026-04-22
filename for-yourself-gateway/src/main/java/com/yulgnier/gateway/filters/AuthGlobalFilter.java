@@ -39,11 +39,12 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
             log.debug("请求被放行 - URL: {}", request.getPath());
             return chain.filter(exchange);
         }
+
         // 校验并解析token
         //   获取jwt("Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9")
         String authorization = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
 
-        // 严格校验Bearer格式
+        // 严格校验 Bearer 格式
         if (authorization == null || authorization.length() <= 7 || !authorization.startsWith("Bearer ")) {
             return Mono.error(new ForYourselfException(ResultCodeEnum.CAPTCHA_VERIFICATION_FAILED, null));
         }
@@ -64,35 +65,11 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
 
         String uid = String.valueOf(uidObj);
 
-        // 从 token 中获取用户身份
-        Object identityObj = claimsFromToken.get(AuthConstants.IDENTITY_KEY);
-        if (identityObj == null) {
-            return Mono.error(new ForYourselfException(ResultCodeEnum.CAPTCHA_VERIFICATION_FAILED, "Token 中缺少用户身份信息"));
-        }
-
-        String identity = String.valueOf(identityObj);
-
-        // 如果是管理员，需要验证权限等级是否存在
-        if (AuthConstants.IDENTITY_ADMIN_USER_VALUE.equals(identity)) {
-            Object adminLevelObj = claimsFromToken.get(AuthConstants.ADMIN_LEVEL_KEY);
-            if (adminLevelObj == null) {
-                return Mono.error(new ForYourselfException(ResultCodeEnum.CAPTCHA_VERIFICATION_FAILED, "管理员 Token 中缺少权限等级信息"));
-            }
-        }
-
         // 构建修改后的请求
         ServerHttpRequest mutatedRequest = request.mutate()
                 .headers(h -> h.remove(HttpHeaders.AUTHORIZATION))       // ① 删除 JWT Token 头
                 .header(AuthConstants.UID_KEY, uid)                      // ② 添加用户 UID
-                .header(AuthConstants.IDENTITY_KEY, identity)            // ③ 添加用户身份
                 .build();
-
-        // 如果是管理员，需要重新构建请求添加权限等级
-        if (AuthConstants.IDENTITY_ADMIN_USER_VALUE.equals(identity)) {
-            mutatedRequest = mutatedRequest.mutate()
-                    .header(AuthConstants.ADMIN_LEVEL_KEY, String.valueOf(claimsFromToken.get(AuthConstants.ADMIN_LEVEL_KEY)))
-                    .build();
-        }
 
         // 添加特殊请求头
         mutatedRequest = mutatedRequest.mutate()

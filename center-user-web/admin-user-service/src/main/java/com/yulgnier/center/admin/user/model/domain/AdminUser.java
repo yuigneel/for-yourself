@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import java.time.LocalDate;
 
 import com.yulgnier.center.user.api.model.enums.GenderEnum;
+import com.yulgnier.common.model.enums.AccountStatusEnum;
+import com.yulgnier.common.model.enums.AdminPermissionsEnum;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -64,23 +66,17 @@ public class AdminUser extends BaseDomain {
      * 账户权限：0-最高权限 数值越大权限越低 当前最低为3
      */
     @TableField(value = "account_permission")
-    private Integer accountPermission;
+    private AdminPermissionsEnum accountPermission;
 
     /**
      * 账户状态：3- 强制删除 2-禁用 1-警告 0-正常(默认0)
      */
     @TableField(value = "account_status")
-    private Integer accountStatus;
+    private AccountStatusEnum accountStatus;
 
     /**
      * 逻辑删除：0-未删除 1-已删除
      */
     @TableField(value = "is_deleted")
     private Integer isDeleted;
-
-    /**
-     * 最后更新人ID
-     */
-    @TableField(value = "update_by")
-    private Long updateBy;
 }
