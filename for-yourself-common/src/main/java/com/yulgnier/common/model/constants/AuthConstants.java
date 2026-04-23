@@ -17,6 +17,12 @@ public final class AuthConstants {
     public static final String LINK_KEY = "link";
 
     /**
+     * 身份常量
+     */
+    public static final String AUTH_TYPE_ADMIN = "admin";
+    public static final String AUTH_TYPE_COMMON = "common";
+
+    /**
      * 项目中字段的分隔符
      * key                             value
      * 业务类型（name）+分隔符+邮箱            验证码+分隔符+尝试次数

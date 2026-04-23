@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/center-admin/userself")
-@Tag(name = "管理员对接自己主账号", description = "主要是管理员自己对自己账号的接口")
+@Tag(name = "管理员对接自己主账号接口", description = "主要是管理员自己对自己账号的接口")
 public class AdminUserToSelfController {
     private final AdminUserService userService;
     @Operation(summary = "获取邮箱验证码")
@@ -48,16 +48,16 @@ public class AdminUserToSelfController {
         return Result.ok("更改成功");
     }
 
-    @Operation(summary = "修改用户普通信息")
+    @Operation(summary = "修改管理员普通信息")
     @PostMapping("/updateUserInfo")
     public Result<String> updateUserInfo(@Valid @RequestBody UserUpdateInfoRequestDTO request) {
         userService.updateUserInfo(request);
         return Result.ok("修改成功");
     }
-    @Operation(summary = "获取用户基础信息")
+    @Operation(summary = "获取管理员基础信息")
     @GetMapping("/getUserInfo")
     public Result<AdminUserInfoResponseVO> getUserInfo() {
-        AdminUserInfoResponseVO response = userService.getUserInfo();
+        AdminUserInfoResponseVO response = userService.getAdminSelfInfo();
         return Result.ok(response);
     }
     @Operation(summary = "修改用户密码")

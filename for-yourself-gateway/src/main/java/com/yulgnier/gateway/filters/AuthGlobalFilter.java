@@ -44,12 +44,12 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
         //   获取jwt("Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9")
         String authorization = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
 
-        // 严格校验 Bearer 格式
+        //  严格校验 Bearer 格式
         if (authorization == null || authorization.length() <= 7 || !authorization.startsWith("Bearer ")) {
             return Mono.error(new ForYourselfException(ResultCodeEnum.CAPTCHA_VERIFICATION_FAILED, null));
         }
 
-        // 安全提取JWT token（防止数组越界）
+        //  安全提取JWT token（防止数组越界）
         String token = authorization.substring(7); // "Bearer " 长度为7
 
         Map<String, Object> claimsFromToken = JwtUtil.getClaimsFromToken(token); // 解析token,token无效返回null

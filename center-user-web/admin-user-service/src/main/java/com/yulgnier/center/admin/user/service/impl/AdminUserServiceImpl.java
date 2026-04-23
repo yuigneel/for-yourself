@@ -1,6 +1,7 @@
 package com.yulgnier.center.admin.user.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.lang.Snowflake;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -13,8 +14,9 @@ import com.yulgnier.center.admin.user.config.properties.MiscellaneousProperties;
 import com.yulgnier.center.admin.user.model.domain.AdminUser;
 import com.yulgnier.center.admin.user.model.dto.*;
 import com.yulgnier.center.admin.user.model.vo.AdminUserCreateResponseVO;
-import com.yulgnier.center.user.api.client.CommonUserClient;
+import com.yulgnier.center.user.api.client.CommonLinkAdminClient;
 import com.yulgnier.center.user.api.model.dto.CommonUserPageQueryDTO;
+import com.yulgnier.center.user.api.model.dto.CommonUserStatusUpdateRequestDTO;
 import com.yulgnier.center.user.api.model.dto.EmailCodeRequestDTO;
 import com.yulgnier.center.user.api.model.enums.BanLevelEnum;
 import com.yulgnier.center.admin.user.model.vo.AdminUserInfoResponseVO;
@@ -26,6 +28,7 @@ import com.yulgnier.center.user.api.model.vo.CommonUserInfoResponseVO;
 import com.yulgnier.common.config.properties.JwtProperties;
 import com.yulgnier.common.exception.ForYourselfException;
 import com.yulgnier.common.model.constants.AuthConstants;
+import com.yulgnier.common.model.enums.AdminPermissionsEnum;
 import com.yulgnier.common.model.result.Result;
 import com.yulgnier.common.model.result.ResultCodeEnum;
 import com.yulgnier.common.utils.*;
@@ -41,6 +44,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ThreadLocalRandom;
+
 
 /**
  * 管理员用户自助服务实现类
@@ -63,7 +68,8 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
     private final BCryptPasswordEncoder bCryptPasswordEncoder;
     private final JwtProperties jwtProperties;
     private final LinkProperties linkProperties;
-    private final CommonUserClient commonUserClient;
+    private final CommonLinkAdminClient commonLinkAdminClient;
+    private final Snowflake snowflake;
 
     /**
      * 获取邮箱验证码
@@ -446,7 +452,7 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
      * @throws ForYourselfException 当账户不存在或已注销时抛出 {@link ResultCodeEnum#USER_NOT_FOUND_OR_CANCELLED}
      */
     @Override
-    public AdminUserInfoResponseVO getUserInfo() {
+    public AdminUserInfoResponseVO getAdminSelfInfo() {
         // 获取用户
         AdminUser adminUser = this.getOne(new LambdaQueryWrapper<AdminUser>()
                 .eq(AdminUser::getUid, UserContextUtil.getUid()));
@@ -681,20 +687,195 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
         }
     }
 
+    /**
+     * 创建管理员账户
+     * <p>功能说明：</p>
+     * <ul>
+     *   <li>验证创建者身份和权限</li>
+     *   <li>校验被创建者邮箱格式</li>
+     *   <li>检查权限级别，确保创建者权限高于被创建者</li>
+     *   <li>自动生成唯一昵称、随机密码和UID</li>
+     *   <li>将新管理员信息存入数据库</li>
+     * </ul>
+     *
+     * @param request 管理员创建请求参数，包含邮箱和权限级别
+     * @return AdminUserCreateResponseVO 包含生成的昵称和初始密码
+     * @throws ForYourselfException 当出现以下情况时抛出：
+     *                              <ul>
+     *                                <li>USER_NOT_FOUND: 创建者不存在</li>
+     *                                <li>EMAIL_FORMAT_ERROR: 邮箱格式错误</li>
+     *                                <li>INSUFFICIENT_PERMISSIONS: 创建者权限不足</li>
+     *                                <li>DATABASE_SERVICE_ERROR: 数据库服务异常</li>
+     *                              </ul>
+     */
+    @Override
+    public AdminUserCreateResponseVO createAdmin(AdminUserCreateRequestDTO request) {
+        // 获取创建者对象
+        AdminUser creator = this.getOne(new LambdaQueryWrapper<AdminUser>().eq(AdminUser::getUid, UserContextUtil.getUid()));
+        if (creator == null) throw new ForYourselfException(ResultCodeEnum.USER_NOT_FOUND, "创捷者不存在");
+        // 检验被创建者邮箱格式
+        if (!ValidateUtil.isValidEmail(request.getEmail()))
+            throw new ForYourselfException(ResultCodeEnum.EMAIL_FORMAT_ERROR, "邮箱格式错误");
+        // 验证权限
+        AdminPermissionsEnum createdByAuthLevel = request.getAccountPermission();
+        if (creator.getAccountPermission().getCode() >= createdByAuthLevel.getCode())        // 这里root 权限只在数据库创建的时候创建所以这里大于等于不冲突
+            throw new ForYourselfException(ResultCodeEnum.INSUFFICIENT_PERMISSIONS, "权限不足");
+        // 生成被创建者对象 uid 邮箱 昵称 密码 权限
+        String nickname = generateUniqueNickname();
+        String password = generateRandomPassword(16);
+        AdminUser createdBy = new AdminUser();
+        createdBy.setUid(snowflake.nextId());
+        createdBy.setEmail(request.getEmail());
+        createdBy.setNickname(nickname);
+        createdBy.setPassword(bCryptPasswordEncoder.encode(password));
+        createdBy.setAccountPermission(request.getAccountPermission());
+        createdBy.setUpdateBy(creator.getUid());
+        // 存入数据库
+        try {
+            this.save(createdBy);
+        } catch (Exception e) {
+            log.error("用户{}：数据库服务异常，请检查！", nickname);
+            throw new ForYourselfException(ResultCodeEnum.DATABASE_SERVICE_ERROR, null);
+        }
+        // 返回 vo
+        return new AdminUserCreateResponseVO(nickname, password);
+    }
+
+    /**
+     * 修改其他管理员的权限等级
+     * <p>业务流程：</p>
+     * <ol>
+     *   <li>获取当前操作用户（修改者）信息</li>
+     *   <li>获取被修改的管理员信息</li>
+     *   <li>验证权限等级：修改者权限必须高于被修改者原权限和目标权限</li>
+     *   <li>更新被修改者的权限等级和修改人UID</li>
+     * </ol>
+     * <p>权限校验规则：修改者权限码必须小于被修改者原权限码且小于目标权限码</p>
+     *
+     * @param request 权限修改请求参数，包含被修改管理员UID和新的权限等级
+     * @throws ForYourselfException 当出现以下情况时抛出：
+     *                              <ul>
+     *                                <li>INSUFFICIENT_PERMISSIONS: 修改者权限不足</li>
+     *                                <li>DATABASE_SERVICE_ERROR: 数据库更新失败</li>
+     *                              </ul>
+     */
+    @Override
+    public void updateAdminPermission(AdminUserPermissionUpdateRequestDTO request) {
+        // 获取创建者对象
+        AdminUser upDater = this.getOne(new LambdaQueryWrapper<AdminUser>().eq(AdminUser::getUid, UserContextUtil.getUid()));
+        // 获取被修改者对象
+        AdminUser updatedBy = this.getOne(new LambdaQueryWrapper<AdminUser>().eq(AdminUser::getUid, request.getUid()));
+        // 验证权限
+        int modifierPermission = upDater.getAccountPermission().getCode();
+        int modifiedOriginPermission = updatedBy.getAccountPermission().getCode();
+        int targetExpectPermission = request.getNewPermission().getCode();
+        if (modifierPermission >= modifiedOriginPermission || modifierPermission >= targetExpectPermission)
+            throw new ForYourselfException(ResultCodeEnum.INSUFFICIENT_PERMISSIONS, "权限不足");
+        // 执行修改
+        LambdaUpdateWrapper<AdminUser> set = new LambdaUpdateWrapper<AdminUser>().eq(AdminUser::getId, updatedBy.getId())
+                .set(AdminUser::getAccountPermission, request.getNewPermission())
+                .set(AdminUser::getUpdateBy, upDater.getUid());
+        boolean update = this.update(set);
+        if (!update) throw new ForYourselfException(ResultCodeEnum.DATABASE_SERVICE_ERROR, null);
+    }
+
+    /**
+     * 修改其它管理员的账号状态
+     * <p>权限校验：只有权限等级高于目标管理员的管理员才能修改其状态</p>
+     *
+     * @param request 状态修改请求，包含目标管理员UID和新状态
+     * @throws ForYourselfException 当权限不足或数据库操作失败时抛出异常
+     */
+    @Override
+    public void updateAdminStatus(AdminUserStatusUpdateRequestDTO request) {
+        // 获取创建者的权限
+        int modifierPermission = this.getOne(new LambdaQueryWrapper<AdminUser>().eq(AdminUser::getUid, UserContextUtil.getUid())).getAccountPermission().getCode();
+        // 获取被创建者权限
+        int modifiedOriginPermission = this.getOne(new LambdaQueryWrapper<AdminUser>().eq(AdminUser::getUid, request.getUid())).getAccountPermission().getCode();
+        // 验证权限
+        if (modifierPermission >= modifiedOriginPermission)
+            throw new ForYourselfException(ResultCodeEnum.INSUFFICIENT_PERMISSIONS, "权限不足");
+        // 修改状态
+        LambdaUpdateWrapper<AdminUser> set = new LambdaUpdateWrapper<AdminUser>().eq(AdminUser::getUid, request.getUid())
+                .set(AdminUser::getAccountStatus, request.getNewStatus())
+                .set(AdminUser::getUpdateBy, UserContextUtil.getUid());
+        boolean update = this.update(set);
+        if (!update) throw new ForYourselfException(ResultCodeEnum.DATABASE_SERVICE_ERROR, null);
+    }
+
+    /**
+     * 获取特定管理员的详细信息
+     *
+     * @param uid 管理员UID
+     * @return 管理员信息VO
+     * @throws ForYourselfException 当管理员不存在时抛出 USER_NOT_FOUND 异常
+     */
+    @Override
+    public AdminUserInfoResponseVO getOtherAdminInfo(Long uid) {
+        AdminUser one = this.getOne(new LambdaQueryWrapper<AdminUser>().eq(AdminUser::getUid, uid));
+        if (one == null) throw new ForYourselfException(ResultCodeEnum.USER_NOT_FOUND, null);
+        return BeanUtil.copyProperties(one, AdminUserInfoResponseVO.class);
+    }
+
+    /**
+     * 分页查询普通用户列表（通过 Feign 调用）
+     * <p>业务流程：</p>
+     * <ol>
+     *   <li>生成 Link Token 用于跨服务身份验证</li>
+     *   <li>将 Token 设置到 UserContext 中</li>
+     *   <li>通过 Feign 调用 common-user-service 的分页接口</li>
+     *   <li>返回分页结果</li>
+     * </ol>
+     * <p>安全机制：使用一次性短时防伪通行令牌进行内网服务间鉴权</p>
+     *
+     * @param query 分页查询参数，包含页码、每页条数、筛选条件等
+     * @return 普通用户分页结果
+     * @throws ForYourselfException {@link ResultCodeEnum#REMOTE_RESPONSE_ERROR} - 远程服务响应异常
+     */
     @Override
     public IPage<CommonUserInfoResponseVO> getCommonPages(CommonUserPageQueryDTO query) {
         String token = InnerFlexibleTokenSecurityUtil.generateToken(linkProperties.getAdminCommon().getSecretKey(), linkProperties.getAdminCommon().getExpireMilliseconds());
         UserContextUtil.setLink(token);
-        Result<IPage<CommonUserInfoResponseVO>> iPageResult = commonUserClient.pageUsers(query);
-        IPage<CommonUserInfoResponseVO> data = iPageResult.getData();
+        Result<Page<CommonUserInfoResponseVO>> pageResult = commonLinkAdminClient.pageUsers(query);
+        IPage<CommonUserInfoResponseVO> data = pageResult.getData();
         if (data == null) throw new ForYourselfException(ResultCodeEnum.REMOTE_RESPONSE_ERROR, null);
         return data;
     }
 
+
+    /**
+     * 获取普通用户信息（通过Feign调用）
+     * <p>生成内部灵活Token并通过Feign客户端调用普通用户服务</p>
+     *
+     * @param uid 普通用户UID
+     * @return 普通用户信息VO
+     * @throws ForYourselfException 当用户不存在时抛出 USER_NOT_FOUND 异常
+     */
     @Override
-    public AdminUserCreateResponseVO createAdmin(AdminUserCreateRequestDTO request) {
-        //TODO
-        return null;
+    public CommonUserInfoResponseVO getOneCommonUserInfo(Long uid) {
+        String token = InnerFlexibleTokenSecurityUtil.generateToken(linkProperties.getAdminCommon().getSecretKey(), linkProperties.getAdminCommon().getExpireMilliseconds());
+        UserContextUtil.setLink(token);
+        CommonUserInfoResponseVO data = commonLinkAdminClient.getById(uid).getData();
+        if (data == null)throw new ForYourselfException(ResultCodeEnum.USER_NOT_FOUND, null);
+        return data;
+    }
+
+    /**
+     * 管理员修改普通用户账号状态（跨服务调用）
+     * <p>业务流程：生成内部访问令牌 → 设置到ThreadLocal → Feign调用common-user-service → 验证响应</p>
+     *
+     * @param request 状态更新请求参数，包含普通用户UID和新的账户状态
+     * @throws ForYourselfException 当出现以下情况时抛出：
+     *                              <ul>
+     *                                <li>{@link ResultCodeEnum#REMOTE_RESPONSE_ERROR} - 远程服务返回数据为空</li>
+     *                              </ul>
+     */
+    @Override
+    public void updateCommonUserStatus(CommonUserStatusUpdateRequestDTO request) {
+        String token = InnerFlexibleTokenSecurityUtil.generateToken(linkProperties.getAdminCommon().getSecretKey(), linkProperties.getAdminCommon().getExpireMilliseconds());
+        UserContextUtil.setLink(token);
+        String data = commonLinkAdminClient.changeStatus(request).getData();
+        if (data == null) throw new ForYourselfException(ResultCodeEnum.REMOTE_RESPONSE_ERROR, null);
     }
 
 
@@ -870,6 +1051,76 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
         return new String(passwordArray);
     }
 
+    /**
+     * 生成符合规则的随机不重复昵称（高唯一版）
+     * <p>昵称规则（参考 ValidateUtil.isValidUsername）：</p>
+     * <ul>
+     *   <li>长度 2-20 位</li>
+     *   <li>不能包含首尾空格</li>
+     *   <li>不能是 admin、root、system 等系统保留用户名</li>
+     *   <li>支持任意字符（包括中文、英文、数字、特殊符号等）</li>
+     * </ul>
+     * <p>生成策略：使用前缀 + 高强度随机字符组合，数据库校验唯一性</p>
+     *
+     * @return 符合规则且在数据库中不重复的随机昵称
+     * @throws ForYourselfException 当多次尝试仍无法生成唯一昵称时抛出
+     */
+    private String generateUniqueNickname() {
+        // 友好前缀池
+        final String[] NICKNAME_PREFIXES = {
+                "用户", "访客", "朋友", "伙伴", "星友",
+                "User", "Guest", "Friend", "Buddy", "Star",
+                "小", "阿", "老", "大"
+        };
+        // 【扩容】随机字符集：数字 + 大小写英文字母（组合量极大，极低重复率）
+        final String RANDOM_CHARS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+        // 最大重试次数（增加兜底）
+        final int MAX_RETRY_COUNT = 15;
+        // 【加长】后缀长度范围：6-12位（长度足够，杜绝短字符重复）
+        final int MIN_SUFFIX_LENGTH = 6;
+        final int MAX_SUFFIX_LENGTH = 12;
+
+        // 线程安全的随机工具
+        ThreadLocalRandom random = ThreadLocalRandom.current();
+
+        for (int retry = 0; retry < MAX_RETRY_COUNT; retry++) {
+            // 1. 随机选择前缀
+            String prefix = NICKNAME_PREFIXES[random.nextInt(NICKNAME_PREFIXES.length)];
+
+            // 2. 生成高强度随机后缀
+            int suffixLength = random.nextInt(MIN_SUFFIX_LENGTH, MAX_SUFFIX_LENGTH + 1);
+            StringBuilder suffix = new StringBuilder(suffixLength);
+            for (int i = 0; i < suffixLength; i++) {
+                suffix.append(RANDOM_CHARS.charAt(random.nextInt(RANDOM_CHARS.length())));
+            }
+
+            // 3. 拼接最终昵称
+            String nickname = prefix + suffix;
+
+            // 4. 校验昵称格式
+            if (!ValidateUtil.isValidUsername(nickname)) {
+                log.debug("昵称格式校验失败：{}，第{}次重试", nickname, retry + 1);
+                continue;
+            }
+
+            // 5. 轻量级查询：判断昵称是否已存在
+            LambdaQueryWrapper<AdminUser> queryWrapper = new LambdaQueryWrapper<AdminUser>()
+                    .eq(AdminUser::getNickname, nickname);
+            boolean exists = this.exists(queryWrapper);
+
+            // 6. 不存在则返回
+            if (!exists) {
+                log.debug("生成唯一昵称成功：{}", nickname);
+                return nickname;
+            }
+
+            log.debug("昵称【{}】已存在，第{}次重试", nickname, retry + 1);
+        }
+
+        // 重试次数耗尽，抛出异常
+        log.error("生成唯一昵称失败：已重试{}次仍未生成", MAX_RETRY_COUNT);
+        throw new ForYourselfException(ResultCodeEnum.SYSTEM_EXECUTION_ERROR, "自动生成昵称失败，请稍后重试");
+    }
 }
 
 

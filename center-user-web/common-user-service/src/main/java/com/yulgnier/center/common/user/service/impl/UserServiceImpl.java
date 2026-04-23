@@ -666,6 +666,73 @@ public class UserServiceImpl
         log.info("用户{}：修改密码成功", commonUser.getNickname());
     }
 
+    /**
+     * 分页查询普通用户列表（仅管理员可调用）
+     * <p>内部会校验调用者身份，非管理员直接拒绝</p>
+     *
+     * @param query 查询参数
+     * @return 分页结果
+     */
+    @Override
+    public IPage<CommonUserInfoResponseVO> pageUsers(CommonUserPageQueryDTO query) {
+        //1. 身份校验，必须是admin传来的请求
+        String token = UserContextUtil.getLink();
+        if (token == null) throw new ForYourselfException(ResultCodeEnum.ILLEGAL_ACCESS, "我容易吗我，go out!");
+        if (!InnerFlexibleTokenSecurityUtil.verifyToken(linkProperties.getAdminCommon().getSecretKey(), linkProperties.getAdminCommon().getExpireMilliseconds(), token))
+            throw new ForYourselfException(ResultCodeEnum.ILLEGAL_ACCESS, "我容易吗我，go out!");
+        // 2. 创建分页对象
+        Page<CommonUser> page = new Page<>(query.getCurrent(), query.getSize());
+
+        // 3. 调用 Mapper 的分页查询方法（MyBatis-Plus 自动处理分页）
+        IPage<CommonUser> userPage = userMapper.selectPageByCondition(page, query);
+
+        // 4. 转换为 VO
+        return userPage.convert(user -> BeanUtil.copyProperties(user, CommonUserInfoResponseVO.class));
+    }
+
+    /**
+     * 根据UID获取普通用户信息
+     * <p>需要验证内部灵活Token，确保访问合法性</p>
+     *
+     * @param uid 用户UID
+     * @return 普通用户信息VO
+     * @throws ForYourselfException 当Token无效、访问非法或用户不存在时抛出异常
+     */
+    @Override
+    public CommonUserInfoResponseVO getOneById(Long uid) {
+        String token = UserContextUtil.getLink();
+        if (token == null) throw new ForYourselfException(ResultCodeEnum.ILLEGAL_ACCESS, "我容易吗我，go out!");
+        if (!InnerFlexibleTokenSecurityUtil.verifyToken(linkProperties.getAdminCommon().getSecretKey(), linkProperties.getAdminCommon().getExpireMilliseconds(), token))
+            throw new ForYourselfException(ResultCodeEnum.ILLEGAL_ACCESS, "我容易吗我，go out!");
+        CommonUser one = this.getOne(new LambdaQueryWrapper<CommonUser>().eq(CommonUser::getUid, uid));
+        if (one == null) throw new ForYourselfException(ResultCodeEnum.USER_NOT_FOUND_OR_CANCELLED, null);
+        return BeanUtil.copyProperties(one, CommonUserInfoResponseVO.class);
+    }
+
+    /**
+     * 管理员修改普通用户账号状态
+     * <p>校验流程：验证管理员内部访问令牌 → 执行状态更新操作</p>
+     *
+     * @param request 状态更新请求参数，包含普通用户UID和新的账户状态
+     * @throws ForYourselfException 当出现以下情况时抛出：
+     *                              <ul>
+     *                                <li>{@link ResultCodeEnum#ILLEGAL_ACCESS} - 管理员访问令牌缺失或验证失败</li>
+     *                                <li>{@link ResultCodeEnum#DATABASE_SERVICE_ERROR} - 数据库更新失败</li>
+     *                              </ul>
+     */
+    @Override
+    public void updateCommonUserStatus(com.yulgnier.center.user.api.model.dto.CommonUserStatusUpdateRequestDTO request) {
+        String token = UserContextUtil.getLink();
+        if (token == null) throw new ForYourselfException(ResultCodeEnum.ILLEGAL_ACCESS, "我容易吗我，go out!");
+        if (!InnerFlexibleTokenSecurityUtil.verifyToken(linkProperties.getAdminCommon().getSecretKey(), linkProperties.getAdminCommon().getExpireMilliseconds(), token))
+            throw new ForYourselfException(ResultCodeEnum.ILLEGAL_ACCESS, "我容易吗我，go out!");
+        boolean update = this.update(new LambdaUpdateWrapper<CommonUser>().eq(CommonUser::getUid, request.getUid())
+                .set(CommonUser::getAccountStatus, request.getNewStatus())
+                .set(CommonUser::getUpdateBy, UserContextUtil.getUid()));
+        if (!update) throw new ForYourselfException(ResultCodeEnum.DATABASE_SERVICE_ERROR, null);
+    }
+
+
     //===================================内部方法===================================
 
     /**
@@ -836,30 +903,6 @@ public class UserServiceImpl
             passwordArray[j] = temp;
         }
         return new String(passwordArray);
-    }
-
-    /**
-     * 分页查询普通用户列表（仅管理员可调用）
-     * <p>内部会校验调用者身份，非管理员直接拒绝</p>
-     *
-     * @param query 查询参数
-     * @return 分页结果
-     */
-    @Override
-    public IPage<CommonUserInfoResponseVO> pageUsers(CommonUserPageQueryDTO query) {
-        //1. 身份校验，必须是admin传来的请求
-        String token = UserContextUtil.getLink();
-        if (token == null) throw new ForYourselfException(ResultCodeEnum.ILLEGAL_ACCESS, "我容易吗我，go out!");
-        if (!InnerFlexibleTokenSecurityUtil.verifyToken(linkProperties.getAdminCommon().getSecretKey(), linkProperties.getAdminCommon().getExpireMilliseconds(), token))
-            throw new ForYourselfException(ResultCodeEnum.ILLEGAL_ACCESS, "我容易吗我，go out!");
-        // 2. 创建分页对象
-        Page<CommonUser> page = new Page<>(query.getCurrent(), query.getSize());
-
-        // 3. 调用 Mapper 的分页查询方法（MyBatis-Plus 自动处理分页）
-        IPage<CommonUser> userPage = userMapper.selectPageByCondition(page, query);
-
-        // 4. 转换为 VO
-        return userPage.convert(user -> BeanUtil.copyProperties(user, CommonUserInfoResponseVO.class));
     }
 
 }

@@ -28,13 +28,10 @@ public interface UserService extends IService<CommonUser> {
 
     void updatePassword( UserUpdatePasswordRequestDTO request);
 
-    /**
-     * 分页查询普通用户列表（仅管理员可调用）
-     * <p>内部会校验调用者身份，非管理员直接拒绝</p>
-     *
-     * @param query 查询参数
-     * @return 分页结果
-     */
     IPage<CommonUserInfoResponseVO> pageUsers(CommonUserPageQueryDTO query);
+
+    CommonUserInfoResponseVO getOneById(Long uid);
+
+    void updateCommonUserStatus( com.yulgnier.center.user.api.model.dto.CommonUserStatusUpdateRequestDTO request);
 }
 
