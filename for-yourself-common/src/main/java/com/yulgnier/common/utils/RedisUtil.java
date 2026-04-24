@@ -1,54 +1,44 @@
 package com.yulgnier.common.utils;
 
-import jakarta.annotation.PostConstruct;
-import jakarta.annotation.Resource;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
+
 import java.util.concurrent.TimeUnit;
 
 /**
  * Redis 通用工具类
- * 静态调用：RedisUtil.set(...)、RedisUtil.get(...)
+ * 标准 Spring Bean 实现，通过依赖注入使用
  */
 @Component
+@RequiredArgsConstructor
 public class RedisUtil {
 
-    /**
-     * @ Resource：从Spring容器中注入StringRedisTemplate（Redis操作核心对象）
-     * 作用等价于@Autowired，是Java官方标准注入注解
-     */
-    @Resource
-    private StringRedisTemplate stringRedisTemplate;
-
-    /**
-     * 静态持有 RedisTemplate，方便静态方法调用
-     */
-    private static StringRedisTemplate redisTemplate;
-
-    /**
-     * @ PostConstruct：Bean初始化后自动执行
-     * 作用：将Spring注入的实例对象，赋值给静态变量，让静态方法能使用RedisTemplate
-     */
-    @PostConstruct
-    private void init() {
-        redisTemplate = this.stringRedisTemplate;
-    }
+    private final StringRedisTemplate stringRedisTemplate;
 
     // ====================== 常用 set 方法 ======================
 
     /**
      * 普通存值（永久有效）
+     *
+     * @param key   Redis键
+     * @param value Redis值
      */
-    public static void set(String key, String value) {
-        redisTemplate.opsForValue().set(key, value);
+    public void set(String key, String value) {
+        stringRedisTemplate.opsForValue().set(key, value);
     }
 
     /**
      * 存值 + 指定过期时间（自定义单位：秒、分、时、天）
-     * 例：set("key", "val", 5, TimeUnit.MINUTES)
+     * 例：redisUtil.set("key", "val", 5, TimeUnit.MINUTES)
+     *
+     * @param key     Redis键
+     * @param value   Redis值
+     * @param timeout 过期时间数值
+     * @param unit    时间单位
      */
-    public static void set(String key, String value, long timeout, TimeUnit unit) {
-        redisTemplate.opsForValue().set(key, value, timeout, unit);
+    public void set(String key, String value, long timeout, TimeUnit unit) {
+        stringRedisTemplate.opsForValue().set(key, value, timeout, unit);
     }
 
 
@@ -56,47 +46,62 @@ public class RedisUtil {
 
     /**
      * 获取值，获取失败返回 null
+     *
+     * @param key Redis键
+     * @return Redis值，不存在返回null
      */
-    public static String get(String key) {
-        return redisTemplate.opsForValue().get(key);
+    public String get(String key) {
+        return stringRedisTemplate.opsForValue().get(key);
     }
 
     // ====================== 常用工具方法 ======================
 
     /**
      * 删除key
+     *
+     * @param key Redis键
+     * @return 是否删除成功
      */
-    public static Boolean delete(String key) {
-        return redisTemplate.delete(key);
+    public Boolean delete(String key) {
+        return stringRedisTemplate.delete(key);
     }
 
     /**
      * 判断key是否存在
+     *
+     * @param key Redis键
+     * @return 是否存在
      */
-    public static Boolean hasKey(String key) {
-        return redisTemplate.hasKey(key);
+    public Boolean hasKey(String key) {
+        return stringRedisTemplate.hasKey(key);
     }
 
     /**
-     * 给已有 key 设置过期时间（秒）
+     * 给已有 key 设置过期时间
+     *
+     * @param key     Redis键
+     * @param timeout 过期时间数值
+     * @param unit    时间单位
+     * @return 是否设置成功
      */
-    public static Boolean expire(String key, long timeout, TimeUnit unit) {
-        return redisTemplate.expire(key, timeout, unit);
+    public Boolean expire(String key, long timeout, TimeUnit unit) {
+        return stringRedisTemplate.expire(key, timeout, unit);
     }
 
     /**
      * 获取 key 的剩余存活时间
-     * @param key Redis 键名
+     *
+     * @param key  Redis 键名
      * @param unit 时间单位（如：TimeUnit.SECONDS、TimeUnit.MINUTES 等）
      * @return 剩余时间（指定单位）；如果 key 不存在、已过期或永久有效，返回 0
      */
-    public static Long getTtl(String key, TimeUnit unit) {
+    public Long getTtl(String key, TimeUnit unit) {
         /*
         如果 key 不存在或已过期，返回 -2；
         如果 key 存在但没有设置过期时间（永久有效），返回 -1；
         如果 key 存在且有过期时间，返回大于 0 的整数，代表剩余时间（单位由 unit 指定）。
         如果 key 存在但不足1个单位，返回 0。
          */
-        return redisTemplate.getExpire(key, unit);
+        return stringRedisTemplate.getExpire(key, unit);
     }
 }

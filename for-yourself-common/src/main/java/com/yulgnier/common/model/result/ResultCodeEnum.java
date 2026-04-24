@@ -127,6 +127,8 @@ public enum ResultCodeEnum {
     CACHE_STORAGE_FULL("C0133", "存储容量已满"),
     UNSUPPORTED_DATA_FORMAT("C0134", "不支持的数据格式"),
 
+    MINIO_SERVICE_ERROR("C0135", "MinIO对象存储服务出错"),
+
     CONFIG_SERVICE_ERROR("C0140", "配置服务出错"),
 
     NETWORK_RESOURCE_SERVICE_ERROR("C0150", "网络资源服务出错"),

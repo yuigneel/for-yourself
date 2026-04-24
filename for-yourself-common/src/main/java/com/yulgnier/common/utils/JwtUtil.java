@@ -4,7 +4,6 @@ import cn.hutool.core.lang.Snowflake;
 import com.yulgnier.common.config.properties.JwtProperties;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -14,36 +13,27 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
- * JWT工具类（静态调用版，和RedisUtil逻辑完全一致）
- * 调用方式：JwtUtil.generateToken(...)
+ * JWT工具类
+ * 标准 Spring Bean 实现，通过依赖注入使用
  */
 @Component
 @RequiredArgsConstructor
 public class JwtUtil {
 
-    // ====================== 1. 非静态变量：接收 Spring 注入（不能是static） ======================
-    // 构造器注入（Spring官方推荐）
-    private final JwtProperties injectJwtProperties;
-    private final Snowflake injectSnowflake;
+    private final JwtProperties jwtProperties;
+    private final Snowflake snowflake;
 
-    // ====================== 2. 静态变量：供静态方法使用 ======================
-    private static JwtProperties jwtProperties;
-    private static Snowflake snowflake;
-
-    // ====================== 3. @PostConstruct 方法：赋值！（只能加在方法上） ======================
-    @PostConstruct
-    private void init() {
-        // 把Spring注入的对象 → 赋值给静态变量
-        jwtProperties = this.injectJwtProperties;
-        snowflake = this.injectSnowflake;
-    }
-
-    // ====================== 核心公共静态方法 ======================
+    // ====================== 核心公共方法 ======================
 
     /**
      * 生成 JWT令牌
+     *
+     * @param claims   JWT载荷数据
+     * @param expire   过期时间数值
+     * @param timeUnit 时间单位
+     * @return JWT Token字符串
      */
-    public static String generateToken(Map<String, Object> claims, long expire, TimeUnit timeUnit) {
+    public String generateToken(Map<String, Object> claims, long expire, TimeUnit timeUnit) {
         String jti = snowflake.nextIdStr();
         Date now = new Date();
         long expireMillis = timeUnit.toMillis(expire);
@@ -62,8 +52,11 @@ public class JwtUtil {
 
     /**
      * 验证 JWT令牌
+     *
+     * @param token JWT Token字符串
+     * @return 是否有效
      */
-    public static boolean validateToken(String token) {
+    public boolean validateToken(String token) {
         try {
             parseClaims(token);
             return true;
@@ -74,8 +67,11 @@ public class JwtUtil {
 
     /**
      * 获取 Token载荷
+     *
+     * @param token JWT Token字符串
+     * @return 载荷Map，token无效返回null
      */
-    public static Map<String, Object> getClaimsFromToken(String token) {
+    public Map<String, Object> getClaimsFromToken(String token) {
         if (!validateToken(token)) {
             return null;
         }
@@ -83,11 +79,11 @@ public class JwtUtil {
     }
 
     // ====================== 私有工具方法 ======================
-    private static SecretKey getSecretKey() {
+    private SecretKey getSecretKey() {
         return Keys.hmacShaKeyFor(jwtProperties.getSecretKey().getBytes());
     }
 
-    private static Claims parseClaims(String token) {
+    private Claims parseClaims(String token) {
         return Jwts.parserBuilder()
                 .setSigningKey(getSecretKey())
                 .build()

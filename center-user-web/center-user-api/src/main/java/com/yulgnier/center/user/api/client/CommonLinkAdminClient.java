@@ -23,7 +23,7 @@ import org.springframework.web.bind.annotation.RequestParam;
  * @author yulgnier
  * @since 2026-04-21
  */
-@FeignClient(name = "center-common-user-service", path = "/center-common/link-admin", configuration = DefaultFeignClientConfig.class)
+@FeignClient(name = "center-common-user-service", contextId = "CommonLinkAdminClient", path = "/center-common/link-admin", configuration = DefaultFeignClientConfig.class)
 public interface CommonLinkAdminClient {
 
     /**

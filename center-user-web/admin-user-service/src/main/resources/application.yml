@@ -80,3 +80,4 @@ truth:
 yulgnier:
   email-expire-minutes: ${your.yulgnier.email-expire-minutes}
   email-try-times: ${your.yulgnier.email-try-times}  # 邮箱验证码尝试次数
+

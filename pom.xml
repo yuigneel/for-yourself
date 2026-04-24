@@ -105,6 +105,12 @@
                 <artifactId>jasypt-spring-boot-starter</artifactId>
                 <version>3.0.5</version>
             </dependency>
+            <!-- MinIO Java 客户端 -->
+            <dependency>
+                <groupId>io.minio</groupId>
+                <artifactId>minio</artifactId>
+                <version>8.5.11</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 

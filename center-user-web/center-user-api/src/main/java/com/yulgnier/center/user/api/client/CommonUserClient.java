@@ -10,7 +10,7 @@ import org.springframework.cloud.openfeign.FeignClient;
  * @author yulgnier
  * @since 2026-04-21
  */
-@FeignClient(name = "center-common-user-service", path = "/center-common/user", configuration = DefaultFeignClientConfig.class)
+@FeignClient(name = "center-common-user-service", contextId = "CommonUserClient", path = "/center-common/user", configuration = DefaultFeignClientConfig.class)
 public interface CommonUserClient {
 
 }

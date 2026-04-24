@@ -16,6 +16,16 @@ gateway:
     - /center-common/user/login
     - /center-common/user/getEmailCode
 
+# ====================== MinIO 对象存储核心配置 ======================
+minio:
+  endpoint: http://127.0.0.1:9000           # 【必填】MinIO API 访问地址
+  access-key: ${your.minio.access-key}      # 【必填】MinIO 登录账号
+  secret-key: ${your.minio.secret-key}      # 【必填】MinIO 登录密码
+  bucket-name: ${your.minio.bucket-name}    # 【必填】默认存储桶名称
+  secure: false                             # 【可选】是否启用 HTTPS 加密访问  本地测试 = false；生产环境部署用HTTPS = true
+  path-style-access: false                  # 【可选】访问模式（新版MinIO默认关闭，不用改）本地/Windows 测试 固定 false 即可
+
+
 truth:
   truth-key: ${your.yulgnier.truth-key}
   truth-value: ${your.yulgnier.truth-value}

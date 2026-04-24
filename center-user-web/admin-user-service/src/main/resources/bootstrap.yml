@@ -22,6 +22,8 @@ spring:
             group: FOR_YOURSELF_LOCAL
           - data-id: nacos-common.yml
             group: FOR_YOURSELF_LOCAL
+          - data-id: minin-common.yml
+            group: FOR_YOURSELF_LOCAL
 
       discovery:
         group: FOR_YOURSELF_LOCAL # 服务分组

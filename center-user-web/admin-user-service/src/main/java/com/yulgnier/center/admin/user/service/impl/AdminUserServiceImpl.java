@@ -70,6 +70,8 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
     private final LinkProperties linkProperties;
     private final CommonLinkAdminClient commonLinkAdminClient;
     private final Snowflake snowflake;
+    private final RedisUtil redisUtil;
+    private final JwtUtil jwtUtil;
 
     /**
      * 获取邮箱验证码
@@ -121,7 +123,7 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
         //    检查是否已经发送了验证码
         //      创建key
         String emailCodeKey = request.getBusinessType().getName() + AuthConstants.SEPARATOR + receiveEmail;
-        if (RedisUtil.get(emailCodeKey) != null) {
+        if (redisUtil.get(emailCodeKey) != null) {
             throw new ForYourselfException(ResultCodeEnum.CAPTCHA_ALREADY_SENT, null);
         }
         // 发送验证码
@@ -130,7 +132,7 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
         String emailCodeValue = emailCode + AuthConstants.SEPARATOR + miscellaneousProperties.getEmailTryTimes();
         //    存入缓存
         try {
-            RedisUtil.set(emailCodeKey, emailCodeValue, miscellaneousProperties.getEmailExpireMinutes(), TimeUnit.MINUTES);
+            redisUtil.set(emailCodeKey, emailCodeValue, miscellaneousProperties.getEmailExpireMinutes(), TimeUnit.MINUTES);
         } catch (Exception e) {
             log.error("RedisUtil.set()异常", e);
             throw new ForYourselfException(ResultCodeEnum.CACHE_SERVICE_ERROR, null);
@@ -150,7 +152,7 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
             log.error("邮件发送失败！", e);
             //    删除 key
             try {
-                RedisUtil.delete(emailCodeKey);
+                redisUtil.delete(emailCodeKey);
             } catch (Exception ex) {
                 log.error("缓存删除失败！", ex);
                 throw new ForYourselfException(ResultCodeEnum.CACHE_SERVICE_ERROR, null);
@@ -204,7 +206,7 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
         }
         //    检验是否已发送code
         String emailCodeKey = BusinessTypeEnum.FORGET_PASSWORD.getName() + AuthConstants.SEPARATOR + receiveEmail;
-        String emailCodeValue = RedisUtil.get(emailCodeKey);
+        String emailCodeValue = redisUtil.get(emailCodeKey);
         if (emailCodeValue == null) {
             throw new ForYourselfException(ResultCodeEnum.CAPTCHA_EXPIRED, null);
         }
@@ -323,7 +325,7 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
             throw new ForYourselfException(ResultCodeEnum.PASSWORD_ERROR, null);
         // 检验验证码
         String emailCodeKey = BusinessTypeEnum.BIND_EMAIL.getName() + AuthConstants.SEPARATOR + request.getNewEmail();
-        String emailCodeValue = RedisUtil.get(emailCodeKey);
+        String emailCodeValue = redisUtil.get(emailCodeKey);
 
         if (emailCodeValue == null) {
             throw new ForYourselfException(ResultCodeEnum.CAPTCHA_EXPIRED, null);
@@ -660,7 +662,7 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
             throw new ForYourselfException(ResultCodeEnum.PASSWORD_FORMAT_ERROR, "密码格式错误");
         // 验证验证码
         String emailCodeKey = BusinessTypeEnum.CANCEL_USER.getName() + AuthConstants.SEPARATOR + request.getEmail();
-        String emailCodeValue = RedisUtil.get(emailCodeKey);
+        String emailCodeValue = redisUtil.get(emailCodeKey);
         if (emailCodeValue == null) throw new ForYourselfException(ResultCodeEnum.CAPTCHA_EXPIRED, "验证码已过期");
         String rdEmailCode;
         Integer rdRemainTimes;
@@ -901,10 +903,10 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
          */
         //  提取计划冻结时间
         try {
-            String value = RedisUtil.get(key); //eg: A:1440
+            String value = redisUtil.get(key); //eg: A:1440
             Integer needTime = value == null ? 0 : Integer.valueOf(value.split(AuthConstants.SEPARATOR)[1]);
             //  获得实际剩余时间
-            Long ttl = RedisUtil.getTtl(key, TimeUnit.MINUTES);
+            Long ttl = redisUtil.getTtl(key, TimeUnit.MINUTES);
             ttl = ttl <= 0 ? 0 : ttl;
             //  计算实际冻结的时间（最大时间-实际剩余时间）
             long actualTime = BanLevelEnum.LEVEL_S.getCode() - ttl;
@@ -942,21 +944,21 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
         Integer timeG = BanLevelEnum.LEVEL_G.getCode();
 
         // 1. 安全获取缓存，防空指针
-        String value = RedisUtil.get(key);
+        String value = redisUtil.get(key);
         String currentBanLevel = (value == null) ? "x" : value.split(AuthConstants.SEPARATOR)[0];
 
         // 2. switch 必须用【字符串字面量】（Java语法强制要求，解决报错）
         // 内部直接用上面提取的变量，无任何冗余调用
         switch (currentBanLevel) {
-            case "S" -> RedisUtil.set(key, S + AuthConstants.SEPARATOR + timeS, timeS, TimeUnit.MINUTES);
-            case "A" -> RedisUtil.set(key, S + AuthConstants.SEPARATOR + timeS, timeS, TimeUnit.MINUTES);
-            case "B" -> RedisUtil.set(key, A + AuthConstants.SEPARATOR + timeA, timeS, TimeUnit.MINUTES);
-            case "C" -> RedisUtil.set(key, B + AuthConstants.SEPARATOR + timeB, timeS, TimeUnit.MINUTES);
-            case "D" -> RedisUtil.set(key, C + AuthConstants.SEPARATOR + timeC, timeS, TimeUnit.MINUTES);
-            case "E" -> RedisUtil.set(key, D + AuthConstants.SEPARATOR + timeD, timeS, TimeUnit.MINUTES);
-            case "F" -> RedisUtil.set(key, E + AuthConstants.SEPARATOR + timeE, timeS, TimeUnit.MINUTES);
-            case "G" -> RedisUtil.set(key, F + AuthConstants.SEPARATOR + timeF, timeS, TimeUnit.MINUTES);
-            default -> RedisUtil.set(key, G + AuthConstants.SEPARATOR + timeG, timeS, TimeUnit.MINUTES);
+            case "S" -> redisUtil.set(key, S + AuthConstants.SEPARATOR + timeS, timeS, TimeUnit.MINUTES);
+            case "A" -> redisUtil.set(key, S + AuthConstants.SEPARATOR + timeS, timeS, TimeUnit.MINUTES);
+            case "B" -> redisUtil.set(key, A + AuthConstants.SEPARATOR + timeA, timeS, TimeUnit.MINUTES);
+            case "C" -> redisUtil.set(key, B + AuthConstants.SEPARATOR + timeB, timeS, TimeUnit.MINUTES);
+            case "D" -> redisUtil.set(key, C + AuthConstants.SEPARATOR + timeC, timeS, TimeUnit.MINUTES);
+            case "E" -> redisUtil.set(key, D + AuthConstants.SEPARATOR + timeD, timeS, TimeUnit.MINUTES);
+            case "F" -> redisUtil.set(key, E + AuthConstants.SEPARATOR + timeE, timeS, TimeUnit.MINUTES);
+            case "G" -> redisUtil.set(key, F + AuthConstants.SEPARATOR + timeF, timeS, TimeUnit.MINUTES);
+            default -> redisUtil.set(key, G + AuthConstants.SEPARATOR + timeG, timeS, TimeUnit.MINUTES);
         }
     }
 
@@ -969,7 +971,7 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
     private String generateToken(String nickname, Long uid) {
         HashMap<String, Object> loadHashMap = new HashMap<>(Map.of(AuthConstants.UID_KEY, uid));
         try {
-            return JwtUtil.generateToken(loadHashMap, jwtProperties.getExpireHour(), TimeUnit.HOURS);
+            return jwtUtil.generateToken(loadHashMap, jwtProperties.getExpireHour(), TimeUnit.HOURS);
         } catch (Exception e) {
             log.error("用户{}：生成jwt令牌失败", nickname, e);
             throw new ForYourselfException(ResultCodeEnum.SYSTEM_EXECUTION_ERROR, null);
@@ -994,16 +996,16 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
         // 存入缓存
         String value = trueCode + AuthConstants.SEPARATOR + remainTimes;
         //    如果时间不足一个单位，则设置一秒
-        long time = RedisUtil.getTtl(key, TimeUnit.MINUTES);
+        long time = redisUtil.getTtl(key, TimeUnit.MINUTES);
         if (time <= 0) {
-            RedisUtil.set(key, value, 1, TimeUnit.SECONDS);
-        } else RedisUtil.set(key, value, time, TimeUnit.MINUTES);
+            redisUtil.set(key, value, 1, TimeUnit.SECONDS);
+        } else redisUtil.set(key, value, time, TimeUnit.MINUTES);
         // 如果尝试次数为0，则开始冻结
         if (remainTimes <= 0) {
             String BanYULGNIERKey = BusinessTypeEnum.SEND_EMAIL.getName() + AuthConstants.SEPARATOR + email;
             markEmailAsCaptchaFreeze(BanYULGNIERKey);
             // 删除验证码的缓存
-            RedisUtil.delete(key);
+            redisUtil.delete(key);
         }
         // 返回false
         return false;

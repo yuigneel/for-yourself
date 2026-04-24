@@ -27,6 +27,7 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
     private final GateWayProperties gateWayProperties;
     private final AntPathMatcher antPathMatcher = new AntPathMatcher();
     private final TruthProperties truthProperties;
+    private final JwtUtil jwtUtil;
     /**
      * 鉴权拦截器
      */
@@ -52,7 +53,7 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
         //  安全提取JWT token（防止数组越界）
         String token = authorization.substring(7); // "Bearer " 长度为7
 
-        Map<String, Object> claimsFromToken = JwtUtil.getClaimsFromToken(token); // 解析token,token无效返回null
+        Map<String, Object> claimsFromToken = jwtUtil.getClaimsFromToken(token); // 解析token,token无效返回null
         if (claimsFromToken == null) {
             return Mono.error(new ForYourselfException(ResultCodeEnum.CAPTCHA_VERIFICATION_FAILED, null));
         }

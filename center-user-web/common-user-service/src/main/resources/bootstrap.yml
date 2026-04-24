@@ -7,7 +7,7 @@ spring:
       config:
         file-extension: yml # 文件后缀名
         group: FOR_YOURSELF_LOCAL  # 配置文件的分组
-        shared-configs:   # 共享配置
+        shared-configs: # 共享配置
           - data-id: datasource-common.yml
             group: FOR_YOURSELF_LOCAL
           - data-id: redis-common.yml
@@ -21,6 +21,8 @@ spring:
           - data-id: swagger-common.yml
             group: FOR_YOURSELF_LOCAL
           - data-id: nacos-common.yml
+            group: FOR_YOURSELF_LOCAL
+          - data-id: minin-common.yml
             group: FOR_YOURSELF_LOCAL
 
       discovery:

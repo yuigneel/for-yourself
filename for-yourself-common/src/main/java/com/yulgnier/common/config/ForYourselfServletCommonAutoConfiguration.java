@@ -1,11 +1,9 @@
 package com.yulgnier.common.config;
 
-import com.yulgnier.common.config.properties.GateWayProperties;
-import com.yulgnier.common.config.properties.JwtProperties;
-import com.yulgnier.common.config.properties.SnowflakeProperties;
-import com.yulgnier.common.config.properties.TruthProperties;
+import com.yulgnier.common.config.properties.*;
 import com.yulgnier.common.exception.GlobalExceptionHandler;
 import com.yulgnier.common.utils.JwtUtil;
+import com.yulgnier.common.utils.MinioUtil;
 import com.yulgnier.common.utils.RedisUtil;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.context.annotation.Configuration;
@@ -30,7 +28,8 @@ import org.springframework.context.annotation.Import;
 // 限定：只有在 SpringMVC Web 项目中才生效（非Web项目不加载，避免无效配置）
 @Import({GlobalExceptionHandler.class, RedisConfig.class, RedisUtil.class, JacksonConfig.class, SecurityConfig.class,
         JwtProperties.class, SnowflakeProperties.class, SnowflakeConfig.class, JwtUtil.class, TruthProperties.class,
-        WebMVCConfig.class, GateWayProperties.class, DefaultFeignClientConfig.class,MyBatisPlusPageConfig.class
+        WebMVCConfig.class, GateWayProperties.class, DefaultFeignClientConfig.class,MyBatisPlusPageConfig.class,
+        MinIOProperties.class,MinioConfig.class, MinioUtil.class
 })   // 核心：自动导入全局异常处理器，将其注册到Spring容器中
 public class ForYourselfServletCommonAutoConfiguration {
     /*
