@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yuigneel.center.common.user.mapper.UserMapper">
+
+    <!-- 根据昵称查询用户(忽略逻辑删除) -->
+    <select id="selectOneByNicknameIgnoreLogicDelete" resultType="com.yuigneel.center.common.user.model.domain.CommonUser">
+        SELECT *
+        FROM t_common_user
+        WHERE nickname = #{nickname}
+        LIMIT 1
+    </select>
+
+    <!-- 根据邮箱查询用户(忽略逻辑删除) -->
+    <select id="selectOneByEmailIgnoreLogicDelete" resultType="com.yuigneel.center.common.user.model.domain.CommonUser">
+        SELECT *
+        FROM t_common_user
+        WHERE email = #{email}
+        LIMIT 1
+    </select>
+
+    <!-- 根据UID查询用户(忽略逻辑删除) -->
+    <select id="selectOneByUidIgnoreLogicDelete" resultType="com.yuigneel.center.common.user.model.domain.CommonUser">
+        SELECT *
+        FROM t_common_user
+        WHERE uid = #{uid}
+        LIMIT 1
+    </select>
+
+    <!-- 根据UID修改用户密码(忽略逻辑删除) -->
+    <update id="updatePasswordByUidIgnoreLogicDelete">
+        UPDATE t_common_user
+        SET password = #{password}
+        WHERE uid = #{uid}
+        LIMIT 1
+    </update>
+
+    <!-- 恢复用户-将is_deleted设为0(忽略逻辑删除) -->
+    <update id="restoreUserIgnoreLogicDelete">
+        UPDATE t_common_user
+        SET is_deleted = 0
+        WHERE uid = #{uid}
+        LIMIT 1
+    </update>
+
+    <!--
+        分页查询普通用户列表（动态条件）
+        MyBatis-Plus 的 Page 对象会自动在 SQL 末尾添加 LIMIT 和 OFFSET
+    -->
+    <select id="selectPageByCondition" resultType="com.yuigneel.center.common.user.model.domain.CommonUser">
+        SELECT
+            id,
+            uid,
+            email,
+            nickname,
+            password,
+            gender,
+            birthday,
+            join_date,
+            account_status,
+            is_deleted,
+            create_time,
+            update_time,
+            update_by
+        FROM t_common_user
+        <where>
+            <!-- 时间范围查询（注册时间） -->
+            <if test="query.startTime != null and query.endTime != null">
+                AND create_time BETWEEN CONCAT(#{query.startTime}, ' 00:00:00') AND CONCAT(#{query.endTime}, ' 23:59:59')
+            </if>
+            <if test="query.startTime != null and query.endTime == null">
+                AND create_time &gt;= CONCAT(#{query.startTime}, ' 00:00:00')
+            </if>
+            <if test="query.startTime == null and query.endTime != null">
+                AND create_time &lt;= CONCAT(#{query.endTime}, ' 23:59:59')
+            </if>
+
+            <!-- 逻辑删除状态 -->
+            <if test="query.isDeleted != null">
+                AND is_deleted = #{query.isDeleted}
+            </if>
+
+            <!-- 账户状态 -->
+            <if test="query.accountStatus != null">
+                AND account_status = #{query.accountStatus}
+            </if>
+
+            <!-- 关键词模糊搜索（昵称或邮箱） -->
+            <if test="query.keyword != null and query.keyword != ''">
+                AND (
+                    nickname LIKE CONCAT('%', #{query.keyword}, '%')
+                    OR email LIKE CONCAT('%', #{query.keyword}, '%')
+                )
+            </if>
+        </where>
+
+        <!-- 动态排序 -->
+        <choose>
+            <!-- 昵称 + 升序 -->
+            <when test="query.orderBy != null and 'nickname'.equals(query.orderBy) and query.orderDirection != null and 'asc'.equals(query.orderDirection)">
+                ORDER BY nickname ASC
+            </when>
+            <!-- 昵称 + 降序（默认） -->
+            <when test="query.orderBy != null and 'nickname'.equals(query.orderBy)">
+                ORDER BY nickname DESC
+            </when>
+            <!-- 创建时间 + 升序 -->
+            <when test="query.orderBy != null and 'createTime'.equals(query.orderBy) and query.orderDirection != null and 'asc'.equals(query.orderDirection)">
+                ORDER BY create_time ASC
+            </when>
+            <!-- 默认：创建时间降序 -->
+            <otherwise>
+                ORDER BY create_time DESC
+            </otherwise>
+        </choose>
+    </select>
+
+</mapper>

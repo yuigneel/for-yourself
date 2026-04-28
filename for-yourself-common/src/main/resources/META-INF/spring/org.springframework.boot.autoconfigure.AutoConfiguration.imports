@@ -6,5 +6,5 @@
 # 2. Spring Boot 启动时会自动实例化这些配置类
 # 3. 配置类上的 @Configuration 注解会触发 Bean 的注册
 # 注册的配置类：common 模块的自动配置类
-com.yulgnier.common.config.ForYourselfServletCommonAutoConfiguration
-com.yulgnier.common.config.ForYourselfReactiveCommonAutoConfiguration
+com.yuigneel.common.config.ForYourselfServletCommonAutoConfiguration
+com.yuigneel.common.config.ForYourselfReactiveCommonAutoConfiguration

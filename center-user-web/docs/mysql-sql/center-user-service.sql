@@ -61,6 +61,25 @@ INSERT INTO `t_admin_user` (`uid`, `email`, `nickname`, `password`, `join_date`,
 VALUES (2043953017778077696, 'yu_lgnier@outlook.com', '小白', '$2a$10$pY9kwEJJB99zylONtPXgyeo8JFVjyOYk6LlZCkAmE2HpiRhNvFmQ6', CURDATE(), 0);
 
 
+-- ==============================
+-- 账号头像表（统一管理用户和管理员头像）
+DROP TABLE IF EXISTS `t_account_avatar`;
+CREATE TABLE `t_account_avatar` (
+                                    `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键自增ID',
+                                    `identity_type` TINYINT NOT NULL COMMENT '身份类型：0-管理员 1-普通用户',
+                                    `uid` BIGINT NOT NULL COMMENT '用户/管理员唯一业务UID',
+                                    `avatar_url` VARCHAR(512) NOT NULL COMMENT '头像图片唯一地址',
+                                    `is_deleted` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '逻辑删除：0-未删除 1-已删除',
+                                    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间(自动生成)',
+                                    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间(自动更新)',
+
+                                    -- 索引
+                                    PRIMARY KEY (`id`),
+                                    KEY `idx_identity_uid` (`identity_type`, `uid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='账号头像表';
+
+
+
 
 
 

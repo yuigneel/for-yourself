@@ -4,7 +4,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.yulgnier</groupId>
+    <groupId>com.yuigneel</groupId>
     <artifactId>for-yourself</artifactId>
     <packaging>pom</packaging>
     <version>0.0.1-SNAPSHOT</version>
@@ -32,12 +32,12 @@
     <dependencyManagement>
         <dependencies>
             <dependency>
-                <groupId>com.yulgnier.common</groupId>
+                <groupId>com.yuigneel.common</groupId>
                 <artifactId>for-yourself-common</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.yulgnier.gateway</groupId>
+                <groupId>com.yuigneel.gateway</groupId>
                 <artifactId>for-yourself-gateway</artifactId>
                 <version>${project.version}</version>
             </dependency>
