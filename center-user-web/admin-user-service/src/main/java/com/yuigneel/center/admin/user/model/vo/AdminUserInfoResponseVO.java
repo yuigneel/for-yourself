@@ -19,12 +19,15 @@ import java.time.LocalDate;
 @Schema(description = "管理员用户完整信息响应")
 public class AdminUserInfoResponseVO {
 
-    @Schema(description = "管理员唯一业务UID", example = "1234567890")
+    @Schema(description = "管理员唯一业务 UID", example = "1234567890")
     private Long uid;
     
     @Schema(description = "登录邮箱(唯一)", example = "admin@example.com")
     private String email;
-    
+
+    @Schema(description = "账号头像",example = "https://example.com/avatar.png")
+    private String avatar;
+
     @Schema(description = "管理员昵称(唯一)", example = "超级管理员")
     private String nickname;
     

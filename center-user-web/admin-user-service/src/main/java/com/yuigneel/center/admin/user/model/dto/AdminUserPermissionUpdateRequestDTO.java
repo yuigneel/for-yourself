@@ -15,8 +15,8 @@ import lombok.Data;
 @Schema(description = "管理员权限修改请求")
 public class AdminUserPermissionUpdateRequestDTO {
     
-    @NotNull(message = "管理员UID不能为空")
-    @Schema(description = "被修改的管理员UID", example = "1234567890", requiredMode = Schema.RequiredMode.REQUIRED)
+    @NotNull(message = "管理员 UID 不能为空")
+    @Schema(description = "被修改的管理员 UID", example = "1234567890", requiredMode = Schema.RequiredMode.REQUIRED)
     private Long uid;
     
     @NotNull(message = "新的权限等级不能为空")

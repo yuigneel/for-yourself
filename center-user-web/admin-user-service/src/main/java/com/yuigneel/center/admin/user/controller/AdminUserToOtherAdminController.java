@@ -7,8 +7,10 @@ import com.yuigneel.center.admin.user.model.dto.AdminUserPermissionUpdateRequest
 import com.yuigneel.center.admin.user.model.dto.AdminUserStatusUpdateRequestDTO;
 import com.yuigneel.center.admin.user.model.vo.AdminUserCreateResponseVO;
 import com.yuigneel.center.admin.user.model.vo.AdminUserInfoResponseVO;
+import com.yuigneel.center.admin.user.service.AdminUserFileService;
 import com.yuigneel.center.admin.user.service.AdminUserService;
 import com.yuigneel.common.model.result.Result;
+import com.yuigneel.common.utils.UserContextUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -26,6 +28,7 @@ import org.springframework.web.bind.annotation.*;
 public class AdminUserToOtherAdminController {
 
     private final AdminUserService adminUserService;
+    private final AdminUserFileService adminUserFileServiceByMinIOImpl;
 
     /**
      * 分页查询管理员用户列表
@@ -90,10 +93,13 @@ public class AdminUserToOtherAdminController {
             // 接收参数
             @RequestParam("uid")
             // 参数校验
-            @NotNull(message = "管理员UID不能为空")
+            @NotNull(message = "管理员 UID 不能为空")
             Long uid
     ) {
         AdminUserInfoResponseVO response = adminUserService.getOtherAdminInfo(uid);
+        UserContextUtil.setUid(uid);
+        String avatar = adminUserFileServiceByMinIOImpl.getAvatar();
+        response.setAvatar(avatar);
         return Result.ok(response);
     }
 }

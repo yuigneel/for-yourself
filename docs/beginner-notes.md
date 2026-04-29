@@ -29,6 +29,11 @@
         6.MySQL 初始化时默认 root 用户无密码，需手动设置：mysql -uroot -p123456
         7.IDEA集成 spring集成 配置application.yml文件
 
+### --MinIO:
+        1.下载解压压缩包
+        2.默认密码为 minioadmin minioadmin
+        3.配置application.yml文件
+
 ## -----------缓存相关类-------------
 
 ### -- Redis：

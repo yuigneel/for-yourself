@@ -31,14 +31,14 @@ public interface UserMapper extends BaseMapper<CommonUser> {
 
     /**
      * 根据UID查询用户(忽略逻辑删除)
-     * @param uid 用户UID
+     * @param uid 用户 UID
      * @return 用户对象
      */
     CommonUser selectOneByUidIgnoreLogicDelete(Long uid);
 
     /**
      * 根据UID修改用户密码(忽略逻辑删除)
-     * @param uid 用户UID
+     * @param uid 用户 UID
      * @param password 加密后的新密码
      * @return 影响行数
      */

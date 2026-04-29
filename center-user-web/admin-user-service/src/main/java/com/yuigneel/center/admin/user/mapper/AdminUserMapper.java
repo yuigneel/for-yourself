@@ -11,6 +11,33 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 */
 public interface AdminUserMapper extends BaseMapper<AdminUser> {
 
+    /**
+     * 根据昵称查询用户（忽略逻辑删除）
+     * @param nickname 昵称
+     * @return 管理员用户
+     */
+    AdminUser selectOneByNicknameIgnoreLogicDelete(String nickname);
+
+    /**
+     * 恢复已逻辑删除的用户（取消逻辑删除）
+     * @param adminUser 管理员用户对象
+     * @return 影响行数
+     */
+    int restoreUserIgnoreLogicDelete(AdminUser adminUser);
+
+    /**
+     * 根据邮箱查询用户（忽略逻辑删除）
+     * @param email 邮箱
+     * @return 管理员用户
+     */
+    AdminUser selectOneByEmailIgnoreLogicDelete(String email);
+
+    /**
+     * 根据UID查询用户（忽略逻辑删除）
+     * @param uid 用户UID
+     * @return 管理员用户
+     */
+    AdminUser selectOneByUidIgnoreLogicDelete(Long uid);
 }
 
 

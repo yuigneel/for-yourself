@@ -5,6 +5,7 @@ import com.yuigneel.center.common.user.model.vo.UserLoginResponseVO;
 import com.yuigneel.center.common.user.service.CommonUserFileService;
 import com.yuigneel.center.common.user.service.UserService;
 import com.yuigneel.center.user.api.model.dto.EmailCodeRequestDTO;
+import com.yuigneel.center.user.api.model.enums.LoginStatusEnum;
 import com.yuigneel.center.user.api.model.vo.CommonUserInfoResponseVO;
 import com.yuigneel.common.exception.ForYourselfException;
 import com.yuigneel.common.model.result.Result;
@@ -174,11 +175,11 @@ public class UserController {
                     description = "用户头像文件",
                     required = true,
                     content = @Content(
-                            mediaType = "multipart/form-data",
+                            mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
                             schema = @Schema(type = "string", format = "binary")  // 明确指定为二进制文件
                     )
-            )
-            MultipartFile avatarFile) {      // 直接接收文件
+            ) MultipartFile avatarFile) // 直接接收文件
+    {
         String response = userService.register(userDTO, avatarFile);
         return Result.ok(response);
     }
@@ -187,9 +188,9 @@ public class UserController {
     @PostMapping("/login")
     public Result<String> login(@Valid @RequestBody UserLoginRequestDTO request) {
         UserLoginResponseVO response = userService.login(request);
-        ResultCodeEnum resultCodeEnum = response.getResultCodeEnum();
+        LoginStatusEnum resultCodeEnum = response.getResultCodeEnum();
         String token = response.getToken();
-        return Result.ok(resultCodeEnum, token);
+        return Result.buildDIY(String.valueOf(ResultCodeEnum.SUCCESS.getCode()), resultCodeEnum.getName(), token);
     }
 
     @Operation(summary = "用户注销")
@@ -208,8 +209,19 @@ public class UserController {
 
     @Operation(summary = "修改用户普通信息")
     @PostMapping(value = "/updateUserInfo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public Result<String> updateUserInfo(@Valid @ModelAttribute UserUpdateInfoRequestDTO request) {
-        userService.updateUserInfo(request);
+    public Result<String> updateUserInfo(
+            @ParameterObject @Valid UserUpdateInfoRequestDTO request,
+            @RequestPart("file")
+            @Parameter(
+                    name = "file",
+                    description = "用户头像文件",
+                    required = true,
+                    content = @Content(
+                            mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
+                            schema = @Schema(type = "string", format = "binary")  // 明确指定为二进制文件
+                    )
+            ) MultipartFile avatarFile) {
+        userService.updateUserInfo(request, avatarFile);
         return Result.ok("修改成功");
     }
 
@@ -245,8 +257,7 @@ public class UserController {
                     required = true,
                     content = @Content(mediaType = MediaType.APPLICATION_OCTET_STREAM_VALUE) // 文件类型
             )
-            @RequestPart("file") MultipartFile file // 推荐用@RequestPart接收文件，比@RequestParam更规范
-    ) {
+            @RequestPart("file") MultipartFile file) {   // 推荐用@RequestPart接收文件，比@RequestParam更规范
         commonUserFileServiceByMinIOImpl.uploadAvatar(file);
         return Result.ok("头像上传成功！");
     }

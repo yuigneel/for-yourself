@@ -17,7 +17,7 @@ import java.time.LocalDate;
 @Schema(description = "用户基础信息响应")
 public class CommonUserInfoResponseVO {
     
-    @Schema(description = "用户唯一业务UID", example = "1234567890")
+    @Schema(description = "用户唯一业务 UID", example = "1234567890")
     private Long uid;
     
     @Schema(description = "用户邮箱", example = "example@163.com")

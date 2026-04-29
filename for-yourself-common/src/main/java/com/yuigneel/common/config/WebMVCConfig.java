@@ -23,7 +23,7 @@ public class WebMVCConfig implements WebMvcConfigurer {
     @Override
     public void addInterceptors(org.springframework.web.servlet.config.annotation.InterceptorRegistry registry) {
         registry.addInterceptor(new UserInfoInterceptor(truthProperties))
-                .addPathPatterns("/**")
+                .addPathPatterns("/**")  // 我丢，我的署名yuigneel写错了！！！
                 .excludePathPatterns(gateWayProperties.getWhiteList());  //  直接传入配置好的白名单数组 ✅
     }
 }

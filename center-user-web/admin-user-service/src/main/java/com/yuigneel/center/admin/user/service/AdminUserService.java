@@ -11,6 +11,7 @@ import com.yuigneel.center.admin.user.model.vo.AdminUserLoginResponseVO;
 import com.yuigneel.center.user.api.model.dto.CommonUserPageQueryDTO;
 import com.yuigneel.center.user.api.model.dto.EmailCodeRequestDTO;
 import com.yuigneel.center.user.api.model.vo.CommonUserInfoResponseVO;
+import org.springframework.web.multipart.MultipartFile;
 
 
 /**
@@ -28,15 +29,15 @@ public interface AdminUserService extends IService<AdminUser> {
 
     void changeEmail(UserChangeEmailRequestDTO request);
 
-    void updateUserInfo( UserUpdateInfoRequestDTO request);
+    void updateUserInfo( UserUpdateInfoRequestDTO request, MultipartFile avatarFile);
 
     AdminUserInfoResponseVO getAdminSelfInfo();
 
     void updatePassword( UserUpdatePasswordRequestDTO request);
 
-    IPage<AdminUserInfoResponseVO> pageUsers(AdminUserPageQueryDTO query);
-
     void logout( AdminUserLogoutRequestDTO request);
+
+    IPage<AdminUserInfoResponseVO> pageUsers(AdminUserPageQueryDTO query);
 
     AdminUserCreateResponseVO createAdmin(AdminUserCreateRequestDTO request);
 

@@ -51,7 +51,8 @@ public class Knife4jConfig {
         return GroupedOpenApi.builder()
                 .group("根普通用户接口")       // 分组名称（页面显示用）
                 .pathsToMatch(      // 接口路径匹配规则 /* 表示匹配所有单级路径 /** 表示匹配所有多级路径
-                        "/center-common/user/**"
+                        "/center-common/user/**",
+                        "/center-common/link-admin/**"
                 )
                 .build();
     }

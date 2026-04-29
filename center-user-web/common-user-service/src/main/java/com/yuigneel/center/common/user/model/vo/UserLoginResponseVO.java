@@ -1,6 +1,6 @@
 package com.yuigneel.center.common.user.model.vo;
 
-import com.yuigneel.common.model.result.ResultCodeEnum;
+import com.yuigneel.center.user.api.model.enums.LoginStatusEnum;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -18,5 +18,5 @@ public class UserLoginResponseVO {
     private String token;
     
     @Schema(description = "登录状态枚举", example = "USER_NORMAL_LOGIN")
-    private ResultCodeEnum resultCodeEnum;
+    private LoginStatusEnum resultCodeEnum;
 }

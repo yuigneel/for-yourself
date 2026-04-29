@@ -61,10 +61,10 @@ gateway:
     - /error
     - /favicon.ico
     # 项目用
-    - /center-common/user/register                     #TODO-----------------------改---------------------
-    - /center-common/user/login
-    - /center-common/user/getEmailCode
-    - /center-common/user/forgetPassword
+    - /center-admin/userself/getEmailCode                     #TODO-----------------------改---------------------
+    - /center-admin/userself/forgetPassword
+    - /center-admin/userself/login
+
 
 link:
   admin-common:

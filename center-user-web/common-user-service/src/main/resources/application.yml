@@ -62,8 +62,8 @@ gateway:
     - /favicon.ico
     # 项目用
     - /center-common/user/register                #TODO-----------------------改---------------------
-    - /center-common/user/login
     - /center-common/user/getEmailCode
+    - /center-common/user/login
     - /center-common/user/forgetPassword
 
 link:

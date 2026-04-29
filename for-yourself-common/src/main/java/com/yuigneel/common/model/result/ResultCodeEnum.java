@@ -1,6 +1,5 @@
 package com.yuigneel.common.model.result;
 
-import com.fasterxml.jackson.annotation.JsonValue;
 
 /**
  * 统一返回结果状态信息类
@@ -50,6 +49,7 @@ public enum ResultCodeEnum {
     PASSWORD_FORMAT_ERROR("A0205", "密码格式错误"),
     PHONE_FORMAT_ERROR("A0206", "手机号格式错误"),
     DATE_FORMAT_ERROR("A0207", "日期格式错误"),
+    FILENAME_FORMAT_ERROR("A0208", "文件名格式错误"),
 
     USERNAME_ALREADY_EXISTS("A0210", "用户名已存在"),
     PHONE_ALREADY_EXISTS("A0211", "手机号已存在"),
@@ -65,22 +65,24 @@ public enum ResultCodeEnum {
     PASSWORD_ERROR("A0301", "密码错误"),
     CAPTCHA_EXPIRED("A0302", "验证码已过期"),
     ACCOUNT_OR_PASSWORD_ERROR("A0303", "账户或密码错误"),
-    ACCOUNT_BANNED("A0304", "账户已被封禁"),
-    ACCOUNT_CANCELLED("A0305", "账户已注销"),
-    USER_NOT_FOUND_OR_CANCELLED("A0306", "用户不存在或已注销"),
     INSUFFICIENT_PERMISSIONS("A0307", "权限不足"),
     // A04xx 用户隐私
     // A05xx 用户资产
-    SAVE_USER_FAILED("A0500", "保存用户失败"),
-    USER_NOT_FOUND("A0501", "用户不存在"),
-    AVATAR_NOT_FOUND("A0502", "头像不存在"),
     // A06xx 传输错误
     FEIGN_CLIENT_CALL_ERROR("A0600", "FeignClient调用异常"),
     REMOTE_RESPONSE_ERROR("A0601", "远程返回结果错误"),
     // A07xx 用户设备错误
-    // A08xx 用户状态
-    USER_NORMAL_LOGIN("A0800", "用户正常登录"),
-    USER_CANCELLED_UNDO_LOGIN("A0801", "用户取消注销并登录"),
+    // A08xx 账户状态
+    ACCOUNT_NORMAL_LOGIN("A0800", "账户正常登录"),
+    ACCOUNT_CANCELLED_UNDO_LOGIN("A0801", "账户取消注销并登录"),
+    ACCOUNT_NOT_FOUND("A0802", "账户不存在"),
+    ACCOUNT_CANCELLED("A0803", "账户已注销"),
+    ACCOUNT_NOT_FOUND_OR_CANCELLED("A0804", "账户不存在或已注销"),
+    AVATAR_NOT_FOUND("A0805", "头像不存在"),
+    ACCOUNT_BANNED("A0806", "账户已被封禁"),
+    // A09xx 账户操作
+    SAVE_ACCOUNT_FAILED("A0900", "保存账户信息失败"),
+    // A10xx 账户安全
 
     // ====================== B0xxx 系统执行出错 ======================
     SYSTEM_EXECUTION_ERROR("B0001", "系统执行出错"),
@@ -109,61 +111,20 @@ public enum ResultCodeEnum {
     // ====================== C0xxx 调用第三方服务出错 ======================
     THIRD_PARTY_SERVICE_ERROR("C0001", "调用第三方服务出错"),
 
-    // C01xx 中间件服务出错
-    MIDDLEWARE_SERVICE_ERROR("C0100", "中间件服务出错"),
-    RPC_SERVICE_ERROR("C0110", "RPC 服务出错"),
-    RPC_SERVICE_NOT_FOUND("C0111", "RPC 服务未找到"),
-    RPC_SERVICE_NOT_REGISTERED("C0112", "RPC 服务未注册"),
-    INTERFACE_NOT_EXIST("C0113", "接口不存在"),
+    // C01xx 数据库服务
+    DATABASE_SERVICE_ERROR("C0100", "数据库服务出错"),
 
-    MESSAGE_SERVICE_ERROR("C0120", "消息服务出错"),
-    MESSAGE_DELIVERY_ERROR("C0121", "消息投递出错"),
-    MESSAGE_CONSUMPTION_ERROR("C0122", "消息消费出错"),
-    MESSAGE_SUBSCRIPTION_ERROR("C0123", "消息订阅出错"),
-    MESSAGE_GROUP_NOT_FOUND("C0124", "消息分组未查到"),
+    // C02xx 缓存服务
+    CACHE_SERVICE_ERROR("C0200", "缓存服务出错"),
+        
+    // C03xx 对象储存
+    MINIO_SERVICE_ERROR("C0300", "对象存储服务出错"),
 
-    CACHE_SERVICE_ERROR("C0130", "缓存服务出错"),
-    CACHE_KEY_LENGTH_EXCEEDS_LIMIT("C0131", "key 长度超过限制"),
-    CACHE_VALUE_LENGTH_EXCEEDS_LIMIT("C0132", "value 长度超过限制"),
-    CACHE_STORAGE_FULL("C0133", "存储容量已满"),
-    UNSUPPORTED_DATA_FORMAT("C0134", "不支持的数据格式"),
+    // C04xx 通知服务
+    NOTIFICATION_SERVICE_ERROR("C0400", "通知服务出错"),
 
-    MINIO_SERVICE_ERROR("C0135", "MinIO对象存储服务出错"),
-
-    CONFIG_SERVICE_ERROR("C0140", "配置服务出错"),
-
-    NETWORK_RESOURCE_SERVICE_ERROR("C0150", "网络资源服务出错"),
-    VPN_SERVICE_ERROR("C0151", "VPN 服务出错"),
-    CDN_SERVICE_ERROR("C0152", "CDN 服务出错"),
-    DOMAIN_RESOLUTION_SERVICE_ERROR("C0153", "域名解析服务出错"),
-    GATEWAY_SERVICE_ERROR("C0154", "网关服务出错"),
-
-    // C02xx 第三方系统执行超时
-    THIRD_PARTY_EXECUTION_TIMEOUT("C0200", "第三方系统执行超时"),
-    RPC_EXECUTION_TIMEOUT("C0210", "RPC 执行超时"),
-    MESSAGE_DELIVERY_TIMEOUT("C0220", "消息投递超时"),
-    CACHE_SERVICE_TIMEOUT("C0230", "缓存服务超时"),
-    CONFIG_SERVICE_TIMEOUT("C0240", "配置服务超时"),
-    DATABASE_SERVICE_TIMEOUT("C0250", "数据库服务超时"),
-
-    // C03xx 数据库服务出错
-    DATABASE_SERVICE_ERROR("C0300", "数据库服务出错"),
-    TABLE_NOT_EXIST("C0311", "表不存在"),
-    COLUMN_NOT_EXIST("C0312", "列不存在"),
-    MULTIPLE_TABLES_SAME_COLUMN_NAME("C0321", "多表关联中存在多个相同名称的列"),
-    DATABASE_DEADLOCK("C0331", "数据库死锁"),
-    PRIMARY_KEY_CONFLICT("C0341", "主键冲突"),
-
-    // C04xx 第三方容灾系统被触发
-    THIRD_PARTY_DISASTER_RECOVERY_TRIGGERED("C0400", "第三方容灾系统被触发"),
-    THIRD_PARTY_RATE_LIMITED("C0401", "第三方系统限流"),
-    THIRD_PARTY_FEATURE_DOWNGRADED("C0402", "第三方功能降级"),
-
-    // C05xx 通知服务出错
-    NOTIFICATION_SERVICE_ERROR("C0500", "通知服务出错"),
-    SMS_NOTIFICATION_FAILED("C0501", "短信提醒服务失败"),
-    VOICE_NOTIFICATION_FAILED("C0502", "语音提醒服务失败"),
-    EMAIL_NOTIFICATION_FAILED("C0503", "邮件提醒服务失败");
+    // C05xx 网关服务
+    GATEWAY_SERVICE_ERROR("C0500", "网关服务出错");
 
     private final String code;
 

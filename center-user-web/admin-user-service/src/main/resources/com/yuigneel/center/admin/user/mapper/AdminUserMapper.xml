@@ -21,4 +21,38 @@
             <result property="updateBy" column="update_by" />
     </resultMap>
 
+    <select id="selectOneByNicknameIgnoreLogicDelete" resultMap="BaseResultMap">
+        SELECT
+            id, uid, email, nickname, password, gender, birthday,
+            join_date, account_permission, account_status, is_deleted,
+            create_time, update_time, update_by
+        FROM t_admin_user
+        WHERE nickname = #{nickname}
+    </select>
+
+    <update id="restoreUserIgnoreLogicDelete">
+        UPDATE t_admin_user
+        SET is_deleted = 0,
+            update_time = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <select id="selectOneByEmailIgnoreLogicDelete" resultMap="BaseResultMap">
+        SELECT
+            id, uid, email, nickname, password, gender, birthday,
+            join_date, account_permission, account_status, is_deleted,
+            create_time, update_time, update_by
+        FROM t_admin_user
+        WHERE email = #{email}
+    </select>
+
+    <select id="selectOneByUidIgnoreLogicDelete" resultMap="BaseResultMap">
+        SELECT
+            id, uid, email, nickname, password, gender, birthday,
+            join_date, account_permission, account_status, is_deleted,
+            create_time, update_time, update_by
+        FROM t_admin_user
+        WHERE uid = #{uid}
+    </select>
+
 </mapper>

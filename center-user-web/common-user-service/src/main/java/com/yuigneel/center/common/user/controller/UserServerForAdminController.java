@@ -42,12 +42,12 @@ public class UserServerForAdminController {
     }
 
     /**
-     * 根据id获得普通用户信息
+     * 根据 id获得普通用户信息
      * <p>仅管理员可调用，内部会校验身份</p>
      */
     @GetMapping("/getById")
-    @Operation(summary = "根据id获得普通用户信息")
-    public Result<CommonUserInfoResponseVO> getById(@Parameter(name = "uid", description = "普通用户UID（雪花ID）", required = true) @RequestParam("uid") @NotNull(message = "普通用户UID不能为空") Long uid) {
+    @Operation(summary = "根据 id获得普通用户信息")
+    public Result<CommonUserInfoResponseVO> getById(@Parameter(name = "uid", description = "普通用户UID（雪花ID）", required = true) @RequestParam("uid") @NotNull(message = "普通用户 UID 不能为空") Long uid) {
         CommonUserInfoResponseVO response = userService.getOneById(uid);
         // 将管理员Id 替换为用户Id
         UserContextUtil.setUid(response.getUid());

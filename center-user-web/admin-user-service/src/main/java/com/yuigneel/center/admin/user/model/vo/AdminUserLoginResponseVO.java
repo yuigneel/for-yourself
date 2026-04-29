@@ -1,5 +1,6 @@
 package com.yuigneel.center.admin.user.model.vo;
 
+import com.yuigneel.center.user.api.model.enums.LoginStatusEnum;
 import com.yuigneel.common.model.result.ResultCodeEnum;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
@@ -12,7 +13,6 @@ import lombok.Data;
  * @date 2026-04-19
  */
 @Data
-@AllArgsConstructor
 @Schema(description = "管理员登录响应")
 public class AdminUserLoginResponseVO {
     
@@ -20,6 +20,5 @@ public class AdminUserLoginResponseVO {
     private String token;
     
     @Schema(description = "登录状态枚举", example = "USER_NORMAL_LOGIN")
-    private ResultCodeEnum resultCodeENum;
-
+    private LoginStatusEnum resultCodeENum;
 }

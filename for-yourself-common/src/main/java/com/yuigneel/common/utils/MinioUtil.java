@@ -272,7 +272,7 @@ public class MinioUtil {
      * @param expireTime     过期时间数值
      * @param timeUnit       时间单位（如 TimeUnit.SECONDS、TimeUnit.DAYS 等）
      * @return 预签名URL字符串，可直接用于浏览器访问或前端展示
-     * @throws Exception 当参数非法或生成URL失败时抛出原始异常
+     * @throws Exception 当参数非法或生成 URL 失败时抛出原始异常
      */
     public String getPresignedUrl(String uniqueFileName, long expireTime, TimeUnit timeUnit) throws Exception {
         // 参数校验

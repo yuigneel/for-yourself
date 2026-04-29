@@ -16,6 +16,7 @@ import com.yuigneel.center.common.user.config.properties.MiscellaneousProperties
 import com.yuigneel.center.common.user.mapper.UserMapper;
 import com.yuigneel.center.common.user.model.domain.AccountAvatar;
 import com.yuigneel.center.common.user.model.domain.CommonUser;
+import com.yuigneel.center.user.api.model.enums.LoginStatusEnum;
 import com.yuigneel.common.model.enums.AccountIdentityTypeEnum;
 import com.yuigneel.common.utils.*;
 import com.yuigneel.center.user.api.model.dto.EmailCodeRequestDTO;
@@ -72,7 +73,7 @@ public class UserServiceImpl
     private final JwtUtil jwtUtil;
     private final MinioUtil minioUtil;
     private final CommonUserFileServiceByMinIOImpl commonUserFileServiceByMinIOImpl;
-    private TransactionTemplate transactionTemplate;
+    private final TransactionTemplate transactionTemplate;
 
     /**
      * 获取邮箱验证码
@@ -94,10 +95,6 @@ public class UserServiceImpl
             throw new ForYourselfException(ResultCodeEnum.EMAIL_FORMAT_ERROR, null);
         }
         //  检验业务是否符合参数
-        if (request.getBusinessType() == null) {
-            log.warn("邮箱{}：业务类型为空", receiveEmail);
-            throw new ForYourselfException(ResultCodeEnum.INCOMPLETE_PARAMETERS, null);
-        }
         if (request.getBusinessType() == BusinessTypeEnum.SEND_EMAIL)
             throw new ForYourselfException(ResultCodeEnum.PARAMETER_ERROR, null);
         String emailCodeKey = request.getBusinessType().getName() + AuthConstants.SEPARATOR + receiveEmail; //eg: 注册:example@163.com
@@ -139,14 +136,13 @@ public class UserServiceImpl
             return "✅ 发送成功！验证码已发送至邮箱：" + receiveEmail;
         } catch (Exception e) {
             log.error("邮件发送失败！", e);
-            // 5.3 删除 key
+            //  删除 key
             try {
                 redisUtil.delete(emailCodeKey);
             } catch (Exception ex) {
                 log.error("缓存删除失败！", ex);
-                throw new ForYourselfException(ResultCodeEnum.CACHE_SERVICE_ERROR, null);
             }
-            throw new ForYourselfException(ResultCodeEnum.THIRD_PARTY_SERVICE_ERROR, "❌ 发送失败!!!");
+            throw new ForYourselfException(ResultCodeEnum.NOTIFICATION_SERVICE_ERROR, "❌ 发送失败!!!");
         }
     }
 
@@ -157,7 +153,7 @@ public class UserServiceImpl
      * @return jwt 令牌
      */
     @Override
-    public String register(UserRegisterRequestDTO request,MultipartFile  avatarFile) {
+    public String register(UserRegisterRequestDTO request, MultipartFile avatarFile) {
         String nickname = request.getNickname();
         log.info("用户{}申请注册", nickname);
         //  检验是否人机
@@ -212,8 +208,8 @@ public class UserServiceImpl
             log.debug("用户{}：验证码已过期，请重新获取", nickname);
             throw new ForYourselfException(ResultCodeEnum.CAPTCHA_EXPIRED, null);
         }
-        String code = null;
-        Integer remainTimes = null;
+        String code;
+        int remainTimes;
         try {
             code = emailCodeValue.split(AuthConstants.SEPARATOR)[0];
             remainTimes = Integer.parseInt(emailCodeValue.split(AuthConstants.SEPARATOR)[1]);
@@ -238,9 +234,8 @@ public class UserServiceImpl
         user.setUid(uid);
         user.setPassword(encryptedPassword);
         user.setJoinDate(joinDate);
-        // 创建 final 副本供 lambda 使用
-        final CommonUser finalUser = user;
-        Boolean transactionResult = transactionTemplate.execute(status -> {
+        final CommonUser finalUser = user;    // 创建 final 副本供 lambda 使用
+        transactionTemplate.execute(status -> {
             try {
                 // 保存用户
                 userMapper.insert(finalUser);
@@ -292,25 +287,19 @@ public class UserServiceImpl
             // 用户名登录
             case USERNAME -> {
                 // 检验用户名格式
-                if (!ValidateUtil.isValidUsername(name)) {
+                if (!ValidateUtil.isValidUsername(name))
                     throw new ForYourselfException(ResultCodeEnum.USERNAME_FORMAT_ERROR, null);
-                }
                 CommonUser user = userMapper.selectOneByNicknameIgnoreLogicDelete(name);
-                if (user == null) {
-                    log.debug("用户{}：用户名不存在", name);
-                    throw new ForYourselfException(ResultCodeEnum.USERNAME_NOT_FOUND, null);
-                }
-                if (!bCryptPasswordEncoder.matches(request.getPw(), user.getPassword())) {
-                    log.debug("用户{}：账户或密码错误", name);
+                if (user == null) throw new ForYourselfException(ResultCodeEnum.USERNAME_NOT_FOUND, null);
+                if (!bCryptPasswordEncoder.matches(request.getPw(), user.getPassword()))
                     throw new ForYourselfException(ResultCodeEnum.ACCOUNT_OR_PASSWORD_ERROR, null);
-                }
-                userLoginResponseVO.setResultCodeEnum(ResultCodeEnum.USER_NORMAL_LOGIN);
+                userLoginResponseVO.setResultCodeEnum(LoginStatusEnum.NORMAL_LOGIN);
                 if (user.getIsDeleted() == 1) {
                     log.info("用户{}：账户已注销,正在恢复。。。", name);
                     int i = userMapper.restoreUserIgnoreLogicDelete(user);
                     if (i == 0) throw new ForYourselfException(ResultCodeEnum.DATABASE_SERVICE_ERROR, null);
                     log.info("用户{}：账户已恢复", name);
-                    userLoginResponseVO.setResultCodeEnum(ResultCodeEnum.USER_CANCELLED_UNDO_LOGIN);
+                    userLoginResponseVO.setResultCodeEnum(LoginStatusEnum.CANCEL_UNREGISTER_LOGIN);
                 }
                 userLoginResponseVO.setToken(generateToken(name, user.getUid()));
                 return userLoginResponseVO;
@@ -318,25 +307,20 @@ public class UserServiceImpl
             // 邮箱登录
             case EMAIL -> {
                 // 检验邮箱格式
-                if (!ValidateUtil.isValidEmail(name)) {
+                if (!ValidateUtil.isValidEmail(name))
                     throw new ForYourselfException(ResultCodeEnum.EMAIL_FORMAT_ERROR, null);
-                }
                 CommonUser user = userMapper.selectOneByEmailIgnoreLogicDelete(name);
-                if (user == null) {
-                    log.debug("用户{}：邮箱不存在", name);
-                    throw new ForYourselfException(ResultCodeEnum.EMAIL_NOT_FOUND, null);
-                }
-                if (!bCryptPasswordEncoder.matches(request.getPw(), user.getPassword())) {
-                    log.debug("用户{}：账户或密码错误", name);
+                if (user == null) throw new ForYourselfException(ResultCodeEnum.EMAIL_NOT_FOUND, null);
+
+                if (!bCryptPasswordEncoder.matches(request.getPw(), user.getPassword()))
                     throw new ForYourselfException(ResultCodeEnum.ACCOUNT_OR_PASSWORD_ERROR, null);
-                }
-                userLoginResponseVO.setResultCodeEnum(ResultCodeEnum.USER_NORMAL_LOGIN);
+                userLoginResponseVO.setResultCodeEnum(LoginStatusEnum.NORMAL_LOGIN);
                 if (user.getIsDeleted() == 1) {
                     log.info("用户{}：账户已注销,正在恢复。。。", name);
                     int i = userMapper.restoreUserIgnoreLogicDelete(user);
                     if (i == 0) throw new ForYourselfException(ResultCodeEnum.DATABASE_SERVICE_ERROR, null);
                     log.info("用户{}：账户已恢复", name);
-                    userLoginResponseVO.setResultCodeEnum(ResultCodeEnum.USER_CANCELLED_UNDO_LOGIN);
+                    userLoginResponseVO.setResultCodeEnum(LoginStatusEnum.CANCEL_UNREGISTER_LOGIN);
                 }
                 userLoginResponseVO.setToken(generateToken(name, user.getUid()));
                 return userLoginResponseVO;
@@ -350,21 +334,18 @@ public class UserServiceImpl
             // UID 登录
             case UID -> {
                 CommonUser user = userMapper.selectOneByUidIgnoreLogicDelete(Long.valueOf(name));
-                if (user == null) {
-                    log.debug("用户{}：UID不存在", name);
-                    throw new ForYourselfException(ResultCodeEnum.UID_NOT_FOUND, null);
-                }
-                if (!bCryptPasswordEncoder.matches(request.getPw(), user.getPassword())) {
-                    log.debug("用户{}：账户或密码错误", name);
+                if (user == null) throw new ForYourselfException(ResultCodeEnum.UID_NOT_FOUND, null);
+
+                if (!bCryptPasswordEncoder.matches(request.getPw(), user.getPassword()))
                     throw new ForYourselfException(ResultCodeEnum.ACCOUNT_OR_PASSWORD_ERROR, null);
-                }
-                userLoginResponseVO.setResultCodeEnum(ResultCodeEnum.USER_NORMAL_LOGIN);
+
+                userLoginResponseVO.setResultCodeEnum(LoginStatusEnum.NORMAL_LOGIN);
                 if (user.getIsDeleted() == 1) {
                     log.info("用户{}：账户已注销,正在恢复。。。", name);
                     int i = userMapper.restoreUserIgnoreLogicDelete(user);
                     if (i == 0) throw new ForYourselfException(ResultCodeEnum.DATABASE_SERVICE_ERROR, null);
                     log.info("用户{}：账户已恢复", name);
-                    userLoginResponseVO.setResultCodeEnum(ResultCodeEnum.USER_CANCELLED_UNDO_LOGIN);
+                    userLoginResponseVO.setResultCodeEnum(LoginStatusEnum.CANCEL_UNREGISTER_LOGIN);
                 }
                 userLoginResponseVO.setToken(generateToken(name, user.getUid()));
                 return userLoginResponseVO;
@@ -436,7 +417,7 @@ public class UserServiceImpl
 
         // 用户不存在 → 抛异常
         if (user == null) {
-            throw new ForYourselfException(ResultCodeEnum.USER_NOT_FOUND_OR_CANCELLED, null);
+            throw new ForYourselfException(ResultCodeEnum.ACCOUNT_NOT_FOUND_OR_CANCELLED, null);
         }
 
         // 校验密码
@@ -483,14 +464,11 @@ public class UserServiceImpl
         } catch (NumberFormatException | ArrayIndexOutOfBoundsException e) {
             log.error("用户{}：Redis缓存格式错误，请检查！", email);
         }
-        if (!checkCode(request.getVerificationCode(), email, key, code, remainTimes)) {
+        if (!checkCode(request.getVerificationCode(), email, key, code, remainTimes))
             throw new ForYourselfException(ResultCodeEnum.CAPTCHA_ERROR, remainTimes - 1);
-        }
         // 获取用户
         CommonUser user = userMapper.selectOneByEmailIgnoreLogicDelete(email);
-        if (user == null) {
-            throw new ForYourselfException(ResultCodeEnum.USER_NOT_FOUND_OR_CANCELLED, null);
-        }
+        if (user == null) throw new ForYourselfException(ResultCodeEnum.ACCOUNT_NOT_FOUND_OR_CANCELLED, null);
         log.info("用户{}：开始找回密码", user.getNickname());
         // 生成随机的密码
         String password = generateRandomPassword(16);
@@ -512,25 +490,19 @@ public class UserServiceImpl
      * @param request 用户信息更新请求参数，包含昵称、性别和生日
      */
     @Override
-    public void updateUserInfo(UserUpdateInfoRequestDTO request) {
+    public void updateUserInfo(UserUpdateInfoRequestDTO request,MultipartFile avatarFile) {
         // 检查昵称格式
-        if (!ValidateUtil.isValidUsername(request.getNickname())) {
-            throw new ForYourselfException(ResultCodeEnum.USERNAME_FORMAT_ERROR, null);
-        }
+        if (!ValidateUtil.isValidUsername(request.getNickname())) throw new ForYourselfException(ResultCodeEnum.USERNAME_FORMAT_ERROR, null);
         // 检查生日格式
         if (request.getBirthday() != null) {
-            if (request.getBirthday().isAfter(LocalDate.now())) {
-                throw new ForYourselfException(ResultCodeEnum.DATE_FORMAT_ERROR, null);
-            }
+            if (request.getBirthday().isAfter(LocalDate.now())) throw new ForYourselfException(ResultCodeEnum.DATE_FORMAT_ERROR, null);
         }
         // 获取用户
         LambdaQueryWrapper<CommonUser> eq = new LambdaQueryWrapper<CommonUser>().eq(CommonUser::getUid, UserContextUtil.getUid());
         CommonUser user = this.getOne(eq);
-        if (user == null) {
-            throw new ForYourselfException(ResultCodeEnum.USER_NOT_FOUND_OR_CANCELLED, null);
-        }
+        if (user == null) throw new ForYourselfException(ResultCodeEnum.ACCOUNT_NOT_FOUND_OR_CANCELLED, null);
         // 获取用户头像对象
-        AccountAvatar accountAvatar = commonUserFileServiceByMinIOImpl.getOne(new LambdaQueryWrapper<AccountAvatar>().eq(AccountAvatar::getUid, user.getUid()));
+        AccountAvatar accountAvatar = commonUserFileServiceByMinIOImpl.getOne(new LambdaQueryWrapper<AccountAvatar>().eq(AccountAvatar::getUid, user.getUid()).eq(AccountAvatar::getIdentityType, AccountIdentityTypeEnum.USER));
 
         // 检查是否有更新项（不能一个都不更新和数据库一样）
         boolean hasChanges = false;
@@ -567,13 +539,13 @@ public class UserServiceImpl
         }
         // 检查头像是否变化（可选字段）
         Boolean hasAvatarChanged = false;
-        if (request.getAvatarFile() == null || request.getAvatarFile().isEmpty()) {
+        if (avatarFile== null || avatarFile.isEmpty()) {
             if (accountAvatar.getAvatarUrl() != null && !accountAvatar.getAvatarUrl().isEmpty()) {
                 hasAvatarChanged = true;
                 hasChanges = true;
             }
         }
-        if (request.getAvatarFile() != null && !request.getAvatarFile().isEmpty()) {
+        if (avatarFile != null && !avatarFile.isEmpty()) {
             hasAvatarChanged = true;
             hasChanges = true;
         }
@@ -590,12 +562,12 @@ public class UserServiceImpl
                 .set(CommonUser::getBirthday, request.getBirthday())
                 .set(CommonUser::getGender, request.getGenderEnum().getCode());
         final Boolean finalHasAvatarChanged = hasAvatarChanged;
-        Boolean transactionResult = transactionTemplate.execute(status -> {
+        transactionTemplate.execute(status -> {
             try {
                 // 更新用户信息
                 this.update(yulgnier);
                 // 更新用户头像
-                if (finalHasAvatarChanged) commonUserFileServiceByMinIOImpl.uploadAvatar(request.getAvatarFile());
+                if (finalHasAvatarChanged) commonUserFileServiceByMinIOImpl.uploadAvatar(avatarFile);
                 log.info("用户{}：更新用户信息成功", user.getNickname());
                 return true;
             } catch (Exception e) {
@@ -615,7 +587,7 @@ public class UserServiceImpl
     public void changeEmail(UserChangeEmailRequestDTO request) {
         CommonUser user = this.getOne(new LambdaQueryWrapper<CommonUser>().eq(CommonUser::getUid, UserContextUtil.getUid()));
         if (user == null) {
-            throw new ForYourselfException(ResultCodeEnum.USER_NOT_FOUND_OR_CANCELLED, null);
+            throw new ForYourselfException(ResultCodeEnum.ACCOUNT_NOT_FOUND_OR_CANCELLED, null);
         }
         log.info("用户{}：开始换绑邮箱", user.getNickname());
         // 检验邮箱格式
@@ -635,11 +607,11 @@ public class UserServiceImpl
         if (value == null) {
             throw new ForYourselfException(ResultCodeEnum.CAPTCHA_EXPIRED, null);
         }
-        String code = null;
-        Integer remainTimes = null;
+        String code  ;
+        int remainTimes;
         try {
             code = value.split(AuthConstants.SEPARATOR)[0];
-            remainTimes = Integer.valueOf(value.split(AuthConstants.SEPARATOR)[1]);
+            remainTimes = Integer.parseInt(value.split(AuthConstants.SEPARATOR)[1]);
         } catch (NumberFormatException | ArrayIndexOutOfBoundsException e) {
             log.error("用户{}：Redis缓存格式错误，请检查！", user.getNickname());
             throw new ForYourselfException(ResultCodeEnum.CACHE_SERVICE_ERROR, null);
@@ -659,7 +631,7 @@ public class UserServiceImpl
 
     /**
      * 获取用户信息
-     * <p>根据当前登录用户的UID查询并返回用户详细信息</p>
+     * <p>根据当前登录用户的 UID查询并返回用户详细信息</p>
      *
      * @return 用户信息响应VO，包含用户的基本信息
      */
@@ -667,7 +639,7 @@ public class UserServiceImpl
     public CommonUserInfoResponseVO getUserInfo() {
         LambdaQueryWrapper<CommonUser> eq = new LambdaQueryWrapper<CommonUser>().eq(CommonUser::getUid, UserContextUtil.getUid());
         Optional<CommonUser> oneOpt = this.getOneOpt(eq);
-        if (oneOpt.isEmpty()) throw new ForYourselfException(ResultCodeEnum.USER_NOT_FOUND_OR_CANCELLED, null);
+        if (oneOpt.isEmpty()) throw new ForYourselfException(ResultCodeEnum.ACCOUNT_NOT_FOUND_OR_CANCELLED, null);
         // 用Hutool工具包拷贝到VO
         return BeanUtil.copyProperties(oneOpt.get(), CommonUserInfoResponseVO.class);
     }
@@ -682,30 +654,19 @@ public class UserServiceImpl
     @Override
     public void updatePassword(UserUpdatePasswordRequestDTO request) {
         // 先验证新旧密码是否相同（避免不必要的数据库查询）
-        if (request.getNewPassword().equals(request.getOldPassword())) {
-            throw new ForYourselfException(ResultCodeEnum.PARAMETER_ERROR, null);
-        }
+        if (request.getNewPassword().equals(request.getOldPassword())) throw new ForYourselfException(ResultCodeEnum.PARAMETER_ERROR, null);
 
         // 验证两个密码是否符合规范
-        if (!ValidateUtil.isValidPassword(request.getNewPassword()) || !ValidateUtil.isValidPassword(request.getOldPassword())) {
-            throw new ForYourselfException(ResultCodeEnum.PASSWORD_FORMAT_ERROR, null);
-        }
+        if (!ValidateUtil.isValidPassword(request.getNewPassword()) || !ValidateUtil.isValidPassword(request.getOldPassword())) throw new ForYourselfException(ResultCodeEnum.PASSWORD_FORMAT_ERROR, null);
 
         // 获取用户
-        CommonUser commonUser = this.getOne(new LambdaQueryWrapper<CommonUser>()
-                .eq(CommonUser::getUid, UserContextUtil.getUid()));
+        CommonUser commonUser = this.getOne(new LambdaQueryWrapper<CommonUser>().eq(CommonUser::getUid, UserContextUtil.getUid()));
 
-        if (commonUser == null) {
-            throw new ForYourselfException(ResultCodeEnum.USER_NOT_FOUND_OR_CANCELLED, null);
-        }
+        if (commonUser == null) throw new ForYourselfException(ResultCodeEnum.ACCOUNT_NOT_FOUND_OR_CANCELLED, null);
 
         // 验证原密码
-        if (!bCryptPasswordEncoder.matches(request.getOldPassword(), commonUser.getPassword())) {
-            throw new ForYourselfException(ResultCodeEnum.PASSWORD_ERROR, null);
-        }
-
+        if (!bCryptPasswordEncoder.matches(request.getOldPassword(), commonUser.getPassword())) throw new ForYourselfException(ResultCodeEnum.PASSWORD_ERROR, null);
         log.info("用户{}：开始修改密码", commonUser.getNickname());
-
         // 修改密码
         LambdaUpdateWrapper<CommonUser> updateWrapper = new LambdaUpdateWrapper<CommonUser>()
                 .eq(CommonUser::getUid, commonUser.getUid()) // 条件：根据UID更新
@@ -739,14 +700,14 @@ public class UserServiceImpl
         // 4. 转换为 VO 并填充头像 URL
         return userPage.convert(user -> {
             CommonUserInfoResponseVO vo = BeanUtil.copyProperties(user, CommonUserInfoResponseVO.class);
-            
+
             // 查询用户头像
             AccountAvatar accountAvatar = commonUserFileServiceByMinIOImpl.getOne(
-                new LambdaQueryWrapper<AccountAvatar>()
-                    .eq(AccountAvatar::getUid, user.getUid())
-                    .eq(AccountAvatar::getIdentityType, AccountIdentityTypeEnum.USER)
+                    new LambdaQueryWrapper<AccountAvatar>()
+                            .eq(AccountAvatar::getUid, user.getUid())
+                            .eq(AccountAvatar::getIdentityType, AccountIdentityTypeEnum.USER)
             );
-            
+
             // 如果有头像，生成临时访问URL
             if (accountAvatar != null && accountAvatar.getAvatarUrl() != null) {
                 try {
@@ -758,17 +719,17 @@ public class UserServiceImpl
                     vo.setAvatar(null);
                 }
             }
-            
+
             return vo;
         });
     }
 
     /**
-     * 根据UID获取普通用户信息
+     * 根据 UID获取普通用户信息
      * <p>需要验证内部灵活Token，确保访问合法性</p>
      *
-     * @param uid 用户UID
-     * @return 普通用户信息VO
+     * @param uid 用户 UID
+     * @return 普通用户信息 VO
      * @throws ForYourselfException 当Token无效、访问非法或用户不存在时抛出异常
      */
     @Override
@@ -778,7 +739,7 @@ public class UserServiceImpl
         if (!InnerFlexibleTokenSecurityUtil.verifyToken(linkProperties.getAdminCommon().getSecretKey(), linkProperties.getAdminCommon().getExpireMilliseconds(), token))
             throw new ForYourselfException(ResultCodeEnum.ILLEGAL_ACCESS, "我容易吗我，go out!");
         CommonUser one = this.getOne(new LambdaQueryWrapper<CommonUser>().eq(CommonUser::getUid, uid));
-        if (one == null) throw new ForYourselfException(ResultCodeEnum.USER_NOT_FOUND_OR_CANCELLED, null);
+        if (one == null) throw new ForYourselfException(ResultCodeEnum.ACCOUNT_NOT_FOUND_OR_CANCELLED, null);
         return BeanUtil.copyProperties(one, CommonUserInfoResponseVO.class);
     }
 

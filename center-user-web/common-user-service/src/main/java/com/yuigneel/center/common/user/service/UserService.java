@@ -22,7 +22,7 @@ public interface UserService extends IService<CommonUser> {
 
     String forgetPassword(UserForgetPasswordRequestDTO request);
 
-    void updateUserInfo(UserUpdateInfoRequestDTO request);
+    void updateUserInfo(UserUpdateInfoRequestDTO request, MultipartFile avatarFile);
 
     void changeEmail(UserChangeEmailRequestDTO request);
 
