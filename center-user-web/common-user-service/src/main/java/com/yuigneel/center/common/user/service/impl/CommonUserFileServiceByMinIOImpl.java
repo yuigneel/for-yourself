@@ -72,7 +72,6 @@ public class CommonUserFileServiceByMinIOImpl extends ServiceImpl<AccountAvatarM
         }
         // ===如果前端不为空，直接上传或跟新头像
         if (file != null && !file.isEmpty()) {
-            String oldFileName = one.getAvatarUrl();
             transactionTemplate.executeWithoutResult(status -> {
                 String newFileName;
                 // ---上传新的头像
@@ -82,14 +81,29 @@ public class CommonUserFileServiceByMinIOImpl extends ServiceImpl<AccountAvatarM
                     log.error("上传头像失败", e);
                     throw new ForYourselfException(ResultCodeEnum.MINIO_SERVICE_ERROR, null);
                 }
-                // ---更新头像记录
-                LambdaUpdateWrapper<AccountAvatar> set = new LambdaUpdateWrapper<AccountAvatar>().eq(AccountAvatar::getUid, uid)
-                        .eq(AccountAvatar::getIdentityType, AccountIdentityTypeEnum.USER)
-                        .set(AccountAvatar::getAvatarUrl, newFileName);
-                this.update(set);
-                // ---删除旧的头像
-                boolean b = minioUtil.deleteFile(oldFileName);
-                if (!b) throw new ForYourselfException(ResultCodeEnum.MINIO_SERVICE_ERROR, null);
+                
+                // ---判断数据库中是否有头像记录，决定是新增还是更新
+                if (one == null) {
+                    // 数据库中没有头像记录，直接新增
+                    AccountAvatar accountAvatar = new AccountAvatar();
+                    accountAvatar.setUid(uid);
+                    accountAvatar.setIdentityType(AccountIdentityTypeEnum.USER);
+                    accountAvatar.setAvatarUrl(newFileName);
+                    this.save(accountAvatar);
+                } else {
+                    // 数据库中有头像记录，先更新再删除旧文件
+                    LambdaUpdateWrapper<AccountAvatar> set = new LambdaUpdateWrapper<AccountAvatar>().eq(AccountAvatar::getUid, uid)
+                            .eq(AccountAvatar::getIdentityType, AccountIdentityTypeEnum.USER)
+                            .set(AccountAvatar::getAvatarUrl, newFileName);
+                    this.update(set);
+                    
+                    // ---删除旧的头像文件
+                    String oldFileName = one.getAvatarUrl();
+                    if (StringUtils.hasText(oldFileName)) {
+                        boolean b = minioUtil.deleteFile(oldFileName);
+                        if (!b) throw new ForYourselfException(ResultCodeEnum.MINIO_SERVICE_ERROR, null);
+                    }
+                }
             });
         }
     }

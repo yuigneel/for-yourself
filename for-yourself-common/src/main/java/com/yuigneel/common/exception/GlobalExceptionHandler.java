@@ -45,6 +45,6 @@ public class GlobalExceptionHandler {
                 .findFirst()
                 .map(fieldError -> fieldError.getDefaultMessage())
                 .orElse("参数校验失败");
-        return Result.fail(ResultCodeEnum.INCOMPLETE_PARAMETERS.getCode(), errorMessage, null);
+        return Result.fail(ResultCodeEnum.PARAMETER_ERROR, errorMessage);
     }
 }

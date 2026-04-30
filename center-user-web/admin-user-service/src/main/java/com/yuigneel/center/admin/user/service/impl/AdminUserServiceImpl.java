@@ -465,7 +465,8 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
         // 检查头像是否变化（可选字段）
         Boolean hasAvatarChanged = false;
         if (avatarFile == null || avatarFile.isEmpty()) {
-            if (accountAvatar.getAvatarUrl() != null && !accountAvatar.getAvatarUrl().isEmpty()) {
+            // 如果用户没有上传新头像，检查数据库中是否有旧头像需要删除
+            if (accountAvatar != null && accountAvatar.getAvatarUrl() != null && !accountAvatar.getAvatarUrl().isEmpty()) {
                 hasAvatarChanged = true;
                 hasChanges = true;
             }

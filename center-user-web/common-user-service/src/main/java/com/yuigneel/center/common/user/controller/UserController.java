@@ -166,20 +166,11 @@ public class UserController {
     }
 
     @Operation(summary = "用户注册")
-    @PostMapping(value = "/register", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)// 关键：声明接收表单文件
+    @PostMapping(value = "/register")
     public Result<String> register(
             @ParameterObject @Valid UserRegisterRequestDTO userDTO,      // 直接接收并验证 DTO
-            @RequestPart("file")
-            @Parameter(
-                    name = "file",
-                    description = "用户头像文件",
-                    required = true,
-                    content = @Content(
-                            mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
-                            schema = @Schema(type = "string", format = "binary")  // 明确指定为二进制文件
-                    )
-            ) MultipartFile avatarFile) // 直接接收文件
-    {
+            @RequestPart(required = false) @Parameter(description = "用户头像文件", required = false)
+            MultipartFile avatarFile) {  // 直接接收文件
         String response = userService.register(userDTO, avatarFile);
         return Result.ok(response);
     }
@@ -208,19 +199,11 @@ public class UserController {
     }
 
     @Operation(summary = "修改用户普通信息")
-    @PostMapping(value = "/updateUserInfo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/updateUserInfo")
     public Result<String> updateUserInfo(
             @ParameterObject @Valid UserUpdateInfoRequestDTO request,
-            @RequestPart("file")
-            @Parameter(
-                    name = "file",
-                    description = "用户头像文件",
-                    required = true,
-                    content = @Content(
-                            mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
-                            schema = @Schema(type = "string", format = "binary")  // 明确指定为二进制文件
-                    )
-            ) MultipartFile avatarFile) {
+            @RequestPart(required = false) @Parameter(description = "用户头像文件", required = false)
+            MultipartFile avatarFile) {
         userService.updateUserInfo(request, avatarFile);
         return Result.ok("修改成功");
     }

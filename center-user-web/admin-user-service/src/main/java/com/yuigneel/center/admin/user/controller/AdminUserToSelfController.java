@@ -63,16 +63,8 @@ public class AdminUserToSelfController {
     @PostMapping("/updateUserInfo")
     public Result<String> updateUserInfo(
             @ParameterObject @Valid UserUpdateInfoRequestDTO request,
-            @RequestPart("file")
-            @Parameter(
-                    name = "file",
-                    description = "用户头像文件",
-                    required = true,
-                    content = @Content(
-                            mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
-                            schema = @Schema(type = "string", format = "binary")  // 明确指定为二进制文件
-                    )
-            ) MultipartFile avatarFile) {
+            @RequestPart(required = false) @Parameter(description = "用户头像文件", required = false)
+             MultipartFile avatarFile) {
         userService.updateUserInfo(request, avatarFile);
         return Result.ok("修改成功");
     }
