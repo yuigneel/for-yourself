@@ -45,7 +45,7 @@ public class AdminUser extends BaseDomain {
     private String password;
 
     /**
-     * 性别：0-未知 3-强男 2-男 1-弱男 -1-弱女 -2-女 -3-强女
+     * 性别：0-未知 3-强男 2-男 1-弱男 -1-弱女 -2-女 -3-强女（必填，默认0）
      */
     @TableField(value = "gender")
     private GenderEnum gender;

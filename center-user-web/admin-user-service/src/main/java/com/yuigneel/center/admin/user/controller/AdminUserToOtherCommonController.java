@@ -52,7 +52,7 @@ public class AdminUserToOtherCommonController {
     /**
      * 修改普通用户账号状态
      */
-    @GetMapping("/updateStatus")
+    @PostMapping("/updateStatus")
     @Operation(summary = "修改普通用户账号状态", description = "通过 Feign 调用普通用户服务")
     public Result<String> updateCommonUserStatus(@Valid @RequestBody CommonUserStatusUpdateRequestDTO request){
         adminUserService.updateCommonUserStatus(request);

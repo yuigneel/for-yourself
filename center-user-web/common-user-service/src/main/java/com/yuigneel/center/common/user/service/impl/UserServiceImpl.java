@@ -197,10 +197,6 @@ public class UserServiceImpl
                 throw new ForYourselfException(ResultCodeEnum.DATE_FORMAT_ERROR, null);
             }
         }
-        //  检查是否有性别输入，有跳过，无设为默认未知
-        if (request.getGenderEnum() == null) {
-            request.setGenderEnum(GenderEnum.UNKNOWN);
-        }
         //  检查邮箱和验证码是否匹配
         String emailCodeKey = BusinessTypeEnum.REGISTER.getName() + AuthConstants.SEPARATOR + userEmail;
         String emailCodeValue = redisUtil.get(emailCodeKey);
@@ -512,17 +508,9 @@ public class UserServiceImpl
             hasChanges = true;
         }
 
-        // 检查性别是否变化（可选字段）
-        if (request.getGenderEnum() == null) {
-            // 前端没传性别，但数据库有值 → 用户想清空性别
-            if (user.getGender() != null) {
-                hasChanges = true;
-            }
-        } else {
-            // 前端传了性别，比较值是否不同
-            if (!request.getGenderEnum().equals(user.getGender())) {
-                hasChanges = true;
-            }
+        // 检查性别是否变化（必填字段）
+        if (!request.getGenderEnum().equals(user.getGender())) {
+            hasChanges = true;
         }
 
         // 检查生日是否变化（可选字段）
@@ -539,13 +527,14 @@ public class UserServiceImpl
         }
         // 检查头像是否变化（可选字段）
         Boolean hasAvatarChanged = false;
-        if (avatarFile== null || avatarFile.isEmpty()) {
-            if (accountAvatar.getAvatarUrl() != null && !accountAvatar.getAvatarUrl().isEmpty()) {
+        if (avatarFile == null || avatarFile.isEmpty()) {
+            // 没有上传新头像，检查是否有旧头像需要删除
+            if (accountAvatar != null && accountAvatar.getAvatarUrl() != null && !accountAvatar.getAvatarUrl().isEmpty()) {
                 hasAvatarChanged = true;
                 hasChanges = true;
             }
-        }
-        if (avatarFile != null && !avatarFile.isEmpty()) {
+        } else {
+            // 上传了新头像
             hasAvatarChanged = true;
             hasChanges = true;
         }
@@ -557,15 +546,18 @@ public class UserServiceImpl
 
         log.info("用户{}：开始更新用户信息", user.getNickname());
 
-        LambdaUpdateWrapper<CommonUser> yulgnier = new LambdaUpdateWrapper<CommonUser>().eq(CommonUser::getId, user.getId())
+        // 构建更新条件（性别为必填字段，始终更新）
+        LambdaUpdateWrapper<CommonUser> updateWrapper = new LambdaUpdateWrapper<CommonUser>()
+                .eq(CommonUser::getId, user.getId())
                 .set(CommonUser::getNickname, request.getNickname())
-                .set(CommonUser::getBirthday, request.getBirthday())
-                .set(CommonUser::getGender, request.getGenderEnum().getCode());
+                .set(CommonUser::getGender, request.getGenderEnum().getCode())
+                .set(CommonUser::getBirthday, request.getBirthday());
+        
         final Boolean finalHasAvatarChanged = hasAvatarChanged;
         transactionTemplate.execute(status -> {
             try {
                 // 更新用户信息
-                this.update(yulgnier);
+                this.update(updateWrapper);
                 // 更新用户头像
                 if (finalHasAvatarChanged) commonUserFileServiceByMinIOImpl.uploadAvatar(avatarFile);
                 log.info("用户{}：更新用户信息成功", user.getNickname());
@@ -596,6 +588,11 @@ public class UserServiceImpl
         }
         if (user.getEmail().equals(request.getNewEmail())) {
             throw new ForYourselfException(ResultCodeEnum.PARAMETER_ERROR, null);
+        }
+        // 检查新邮箱是否已被其他用户使用
+        CommonUser existingUser = userMapper.selectOneByEmailIgnoreLogicDelete(request.getNewEmail());
+        if (existingUser != null && !existingUser.getUid().equals(user.getUid())) {
+            throw new ForYourselfException(ResultCodeEnum.EMAIL_ALREADY_EXISTS, null);
         }
         // 密码
         if (!bCryptPasswordEncoder.matches(request.getPassword(), user.getPassword())) {

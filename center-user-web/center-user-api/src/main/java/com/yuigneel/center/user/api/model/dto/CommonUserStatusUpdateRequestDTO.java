@@ -20,6 +20,6 @@ public class CommonUserStatusUpdateRequestDTO {
     private Long uid;
     
     @NotNull(message = "新的账户状态不能为空")
-    @Schema(description = "新的账户状态", example = "ACCOUNT_STATUS_NORMAL", requiredMode = Schema.RequiredMode.REQUIRED)
+    @Schema(description = "新的账户状态", example = "0", requiredMode = Schema.RequiredMode.REQUIRED)
     private AccountStatusEnum newStatus;
 }

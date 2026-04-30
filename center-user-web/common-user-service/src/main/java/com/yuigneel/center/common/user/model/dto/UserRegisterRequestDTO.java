@@ -38,7 +38,8 @@ public class UserRegisterRequestDTO {
     @Schema(description = "实际出生日期", example = "2000-01-01", requiredMode = Schema.RequiredMode.NOT_REQUIRED, type = "string", format = "date")
     private LocalDate birthday;
 
-    @Schema(description = "性别：0-未知 3-强男 2-男 1-弱男 -1-弱女 -2-女 -3-强女", example = "0", requiredMode = Schema.RequiredMode.NOT_REQUIRED, type = "integer", format = "int32")
+    @NotNull(message = "性别不能为空")
+    @Schema(description = "性别：0-未知 3-强男 2-男 1-弱男 -1-弱女 -2-女 -3-强女", example = "0", requiredMode = Schema.RequiredMode.REQUIRED, type = "integer")
     private GenderEnum genderEnum;
 
     @NotBlank(message = "Cloudflare Turnstile 人机验证响应 token 不能为空")

@@ -15,7 +15,7 @@ CREATE TABLE `t_common_user` (
                                  `email` VARCHAR(128) NOT NULL COMMENT '登录邮箱(唯一)',
                                  `nickname` VARCHAR(64) NOT NULL COMMENT '用户昵称(唯一)',
                                  `password` VARCHAR(128) NOT NULL COMMENT 'BCrypt加密后的密码',
-                                 `gender` TINYINT DEFAULT 0 COMMENT '性别：0-未知 3-强男 2-男 1-弱男 -1-弱女 -2-女 -3-强女',
+                                 `gender` TINYINT NOT NULL DEFAULT 0 COMMENT '性别：0-未知 3-强男 2-男 1-弱男 -1-弱女 -2-女 -3-强女',
                                  `birthday` DATE DEFAULT NULL COMMENT '出生日期',
     -- 🔥通用字段，不绑定业务
                                  `join_date` DATE NOT NULL COMMENT '平台入驻日期',
@@ -39,7 +39,7 @@ CREATE TABLE `t_admin_user` (
                                 `email` VARCHAR(128) NOT NULL COMMENT '登录邮箱(唯一)',
                                 `nickname` VARCHAR(64) NOT NULL COMMENT '管理员昵称(唯一)',
                                 `password` VARCHAR(128) NOT NULL COMMENT 'BCrypt加密后的密码',
-                                `gender` TINYINT DEFAULT 0 COMMENT '性别：0-未知 3-强男 2-男 1-弱男 -1-弱女 -2-女 -3-强女',
+                                `gender` TINYINT NOT NULL DEFAULT 0 COMMENT '性别：0-未知 3-强男 2-男 1-弱男 -1-弱女 -2-女 -3-强女',
                                 `birthday` DATE DEFAULT NULL COMMENT '出生日期',
                                 `join_date` DATE NOT NULL COMMENT '平台入驻日期',
                                 `account_permission` TINYINT NOT NULL DEFAULT 3 COMMENT '账户权限：0-最高权限 数值越大权限越低 当前最低为3',
@@ -80,6 +80,11 @@ CREATE TABLE `t_account_avatar` (
                                     PRIMARY KEY (`id`),
                                     KEY `idx_identity_uid` (`identity_type`, `uid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='账号头像表';
+
+
+
+
+
 
 
 

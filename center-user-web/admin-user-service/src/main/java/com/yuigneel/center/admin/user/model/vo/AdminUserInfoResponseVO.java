@@ -31,7 +31,7 @@ public class AdminUserInfoResponseVO {
     @Schema(description = "管理员昵称(唯一)", example = "超级管理员")
     private String nickname;
     
-    @Schema(description = "性别：0-未知 3-强男 2-男 1-弱男 -1-弱女 -2-女 -3-强女", example = "0")
+    @Schema(description = "性别：0-未知 3-强男 2-男 1-弱男 -1-弱女 -2-女 -3-强女", example = "0", type = "integer")
     private GenderEnum gender;
     
     @Schema(description = "出生日期", example = "1990-01-01")

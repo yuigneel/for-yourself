@@ -20,15 +20,14 @@ public class GenderEnumConverter implements Converter<String, GenderEnum> {
     /**
      * 转换核心逻辑（仅针对GenderEnum枚举设计）
      * @param source 前端传入的字符串类型性别编码（允许值：3/2/1/0/-1/-2/-3）
-     * @return 匹配的GenderEnum枚举实例，空值返回null
-     * @throws IllegalArgumentException 入参非法时抛出明确异常提示
+     * @return 匹配的 GenderEnum 枚举实例（不会返回 null）
+     * @throws ForYourselfException 入参为空或非法时抛出明确异常提示
      */
-    @Nullable
     @Override
     public GenderEnum convert(String source) {
-        // 1. 空值处理：前端未传参时返回null，适配非必传参数场景
+        // 1. 空值处理：性别为必填字段，不允许为空
         if (!StringUtils.hasText(source)) {
-            return null;
+            throw new ForYourselfException(ResultCodeEnum.PARAMETER_ERROR, "性别不能为空");
         }
 
         Integer code;

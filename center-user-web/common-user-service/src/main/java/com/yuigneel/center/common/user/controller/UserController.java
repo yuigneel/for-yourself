@@ -15,8 +15,6 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -36,129 +34,152 @@ public class UserController {
     private final UserService userService;
     private final CommonUserFileService commonUserFileServiceByMinIOImpl;
 
-    // 这里只是试一试这个功能，太麻烦了，个人开发就不写了
-    @ApiResponses(value = {
-            // 1. 【成功】发送验证码成功
-            @ApiResponse(
-                    responseCode = "200",
-                    description = "邮箱验证码发送成功",
-                    content = @Content(
-                            schema = @Schema(implementation = Result.class),
-                            examples = @ExampleObject(
-                                    value = """
-                                            {
-                                              "code": 200,
-                                              "message": "操作成功",
-                                              "data": "✅ 发送成功！验证码已发送至邮箱：example@email.com"
-                                            }
-                                            """
+    @Operation(
+            summary = "获取邮箱验证码",
+            description = "发送邮箱验证码用于注册、找回密码等操作，需要完成 Cloudflare 人机验证",
+            responses = {
+                    // 1. 【成功】发送验证码成功
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "200",
+                            description = "邮箱验证码发送成功",
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(implementation = Result.class),
+                                    examples = @ExampleObject(
+                                            name = "发送成功",
+                                            summary = "验证码已成功发送至邮箱",
+                                            value = """
+                                                    {
+                                                      "code": "00000",
+                                                      "message": "操作成功",
+                                                      "data": "✅ 发送成功！验证码已发送至邮箱：example@email.com"
+                                                    }
+                                                    """
+                                    )
+                            )
+                    ),
+                    // 2. 【参数校验失败】@NotBlank 触发（邮箱/验证码/人机验证为空）
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "400",
+                            description = "请求参数不完整或格式错误",
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(implementation = Result.class),
+                                    examples = @ExampleObject(
+                                            name = "参数校验失败",
+                                            summary = "请求信息不完整",
+                                            value = """
+                                                    {
+                                                      "code": "A0200",
+                                                      "message": "请求参数不完整",
+                                                      "data": null
+                                                    }
+                                                    """
+                                    )
+                            )
+                    ),
+                    // 3. 【人机验证失败】非法请求
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "400",
+                            description = "Cloudflare 人机验证失败",
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(implementation = Result.class),
+                                    examples = @ExampleObject(
+                                            name = "人机验证失败",
+                                            summary = "非法请求",
+                                            value = """
+                                                    {
+                                                      "code": "A0100",
+                                                      "message": "人机验证失败",
+                                                      "data": "别攻击了，用爱发电，真的怕了！"
+                                                    }
+                                                    """
+                                    )
+                            )
+                    ),
+                    // 4. 【邮箱格式错误】
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "400",
+                            description = "邮箱格式不正确",
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(implementation = Result.class),
+                                    examples = @ExampleObject(
+                                            name = "邮箱格式错误",
+                                            summary = "邮箱格式不正确",
+                                            value = """
+                                                    {
+                                                      "code": "A0203",
+                                                      "message": "邮箱格式错误",
+                                                      "data": null
+                                                    }
+                                                    """
+                                    )
+                            )
+                    ),
+                    // 5. 【验证码已发送，重复请求】
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "409",
+                            description = "验证码已发送，请勿重复操作",
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(implementation = Result.class),
+                                    examples = @ExampleObject(
+                                            name = "重复请求",
+                                            summary = "验证码已发送",
+                                            value = """
+                                                    {
+                                                      "code": "A0102",
+                                                      "message": "验证码已发送",
+                                                      "data": null
+                                                    }
+                                                    """
+                                    )
+                            )
+                    ),
+                    // 6. 【发送过于频繁】
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "429",
+                            description = "操作频繁，请稍后重试",
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(implementation = Result.class),
+                                    examples = @ExampleObject(
+                                            name = "请求过于频繁",
+                                            summary = "操作频繁，请稍后重试",
+                                            value = """
+                                                    {
+                                                      "code": "A0101",
+                                                      "message": "验证码请求过于频繁",
+                                                      "data": 60
+                                                    }
+                                                    """
+                                    )
+                            )
+                    ),
+                    // 7. 【服务异常】邮件/Redis报错
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "500",
+                            description = "服务异常，验证码发送失败",
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(implementation = Result.class),
+                                    examples = @ExampleObject(
+                                            name = "服务异常",
+                                            summary = "服务异常，请稍后重试",
+                                            value = """
+                                                    {
+                                                      "code": "C0400",
+                                                      "message": "通知服务出错",
+                                                      "data": null
+                                                    }
+                                                    """
+                                    )
                             )
                     )
-            ),
-            // 2. 【参数校验失败】@NotBlank 触发（邮箱/验证码/人机验证为空）
-            @ApiResponse(
-                    responseCode = "401",
-                    description = "请求参数不完整/格式错误",
-                    content = @Content(
-                            schema = @Schema(implementation = Result.class),
-                            examples = @ExampleObject(
-                                    value = """
-                                            {
-                                              "code": 401,
-                                              "message": "请求信息不完整",
-                                              "data": null
-                                            }
-                                            """
-                            )
-                    )
-            ),
-            // 3. 【人机验证失败】非法请求
-            @ApiResponse(
-                    responseCode = "402",
-                    description = "Cloudflare人机验证失败",
-                    content = @Content(
-                            schema = @Schema(implementation = Result.class),
-                            examples = @ExampleObject(
-                                    value = """
-                                            {
-                                              "code": 402,
-                                              "message": "非法请求",
-                                              "data": "别攻击了，用爱发电，真的怕了！"
-                                            }
-                                            """
-                            )
-                    )
-            ),
-            // 4. 【邮箱格式错误】
-            @ApiResponse(
-                    responseCode = "415",
-                    description = "邮箱格式不正确",
-                    content = @Content(
-                            schema = @Schema(implementation = Result.class),
-                            examples = @ExampleObject(
-                                    value = """
-                                            {
-                                              "code": 415,
-                                              "message": "邮箱格式不正确",
-                                              "data": null
-                                            }
-                                            """
-                            )
-                    )
-            ),
-            // 5. 【验证码已发送，重复请求】
-            @ApiResponse(
-                    responseCode = "451",
-                    description = "验证码已发送，请勿重复操作",
-                    content = @Content(
-                            schema = @Schema(implementation = Result.class),
-                            examples = @ExampleObject(
-                                    value = """
-                                            {
-                                              "code": 451,
-                                              "message": "邮箱验证码已发送，请勿重复操作",
-                                              "data": null
-                                            }
-                                            """
-                            )
-                    )
-            ),
-            // 6. 【发送过于频繁】
-            @ApiResponse(
-                    responseCode = "450",
-                    description = "操作频繁，请稍后重试",
-                    content = @Content(
-                            schema = @Schema(implementation = Result.class),
-                            examples = @ExampleObject(
-                                    value = """
-                                            {
-                                              "code": 450,
-                                              "message": "操作频繁，请稍后重试",
-                                              "data": 60
-                                            }
-                                            """
-                            )
-                    )
-            ),
-            // 7. 【服务异常】邮件/Redis报错
-            @ApiResponse(
-                    responseCode = "700",
-                    description = "服务异常，验证码发送失败",
-                    content = @Content(
-                            schema = @Schema(implementation = Result.class),
-                            examples = @ExampleObject(
-                                    value = """
-                                            {
-                                              "code": 700,
-                                              "message": "服务异常，请稍后重试",
-                                              "data": null
-                                            }
-                                            """
-                            )
-                    )
-            )
-    })
-    @Operation(summary = "获取邮箱验证码")
+            }
+    )
     @PostMapping("/getEmailCode")
     public Result<String> getEmailCode(@Valid @RequestBody EmailCodeRequestDTO request) {
         String response = userService.getEmailCode(request);

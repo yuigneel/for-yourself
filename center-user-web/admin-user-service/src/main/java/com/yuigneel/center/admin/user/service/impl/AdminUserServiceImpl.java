@@ -350,6 +350,10 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
             throw new ForYourselfException(ResultCodeEnum.EMAIL_FORMAT_ERROR, null);
         if (request.getNewEmail().equals(adminUser.getEmail()))
             throw new ForYourselfException(ResultCodeEnum.PARAMETER_ERROR, null);
+        // 检查新邮箱是否已被其他管理员使用
+        AdminUser existingAdmin = adminUserMapper.selectOneByEmailIgnoreLogicDelete(request.getNewEmail());
+        if (existingAdmin != null && !existingAdmin.getUid().equals(adminUser.getUid()))
+            throw new ForYourselfException(ResultCodeEnum.EMAIL_ALREADY_EXISTS, null);
         // 检验密码
         if (!ValidateUtil.isValidPassword(request.getPassword()))
             throw new ForYourselfException(ResultCodeEnum.PASSWORD_FORMAT_ERROR, null);
@@ -396,7 +400,7 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
      *   <li>构建更新条件并执行数据库更新操作</li>
      * </ol>
      *
-     * @param request 用户信息更新请求参数，包含昵称（必填）、性别（可选）、生日（可选）
+     * @param request 用户信息更新请求参数，包含昵称（必填）、性别（必填）、生日（可选）
      * @throws ForYourselfException 当出现以下情况时抛出：
      *                              <ul>
      *                                <li>{@link ResultCodeEnum#USERNAME_FORMAT_ERROR} - 昵称格式不符合规范</li>
@@ -436,17 +440,9 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
             hasChanges = true;
         }
 
-        // 检查性别是否变化（可选字段）
-        if (request.getGenderEnum() == null) {
-            // 前端没传性别，但数据库有值 → 用户想清空性别
-            if (adminUser.getGender() != null) {
-                hasChanges = true;
-            }
-        } else {
-            // 前端传了性别，比较值是否不同
-            if (!request.getGenderEnum().equals(adminUser.getGender())) {
-                hasChanges = true;
-            }
+        // 检查性别是否变化（必填字段）
+        if (!request.getGenderEnum().equals(adminUser.getGender())) {
+            hasChanges = true;
         }
 
         // 检查生日是否变化（可选字段）
@@ -465,13 +461,13 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
         // 检查头像是否变化（可选字段）
         Boolean hasAvatarChanged = false;
         if (avatarFile == null || avatarFile.isEmpty()) {
-            // 如果用户没有上传新头像，检查数据库中是否有旧头像需要删除
+            // 没有上传新头像，检查是否有旧头像需要删除
             if (accountAvatar != null && accountAvatar.getAvatarUrl() != null && !accountAvatar.getAvatarUrl().isEmpty()) {
                 hasAvatarChanged = true;
                 hasChanges = true;
             }
-        }
-        if (avatarFile != null && !avatarFile.isEmpty()) {
+        } else {
+            // 上传了新头像
             hasAvatarChanged = true;
             hasChanges = true;
         }
@@ -482,12 +478,12 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
             throw new ForYourselfException(ResultCodeEnum.PARAMETER_ERROR, null);
         }
 
-        // 构建更新条件
+        // 构建更新条件（性别为必填字段，始终更新）
         LambdaUpdateWrapper<AdminUser> updateWrapper = new LambdaUpdateWrapper<AdminUser>()
                 .eq(AdminUser::getId, adminUser.getId())
                 .set(AdminUser::getNickname, request.getNickname())
-                .set(AdminUser::getBirthday, request.getBirthday())
-                .set(AdminUser::getGender, request.getGenderEnum().getCode());
+                .set(AdminUser::getGender, request.getGenderEnum().getCode())
+                .set(AdminUser::getBirthday, request.getBirthday());
         log.info("用户{}：开始更新用户信息", adminUser.getNickname());
         // 执行更新
         final Boolean finalHasAvatarChanged = hasAvatarChanged;
@@ -795,6 +791,10 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
         // 检验被创建者邮箱格式
         if (!ValidateUtil.isValidEmail(request.getEmail()))
             throw new ForYourselfException(ResultCodeEnum.EMAIL_FORMAT_ERROR, "邮箱格式错误");
+        // 检查邮箱是否已被其他管理员使用
+        AdminUser existingAdmin = adminUserMapper.selectOneByEmailIgnoreLogicDelete(request.getEmail());
+        if (existingAdmin != null)
+            throw new ForYourselfException(ResultCodeEnum.EMAIL_ALREADY_EXISTS, "该邮箱已被使用");
         // 验证权限
         AdminPermissionsEnum createdByAuthLevel = request.getAccountPermission();
         if (creator.getAccountPermission().getCode() >= createdByAuthLevel.getCode())        // 这里root 权限只在数据库创建的时候创建所以这里大于等于不冲突
@@ -807,6 +807,7 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
         createdBy.setEmail(request.getEmail());
         createdBy.setNickname(nickname);
         createdBy.setPassword(bCryptPasswordEncoder.encode(password));
+        createdBy.setJoinDate(LocalDate.now());  // 设置入驻日期为当前日期
         createdBy.setAccountPermission(request.getAccountPermission());
         createdBy.setUpdateBy(creator.getUid());
         // 存入数据库

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import com.yuigneel.center.user.api.model.enums.GenderEnum;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import org.springframework.format.annotation.DateTimeFormat;
 
@@ -23,7 +24,8 @@ public class UserUpdateInfoRequestDTO {
     @Schema(description = "用户昵称", example = "小明", requiredMode = Schema.RequiredMode.REQUIRED, type = "string")
     private String nickname;
 
-    @Schema(description = "性别：2-男 -2-女 0-未知 (可选)", example = "0", requiredMode = Schema.RequiredMode.NOT_REQUIRED, type = "integer")
+    @NotNull(message = "性别不能为空")
+    @Schema(description = "性别：0-未知 3-强男 2-男 1-弱男 -1-弱女 -2-女 -3-强女", example = "0", requiredMode = Schema.RequiredMode.REQUIRED, type = "integer")
     private GenderEnum genderEnum;
 
     @Schema(description = "生日（可选）", example = "2000-01-01", requiredMode = Schema.RequiredMode.NOT_REQUIRED, type = "string", format = "date")
