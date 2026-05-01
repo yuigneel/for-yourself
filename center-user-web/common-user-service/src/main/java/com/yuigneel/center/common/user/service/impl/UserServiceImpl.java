@@ -20,9 +20,8 @@ import com.yuigneel.center.user.api.model.enums.LoginStatusEnum;
 import com.yuigneel.common.model.enums.AccountIdentityTypeEnum;
 import com.yuigneel.common.utils.*;
 import com.yuigneel.center.user.api.model.dto.EmailCodeRequestDTO;
-import com.yuigneel.center.user.api.model.enums.BanLevelEnum;
+import com.yuigneel.center.user.api.model.enums.CaptchaFreezeLevelEnum;
 import com.yuigneel.center.user.api.model.enums.BusinessTypeEnum;
-import com.yuigneel.center.user.api.model.enums.GenderEnum;
 import com.yuigneel.center.common.user.model.vo.UserLoginResponseVO;
 import com.yuigneel.center.common.user.service.UserService;
 import com.yuigneel.center.user.api.model.dto.CommonUserPageQueryDTO;
@@ -792,7 +791,7 @@ public class UserServiceImpl
             Long ttl = redisUtil.getTtl(key, TimeUnit.MINUTES);
             ttl = ttl <= 0 ? 0 : ttl;
             //  计算实际冻结的时间（最大时间-实际剩余时间）
-            long actualTime = BanLevelEnum.LEVEL_S.getCode() - ttl;
+            long actualTime = CaptchaFreezeLevelEnum.LEVEL_S.getCode() - ttl;
             //  计算并返回还剩多长冻结时间（计划冻结时间-实际冻结时间）
             return needTime - (int) actualTime;
         } catch (NumberFormatException | ArrayIndexOutOfBoundsException e) {
@@ -808,23 +807,23 @@ public class UserServiceImpl
      */
     private void markEmailAsCaptchaFreeze(String key) {
         // 🔥 核心优化：只调用1次枚举，全部提取到局部变量（后续直接用，不重复调用）
-        String S = BanLevelEnum.LEVEL_S.getName();
-        String A = BanLevelEnum.LEVEL_A.getName();
-        String B = BanLevelEnum.LEVEL_B.getName();
-        String C = BanLevelEnum.LEVEL_C.getName();
-        String D = BanLevelEnum.LEVEL_D.getName();
-        String E = BanLevelEnum.LEVEL_E.getName();
-        String F = BanLevelEnum.LEVEL_F.getName();
-        String G = BanLevelEnum.LEVEL_G.getName();
+        String S = CaptchaFreezeLevelEnum.LEVEL_S.getName();
+        String A = CaptchaFreezeLevelEnum.LEVEL_A.getName();
+        String B = CaptchaFreezeLevelEnum.LEVEL_B.getName();
+        String C = CaptchaFreezeLevelEnum.LEVEL_C.getName();
+        String D = CaptchaFreezeLevelEnum.LEVEL_D.getName();
+        String E = CaptchaFreezeLevelEnum.LEVEL_E.getName();
+        String F = CaptchaFreezeLevelEnum.LEVEL_F.getName();
+        String G = CaptchaFreezeLevelEnum.LEVEL_G.getName();
 
-        Integer timeS = BanLevelEnum.LEVEL_S.getCode();
-        Integer timeA = BanLevelEnum.LEVEL_A.getCode();
-        Integer timeB = BanLevelEnum.LEVEL_B.getCode();
-        Integer timeC = BanLevelEnum.LEVEL_C.getCode();
-        Integer timeD = BanLevelEnum.LEVEL_D.getCode();
-        Integer timeE = BanLevelEnum.LEVEL_E.getCode();
-        Integer timeF = BanLevelEnum.LEVEL_F.getCode();
-        Integer timeG = BanLevelEnum.LEVEL_G.getCode();
+        Integer timeS = CaptchaFreezeLevelEnum.LEVEL_S.getCode();
+        Integer timeA = CaptchaFreezeLevelEnum.LEVEL_A.getCode();
+        Integer timeB = CaptchaFreezeLevelEnum.LEVEL_B.getCode();
+        Integer timeC = CaptchaFreezeLevelEnum.LEVEL_C.getCode();
+        Integer timeD = CaptchaFreezeLevelEnum.LEVEL_D.getCode();
+        Integer timeE = CaptchaFreezeLevelEnum.LEVEL_E.getCode();
+        Integer timeF = CaptchaFreezeLevelEnum.LEVEL_F.getCode();
+        Integer timeG = CaptchaFreezeLevelEnum.LEVEL_G.getCode();
 
         // 1. 安全获取缓存，防空指针
         String value = redisUtil.get(key);
