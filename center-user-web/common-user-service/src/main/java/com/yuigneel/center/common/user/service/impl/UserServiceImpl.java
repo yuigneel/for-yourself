@@ -8,16 +8,20 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.yuigneel.center.common.user.model.dto.*;
-import com.yuigneel.center.user.api.model.dto.CommonUserStatusUpdateRequestDTO;
 import com.yuigneel.center.common.user.config.properties.CloudflareProperties;
 import com.yuigneel.center.common.user.config.properties.LinkProperties;
 import com.yuigneel.center.common.user.config.properties.MailProperties;
 import com.yuigneel.center.common.user.config.properties.MiscellaneousProperties;
+import com.yuigneel.center.common.user.mapper.AccountExceptionStatusTimeMapper;
 import com.yuigneel.center.common.user.mapper.UserMapper;
 import com.yuigneel.center.common.user.model.domain.AccountAvatar;
+import com.yuigneel.center.common.user.model.domain.AccountExceptionStatusTime;
 import com.yuigneel.center.common.user.model.domain.CommonUser;
+import com.yuigneel.center.user.api.model.dto.AccountStatusUpdateRequestDTO;
+import com.yuigneel.center.user.api.model.enums.AccountBanLevel;
 import com.yuigneel.center.user.api.model.enums.LoginStatusEnum;
 import com.yuigneel.common.model.enums.AccountIdentityTypeEnum;
+import com.yuigneel.common.model.enums.AccountStatusEnum;
 import com.yuigneel.common.utils.*;
 import com.yuigneel.center.user.api.model.dto.EmailCodeRequestDTO;
 import com.yuigneel.center.user.api.model.enums.CaptchaFreezeLevelEnum;
@@ -40,6 +44,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -73,6 +78,7 @@ public class UserServiceImpl
     private final MinioUtil minioUtil;
     private final CommonUserFileServiceByMinIOImpl commonUserFileServiceByMinIOImpl;
     private final TransactionTemplate transactionTemplate;
+    private final AccountExceptionStatusTimeMapper accountExceptionStatusTimeMapper;
 
     /**
      * 获取邮箱验证码
@@ -751,15 +757,101 @@ public class UserServiceImpl
      *                              </ul>
      */
     @Override
-    public void updateCommonUserStatus(CommonUserStatusUpdateRequestDTO request) {
+    public void updateCommonUserStatus(AccountStatusUpdateRequestDTO request) {
         String token = UserContextUtil.getLink();
         if (token == null) throw new ForYourselfException(ResultCodeEnum.ILLEGAL_ACCESS, "我容易吗我，go out!");
         if (!InnerFlexibleTokenSecurityUtil.verifyToken(linkProperties.getAdminCommon().getSecretKey(), linkProperties.getAdminCommon().getExpireMilliseconds(), token))
             throw new ForYourselfException(ResultCodeEnum.ILLEGAL_ACCESS, "我容易吗我，go out!");
-        boolean update = this.update(new LambdaUpdateWrapper<CommonUser>().eq(CommonUser::getUid, request.getUid())
-                .set(CommonUser::getAccountStatus, request.getNewStatus())
-                .set(CommonUser::getUpdateBy, UserContextUtil.getUid()));
-        if (!update) throw new ForYourselfException(ResultCodeEnum.DATABASE_SERVICE_ERROR, null);
+    
+        // === 1. 前置校验：获取封禁等级（如果目标状态不是正常，则必须有封禁等级）
+        AccountBanLevel banLevel;
+        if (request.getTargetStatus() != AccountStatusEnum.ACCOUNT_STATUS_NORMAL) {
+            if (request.getBanLevel() == null || request.getBanLevel().isEmpty()) {
+                throw new ForYourselfException(ResultCodeEnum.INCOMPLETE_PARAMETERS, "异常状态必须指定封禁等级");
+            }
+            banLevel = AccountBanLevel.getByLetter(request.getBanLevel());
+            if (banLevel == null) {
+                throw new ForYourselfException(ResultCodeEnum.INCOMPLETE_PARAMETERS, "无效的封禁等级");
+            }
+        } else {
+            banLevel = null;
+        }
+
+        // === 2. 获取被修改者对象
+        CommonUser updated = this.getOne(new LambdaQueryWrapper<CommonUser>().eq(CommonUser::getUid, request.getUid()));
+        if (updated == null) throw new ForYourselfException(ResultCodeEnum.ACCOUNT_NOT_FOUND, null);
+    
+        // === 3. 获取原状态和目标状态
+        AccountStatusEnum originStatus = updated.getAccountStatus();
+        AccountStatusEnum targetStatus = request.getTargetStatus();
+    
+        // === 4. 判断是否需要修改
+        if (originStatus == targetStatus) throw new ForYourselfException(ResultCodeEnum.NO_NEED_TO_UPDATE, null);
+    
+        // === 5. 事务处理
+        transactionTemplate.executeWithoutResult(status -> {
+            // --- 5.1 修改普通用户账户状态
+            LambdaUpdateWrapper<CommonUser> userUpdate = new LambdaUpdateWrapper<CommonUser>()
+                    .eq(CommonUser::getUid, updated.getUid())
+                    .set(CommonUser::getAccountStatus, targetStatus)
+                    .set(CommonUser::getUpdateBy, UserContextUtil.getUid());
+    
+            if (!this.update(userUpdate)) {
+                throw new ForYourselfException(ResultCodeEnum.DATABASE_SERVICE_ERROR, "更新普通用户状态失败");
+            }
+    
+            // --- 5.2 处理异常状态时间表
+            if (targetStatus == AccountStatusEnum.ACCOUNT_STATUS_NORMAL) {
+                // 恢复正常：删除异常记录
+                LambdaQueryWrapper<AccountExceptionStatusTime> deleteWrapper = new LambdaQueryWrapper<AccountExceptionStatusTime>()
+                        .eq(AccountExceptionStatusTime::getUid, updated.getUid())
+                        .eq(AccountExceptionStatusTime::getIdentityType, AccountIdentityTypeEnum.USER);
+    
+                if (accountExceptionStatusTimeMapper.delete(deleteWrapper) <= 0) {
+                    log.warn("普通用户{}恢复正常，但未找到对应的异常记录", updated.getUid());
+                }
+            } else {
+                // 设为异常：计算到期时间
+                LocalDateTime expireTime = LocalDateTime.now().plusHours(banLevel.getCode());
+    
+                // 尝试查询是否已存在异常记录
+                AccountExceptionStatusTime existingRecord = accountExceptionStatusTimeMapper.selectOne(
+                        new LambdaQueryWrapper<AccountExceptionStatusTime>()
+                                .eq(AccountExceptionStatusTime::getUid, updated.getUid())
+                                .eq(AccountExceptionStatusTime::getIdentityType, AccountIdentityTypeEnum.USER)
+                );
+    
+                if (existingRecord == null) {
+                    // 插入新记录
+                    AccountExceptionStatusTime insert = new AccountExceptionStatusTime();
+                    insert.setUid(updated.getUid());
+                    insert.setIdentityType(AccountIdentityTypeEnum.USER);
+                    insert.setExceptionType(targetStatus);
+                    insert.setExpireTime(expireTime);
+                    insert.setReason(request.getBanReason());
+                    insert.setUpdateBy(UserContextUtil.getUid());
+    
+                    if (accountExceptionStatusTimeMapper.insert(insert) <= 0) {
+                        throw new ForYourselfException(ResultCodeEnum.DATABASE_SERVICE_ERROR, "插入异常记录失败");
+                    }
+                } else {
+                    // 更新现有记录
+                    LambdaUpdateWrapper<AccountExceptionStatusTime> updateWrapper = new LambdaUpdateWrapper<AccountExceptionStatusTime>()
+                            .eq(AccountExceptionStatusTime::getId, existingRecord.getId())
+                            .set(AccountExceptionStatusTime::getExceptionType, targetStatus.getCode())
+                            .set(AccountExceptionStatusTime::getExpireTime, expireTime)
+                            .set(AccountExceptionStatusTime::getUpdateBy, UserContextUtil.getUid());
+    
+                    if (request.getBanReason() != null) {
+                        updateWrapper.set(AccountExceptionStatusTime::getReason, request.getBanReason());
+                    }
+    
+                    if (accountExceptionStatusTimeMapper.update(null, updateWrapper) <= 0) {
+                        throw new ForYourselfException(ResultCodeEnum.DATABASE_SERVICE_ERROR, "更新异常记录失败");
+                    }
+                }
+            }
+        });
     }
 
 

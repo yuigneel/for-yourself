@@ -1,8 +1,8 @@
 package com.yuigneel.center.user.api.client;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.yuigneel.center.user.api.model.dto.AccountStatusUpdateRequestDTO;
 import com.yuigneel.center.user.api.model.dto.CommonUserPageQueryDTO;
-import com.yuigneel.center.user.api.model.dto.CommonUserStatusUpdateRequestDTO;
 import com.yuigneel.center.user.api.model.vo.CommonUserInfoResponseVO;
 import com.yuigneel.common.config.DefaultFeignClientConfig;
 import com.yuigneel.common.model.result.Result;
@@ -59,6 +59,6 @@ public interface CommonLinkAdminClient {
      */
     @PostMapping("/changeStatus")
     @Operation(summary = "更改普通用户的账号状态", description = "仅管理员可调用，内部会校验身份")
-    Result<String> changeStatus(@Valid @RequestBody CommonUserStatusUpdateRequestDTO request);
+    Result<String> changeStatus(@Valid @RequestBody AccountStatusUpdateRequestDTO request);
 
 }

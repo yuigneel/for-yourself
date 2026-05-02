@@ -13,7 +13,7 @@ import lombok.Getter;
  */
 @Getter
 @AllArgsConstructor
-public enum BanLevelEnum implements BaseEnum {
+public enum EmailBanLevelEnum implements BaseEnum {
     /**
      * S 级封禁 - 最严重违规，封禁 24 小时（1440 分钟）
      */
@@ -81,8 +81,8 @@ public enum BanLevelEnum implements BaseEnum {
      * @param name 枚举名称（如 "S 级封禁"）
      * @return 对应的枚举值，如果未找到则返回 null
      */
-    public static BanLevelEnum getByName(String name) {
-        for (BanLevelEnum level : values()) {
+    public static EmailBanLevelEnum getByName(String name) {
+        for (EmailBanLevelEnum level : values()) {
             if (level.getName().equals(name)) {
                 return level;
             }
@@ -94,13 +94,13 @@ public enum BanLevelEnum implements BaseEnum {
      * 根据等级字母获取对应的封禁等级枚举
      *
      * @param letter 等级字母（如 "S", "A", "B"...）
-     * @return 对应的枚举值，如果未找到则返回 LEVEL_G
+     * @return 对应的枚举值，如果未找到则返回 null
      */
-    public static BanLevelEnum getByLetter(String letter) {
+    public static EmailBanLevelEnum getByLetter(String letter) {
         try {
             return valueOf("LEVEL_" + letter.toUpperCase());
         } catch (IllegalArgumentException e) {
-            return LEVEL_G;
+            return null;
         }
     }
 }

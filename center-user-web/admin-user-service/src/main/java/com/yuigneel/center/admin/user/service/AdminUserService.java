@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.yuigneel.center.admin.user.model.domain.AdminUser;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.yuigneel.center.admin.user.model.dto.*;
-import com.yuigneel.center.user.api.model.dto.CommonUserStatusUpdateRequestDTO;
+import com.yuigneel.center.user.api.model.dto.AccountStatusUpdateRequestDTO;
 import com.yuigneel.center.admin.user.model.vo.AdminUserCreateResponseVO;
 import com.yuigneel.center.admin.user.model.vo.AdminUserInfoResponseVO;
 import com.yuigneel.center.admin.user.model.vo.AdminUserLoginResponseVO;
@@ -45,12 +45,12 @@ public interface AdminUserService extends IService<AdminUser> {
 
     IPage<CommonUserInfoResponseVO> getCommonPages(CommonUserPageQueryDTO query);
 
-    void updateAdminStatus( AdminUserStatusUpdateRequestDTO request);
+    void updateAdminStatus(AccountStatusUpdateRequestDTO request );
 
     AdminUserInfoResponseVO getOtherAdminInfo(Long uid);
 
     CommonUserInfoResponseVO getOneCommonUserInfo( Long uid);
 
-    void updateCommonUserStatus(CommonUserStatusUpdateRequestDTO request);
+    void updateCommonUserStatus(AccountStatusUpdateRequestDTO request);
 }
 

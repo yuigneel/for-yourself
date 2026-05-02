@@ -33,7 +33,7 @@ public enum ResultCodeEnum {
     // ====================== 占位模糊响应 ======================
     SUCCESS("00000", "成功"),
     FAIL("11111", "失败"),
-    TODO("22333","功能未实现"),
+    TODO("22333", "功能未实现"),
     // ====================== Axxxx 用户端错误 ======================
     USER_SIDE_ERROR("A0001", "用户端错误"),
     // A01xx 访问系统错误
@@ -82,6 +82,7 @@ public enum ResultCodeEnum {
     ACCOUNT_BANNED("A0806", "账户已被封禁"),
     // A09xx 账户操作
     SAVE_ACCOUNT_FAILED("A0900", "保存账户信息失败"),
+    NO_NEED_TO_UPDATE("A0901", "无需更新"),
     // A10xx 账户安全
 
     // ====================== B0xxx 系统执行出错 ======================
@@ -116,7 +117,7 @@ public enum ResultCodeEnum {
 
     // C02xx 缓存服务
     CACHE_SERVICE_ERROR("C0200", "缓存服务出错"),
-        
+
     // C03xx 对象储存
     MINIO_SERVICE_ERROR("C0300", "对象存储服务出错"),
 

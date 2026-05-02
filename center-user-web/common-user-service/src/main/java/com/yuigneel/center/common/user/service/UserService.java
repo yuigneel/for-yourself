@@ -3,9 +3,9 @@ package com.yuigneel.center.common.user.service;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.yuigneel.center.common.user.model.dto.*;
-import com.yuigneel.center.user.api.model.dto.CommonUserStatusUpdateRequestDTO;
 import com.yuigneel.center.common.user.model.domain.CommonUser;
 import com.yuigneel.center.common.user.model.vo.UserLoginResponseVO;
+import com.yuigneel.center.user.api.model.dto.AccountStatusUpdateRequestDTO;
 import com.yuigneel.center.user.api.model.dto.CommonUserPageQueryDTO;
 import com.yuigneel.center.user.api.model.dto.EmailCodeRequestDTO;
 import com.yuigneel.center.user.api.model.vo.CommonUserInfoResponseVO;
@@ -34,6 +34,6 @@ public interface UserService extends IService<CommonUser> {
 
     CommonUserInfoResponseVO getOneById(Long uid);
 
-    void updateCommonUserStatus( CommonUserStatusUpdateRequestDTO request);
+    void updateCommonUserStatus( AccountStatusUpdateRequestDTO request);
 }
 

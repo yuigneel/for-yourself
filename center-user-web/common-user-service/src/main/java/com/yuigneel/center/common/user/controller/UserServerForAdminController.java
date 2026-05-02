@@ -2,8 +2,8 @@ package com.yuigneel.center.common.user.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.yuigneel.center.common.user.service.CommonUserFileService;
-import com.yuigneel.center.user.api.model.dto.CommonUserStatusUpdateRequestDTO;
 import com.yuigneel.center.common.user.service.UserService;
+import com.yuigneel.center.user.api.model.dto.AccountStatusUpdateRequestDTO;
 import com.yuigneel.center.user.api.model.dto.CommonUserPageQueryDTO;
 import com.yuigneel.center.user.api.model.vo.CommonUserInfoResponseVO;
 import com.yuigneel.common.model.result.Result;
@@ -65,7 +65,7 @@ public class UserServerForAdminController {
      */
     @PostMapping("/changeStatus")
     @Operation(summary = "更改普通用户的账号状态", description = "仅管理员可调用，内部会校验身份")
-    public Result<String> changeStatus(@Valid @RequestBody CommonUserStatusUpdateRequestDTO request) {
+    public Result<String> changeStatus(@Valid @RequestBody AccountStatusUpdateRequestDTO request) {
         userService.updateCommonUserStatus(request);
         return Result.ok("修改状态成功！");
     }

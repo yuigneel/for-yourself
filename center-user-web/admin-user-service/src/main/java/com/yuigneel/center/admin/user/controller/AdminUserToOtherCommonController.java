@@ -2,6 +2,7 @@ package com.yuigneel.center.admin.user.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.yuigneel.center.admin.user.service.AdminUserService;
+import com.yuigneel.center.user.api.model.dto.AccountStatusUpdateRequestDTO;
 import com.yuigneel.center.user.api.model.dto.CommonUserPageQueryDTO;
 import com.yuigneel.center.user.api.model.dto.CommonUserStatusUpdateRequestDTO;
 import com.yuigneel.center.user.api.model.vo.CommonUserInfoResponseVO;
@@ -54,7 +55,7 @@ public class AdminUserToOtherCommonController {
      */
     @PostMapping("/updateStatus")
     @Operation(summary = "修改普通用户账号状态", description = "通过 Feign 调用普通用户服务")
-    public Result<String> updateCommonUserStatus(@Valid @RequestBody CommonUserStatusUpdateRequestDTO request){
+    public Result<String> updateCommonUserStatus(@Valid @RequestBody AccountStatusUpdateRequestDTO request){
         adminUserService.updateCommonUserStatus(request);
         return Result.ok();
     }

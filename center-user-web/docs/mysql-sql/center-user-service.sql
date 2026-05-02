@@ -82,6 +82,43 @@ CREATE TABLE `t_account_avatar` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='账号头像表';
 
 
+-- ============================================
+-- 账号异常状态时间表
+-- 作者：yuigneel
+-- 日期：2026-05-02
+-- 用途：记录管理员和用户的封禁、警告等异常状态的到期时间
+-- 说明：一个账号同一时间只能有一个异常状态（不叠加）
+-- ============================================
+CREATE TABLE t_account_exception_status_time (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键ID（自增）',
+
+    uid BIGINT NOT NULL COMMENT '账号UID（雪花ID）',
+
+    identity_type TINYINT NOT NULL COMMENT '身份类型：0-管理员 1-普通用户（对应AccountIdentityTypeEnum枚举）',
+
+    exception_type TINYINT NOT NULL COMMENT '异常类型：1-警告 2-封禁 3-强制注销',
+
+    expire_time DATETIME NOT NULL COMMENT '异常状态到期时间（精确到秒）',
+
+    reason VARCHAR(500) DEFAULT NULL COMMENT '异常原因/封禁理由',
+
+    is_deleted TINYINT NOT NULL DEFAULT 0 COMMENT '逻辑删除：0-未删除 1-已删除（默认0）',
+
+    create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+
+    update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+
+    update_by BIGINT DEFAULT NULL COMMENT '更新人UID（操作的管理员UID，NULL表示系统自动更新）',
+
+
+    -- 联合唯一索引：一个账号的同一身份只能有一条异常状态记录（防止状态叠加）
+    UNIQUE KEY uk_uid_identity (uid, identity_type),
+
+    -- 查询优化索引：快速查找已过期的记录
+    INDEX idx_expire_time (expire_time)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='账号异常状态时间表';
+
 
 
 

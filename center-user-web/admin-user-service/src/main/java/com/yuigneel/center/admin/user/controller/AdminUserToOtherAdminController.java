@@ -4,11 +4,11 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.yuigneel.center.admin.user.model.dto.AdminUserCreateRequestDTO;
 import com.yuigneel.center.admin.user.model.dto.AdminUserPageQueryDTO;
 import com.yuigneel.center.admin.user.model.dto.AdminUserPermissionUpdateRequestDTO;
-import com.yuigneel.center.admin.user.model.dto.AdminUserStatusUpdateRequestDTO;
 import com.yuigneel.center.admin.user.model.vo.AdminUserCreateResponseVO;
 import com.yuigneel.center.admin.user.model.vo.AdminUserInfoResponseVO;
 import com.yuigneel.center.admin.user.service.AdminUserFileService;
 import com.yuigneel.center.admin.user.service.AdminUserService;
+import com.yuigneel.center.user.api.model.dto.AccountStatusUpdateRequestDTO;
 import com.yuigneel.common.model.result.Result;
 import com.yuigneel.common.utils.UserContextUtil;
 import io.swagger.v3.oas.annotations.Operation;
@@ -73,7 +73,7 @@ public class AdminUserToOtherAdminController {
      */
     @PostMapping("/update-status")
     @Operation(summary = "修改其它管理员账号状态", description = "修改其它管理员的账号状态")
-    public Result<String> updateAdminStatus(@Valid @RequestBody AdminUserStatusUpdateRequestDTO request) {
+    public Result<String> updateAdminStatus(@Valid @RequestBody AccountStatusUpdateRequestDTO  request) {
         adminUserService.updateAdminStatus(request);
         return Result.ok("修改状态成功！");
     }

@@ -11,18 +11,22 @@ import com.yuigneel.center.admin.user.config.properties.CloudflareProperties;
 import com.yuigneel.center.admin.user.config.properties.LinkProperties;
 import com.yuigneel.center.admin.user.config.properties.MailProperties;
 import com.yuigneel.center.admin.user.config.properties.MiscellaneousProperties;
+import com.yuigneel.center.admin.user.mapper.AccountExceptionStatusTimeMapper;
 import com.yuigneel.center.admin.user.model.domain.AccountAvatar;
+import com.yuigneel.center.admin.user.model.domain.AccountExceptionStatusTime;
 import com.yuigneel.center.admin.user.model.domain.AdminUser;
 import com.yuigneel.center.admin.user.model.dto.*;
 import com.yuigneel.center.admin.user.service.AdminUserFileService;
+import com.yuigneel.center.user.api.model.dto.AccountStatusUpdateRequestDTO;
+import com.yuigneel.center.user.api.model.enums.AccountBanLevel;
 import com.yuigneel.center.user.api.model.enums.CaptchaFreezeLevelEnum;
 import com.yuigneel.center.user.api.model.enums.LoginStatusEnum;
 import com.yuigneel.common.model.enums.AccountIdentityTypeEnum;
+import com.yuigneel.common.model.enums.AccountStatusEnum;
 import com.yuigneel.common.utils.*;
 import com.yuigneel.center.admin.user.model.vo.AdminUserCreateResponseVO;
 import com.yuigneel.center.user.api.client.CommonLinkAdminClient;
 import com.yuigneel.center.user.api.model.dto.CommonUserPageQueryDTO;
-import com.yuigneel.center.user.api.model.dto.CommonUserStatusUpdateRequestDTO;
 import com.yuigneel.center.user.api.model.dto.EmailCodeRequestDTO;
 import com.yuigneel.center.admin.user.model.vo.AdminUserInfoResponseVO;
 import com.yuigneel.center.admin.user.model.vo.AdminUserLoginResponseVO;
@@ -36,6 +40,7 @@ import com.yuigneel.common.model.constants.AuthConstants;
 import com.yuigneel.common.model.enums.AdminPermissionsEnum;
 import com.yuigneel.common.model.result.Result;
 import com.yuigneel.common.model.result.ResultCodeEnum;
+import kotlin.jvm.internal.Lambda;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.mail.SimpleMailMessage;
@@ -46,6 +51,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -82,6 +88,7 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
     private final AdminUserFileService adminUserFileServiceByMinIOImpl;
     private final TransactionTemplate transactionTemplate;
     private final AdminUserMapper adminUserMapper;
+    private final AccountExceptionStatusTimeMapper accountExceptionStatusTimeMapper;
 
     /**
      * 获取邮箱验证码
@@ -290,10 +297,13 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
             }
             // 邮箱登录
             case EMAIL -> {
-                if (!ValidateUtil.isValidEmail(name)) throw new ForYourselfException(ResultCodeEnum.EMAIL_FORMAT_ERROR, null);
+                if (!ValidateUtil.isValidEmail(name))
+                    throw new ForYourselfException(ResultCodeEnum.EMAIL_FORMAT_ERROR, null);
                 AdminUser adminUser = adminUserMapper.selectOneByEmailIgnoreLogicDelete(name);
-                if (adminUser == null) throw new ForYourselfException(ResultCodeEnum.ACCOUNT_NOT_FOUND_OR_CANCELLED, null);
-                if (!bCryptPasswordEncoder.matches(request.getPassword(), adminUser.getPassword())) throw new ForYourselfException(ResultCodeEnum.PASSWORD_ERROR, null);
+                if (adminUser == null)
+                    throw new ForYourselfException(ResultCodeEnum.ACCOUNT_NOT_FOUND_OR_CANCELLED, null);
+                if (!bCryptPasswordEncoder.matches(request.getPassword(), adminUser.getPassword()))
+                    throw new ForYourselfException(ResultCodeEnum.PASSWORD_ERROR, null);
                 adminUserLoginResponseVO.setResultCodeENum(LoginStatusEnum.NORMAL_LOGIN);
                 if (adminUser.getIsDeleted() == 1) {
                     log.info("用户{}：账户已注销,正在恢复。。。", name);
@@ -313,9 +323,11 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
             }
             // UID 登录
             case UID -> {
-                AdminUser adminUser =adminUserMapper.selectOneByUidIgnoreLogicDelete(Long.valueOf(name));
-                if (adminUser == null) throw new ForYourselfException(ResultCodeEnum.ACCOUNT_NOT_FOUND_OR_CANCELLED, null);
-                if (!bCryptPasswordEncoder.matches(request.getPassword(), adminUser.getPassword())) throw new ForYourselfException(ResultCodeEnum.PASSWORD_ERROR, null);
+                AdminUser adminUser = adminUserMapper.selectOneByUidIgnoreLogicDelete(Long.valueOf(name));
+                if (adminUser == null)
+                    throw new ForYourselfException(ResultCodeEnum.ACCOUNT_NOT_FOUND_OR_CANCELLED, null);
+                if (!bCryptPasswordEncoder.matches(request.getPassword(), adminUser.getPassword()))
+                    throw new ForYourselfException(ResultCodeEnum.PASSWORD_ERROR, null);
                 adminUserLoginResponseVO.setResultCodeENum(LoginStatusEnum.NORMAL_LOGIN);
                 if (adminUser.getIsDeleted() == 1) {
                     log.info("用户{}：账户已注销,正在恢复。。。", name);
@@ -867,20 +879,75 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
      * @throws ForYourselfException 当权限不足或数据库操作失败时抛出异常
      */
     @Override
-    public void updateAdminStatus(AdminUserStatusUpdateRequestDTO request) {
-        // 获取创建者的权限
-        int modifierPermission = this.getOne(new LambdaQueryWrapper<AdminUser>().eq(AdminUser::getUid, UserContextUtil.getUid())).getAccountPermission().getCode();
-        // 获取被创建者权限
-        int modifiedOriginPermission = this.getOne(new LambdaQueryWrapper<AdminUser>().eq(AdminUser::getUid, request.getUid())).getAccountPermission().getCode();
-        // 验证权限
-        if (modifierPermission >= modifiedOriginPermission)
-            throw new ForYourselfException(ResultCodeEnum.INSUFFICIENT_PERMISSIONS, "权限不足");
-        // 修改状态
-        LambdaUpdateWrapper<AdminUser> set = new LambdaUpdateWrapper<AdminUser>().eq(AdminUser::getUid, request.getUid())
-                .set(AdminUser::getAccountStatus, request.getNewStatus())
-                .set(AdminUser::getUpdateBy, UserContextUtil.getUid());
-        boolean update = this.update(set);
-        if (!update) throw new ForYourselfException(ResultCodeEnum.DATABASE_SERVICE_ERROR, null);
+    public void updateAdminStatus(AccountStatusUpdateRequestDTO request) {
+        // ===获取修改者和被修改者对象
+        AdminUser modifier = this.getOne(new LambdaQueryWrapper<AdminUser>().eq(AdminUser::getUid, UserContextUtil.getUid()));
+        AdminUser updated = this.getOne(new LambdaQueryWrapper<AdminUser>().eq(AdminUser::getUid, request.getUid())); // 被修改者
+        if (updated == null) throw new ForYourselfException(ResultCodeEnum.ACCOUNT_NOT_FOUND, null);
+        // ===判断是否有权限修改
+        if (modifier.getAccountPermission().getCode() >= updated.getAccountPermission().getCode())
+            throw new ForYourselfException(ResultCodeEnum.INSUFFICIENT_PERMISSIONS, null);
+        // ===获取被修改者原来的状态和目标状态
+        AccountStatusEnum originStatus = updated.getAccountStatus();
+        AccountStatusEnum targetStatus = request.getTargetStatus();
+        // ===判断是否需要修改
+        if (originStatus == targetStatus) throw new ForYourselfException(ResultCodeEnum.NO_NEED_TO_UPDATE, null);
+        // ====修改
+        // ---获取封禁等级（如果目标状态不是正常，则必须有封禁等级）
+        AccountBanLevel byLetter;
+        if (request.getBanLevel() != null && !request.getBanLevel().isEmpty()) {
+            byLetter = AccountBanLevel.getByLetter(request.getBanLevel());
+        } else {
+            byLetter = null;
+        }
+        transactionTemplate.executeWithoutResult(status -> {
+            // ---先修改管理员账户状态
+            LambdaUpdateWrapper<AdminUser> set = new LambdaUpdateWrapper<AdminUser>().eq(AdminUser::getUid, updated.getUid())
+                    .set(AdminUser::getAccountStatus, targetStatus)
+                    .set(AdminUser::getUpdateBy, modifier.getUid());
+            boolean update = this.update(set);
+            if (!update) throw new ForYourselfException(ResultCodeEnum.DATABASE_SERVICE_ERROR, null);
+            // ---根据情况处理封禁表
+            // ···如果目标状态为正常,原始状态肯定为异常，删除
+            if (targetStatus == AccountStatusEnum.ACCOUNT_STATUS_NORMAL) {
+                LambdaQueryWrapper<AccountExceptionStatusTime> eq = new LambdaQueryWrapper<AccountExceptionStatusTime>().eq(AccountExceptionStatusTime::getUid, updated.getUid())
+                        .eq(AccountExceptionStatusTime::getExceptionType, originStatus)
+                        .eq(AccountExceptionStatusTime::getIdentityType, AccountIdentityTypeEnum.ADMIN);
+                boolean delete = accountExceptionStatusTimeMapper.delete(eq) > 0;
+                if (!delete) throw new ForYourselfException(ResultCodeEnum.DATABASE_SERVICE_ERROR, null);
+            }
+            // ···如果目标状态为异常
+            else {
+                // ~~~先计算到期时间
+                if (byLetter == null)
+                    throw new ForYourselfException(ResultCodeEnum.INCOMPLETE_PARAMETERS, "封禁等级不能为空");
+                LocalDateTime expireTime = LocalDateTime.now().plusHours(byLetter.getCode());
+                // ~~~如果原始状态为正常，则插入
+                if (originStatus == AccountStatusEnum.ACCOUNT_STATUS_NORMAL) {
+                    AccountExceptionStatusTime insert = new AccountExceptionStatusTime();
+                    insert.setUid(updated.getUid());
+                    insert.setExceptionType(targetStatus);
+                    insert.setIdentityType(AccountIdentityTypeEnum.ADMIN);
+                    insert.setExpireTime(expireTime);
+                    if (request.getBanReason() != null) insert.setReason(request.getBanReason());
+                    insert.setUpdateBy(modifier.getUid());
+                    int insertCount = accountExceptionStatusTimeMapper.insert(insert);
+                    if (insertCount <= 0) throw new ForYourselfException(ResultCodeEnum.DATABASE_SERVICE_ERROR, null);
+                }
+                // ~~~如果原始状态为异常，则更新
+                else {
+                    LambdaUpdateWrapper<AccountExceptionStatusTime> updateWrapper = new LambdaUpdateWrapper<AccountExceptionStatusTime>()
+                            .eq(AccountExceptionStatusTime::getUid, updated.getUid())
+                            .eq(AccountExceptionStatusTime::getIdentityType, AccountIdentityTypeEnum.ADMIN)
+                            .set(AccountExceptionStatusTime::getExceptionType, targetStatus)
+                            .set(AccountExceptionStatusTime::getExpireTime, expireTime)
+                            .set(AccountExceptionStatusTime::getUpdateBy, modifier.getUid());
+                    if (request.getBanReason() != null)updateWrapper.set(AccountExceptionStatusTime::getReason, request.getBanReason());
+                    int updateCount = accountExceptionStatusTimeMapper.update(null, updateWrapper);
+                    if (updateCount <= 0) throw new ForYourselfException(ResultCodeEnum.DATABASE_SERVICE_ERROR, null);
+                }
+            }
+        });
     }
 
     /**
@@ -951,7 +1018,7 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
      *                              </ul>
      */
     @Override
-    public void updateCommonUserStatus(CommonUserStatusUpdateRequestDTO request) {
+    public void updateCommonUserStatus(AccountStatusUpdateRequestDTO request) {
         String token = InnerFlexibleTokenSecurityUtil.generateToken(linkProperties.getAdminCommon().getSecretKey(), linkProperties.getAdminCommon().getExpireMilliseconds());
         UserContextUtil.setLink(token);
         String data = commonLinkAdminClient.changeStatus(request).getData();
