@@ -35,5 +35,7 @@ public interface UserService extends IService<CommonUser> {
     CommonUserInfoResponseVO getOneById(Long uid);
 
     void updateCommonUserStatus( AccountStatusUpdateRequestDTO request);
+
+    String getNewJWT();
 }
 

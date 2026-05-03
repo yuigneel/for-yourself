@@ -111,4 +111,11 @@ public class AdminUserToSelfController {
             throw new ForYourselfException(ResultCodeEnum.AVATAR_NOT_FOUND, null);
         return Result.ok(response);
     }
+
+    @Operation(summary = "获取新的 JWT", description = "JWT快过期的时候前端主动请求，获取新的JWT")
+    @GetMapping("/getNewJWT")
+    public Result<String> getNewJWT() {
+        String response = userService.getNewJWT();
+        return Result.ok(response);
+    }
 }

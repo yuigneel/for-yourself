@@ -4,6 +4,10 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.yuigneel.center.common.user.mapper.AccountExceptionStatusTimeMapper">
 
-    <!-- 后续根据业务需求添加自定义SQL -->
+    <!-- 物理删除：直接 DELETE，不走 MyBatis-Plus 的逻辑删除 -->
+    <delete id="physicalDeleteByUidAndIdentity">
+        DELETE FROM t_account_exception_status_time 
+        WHERE uid = #{uid} AND identity_type = #{identityType}
+    </delete>
 
 </mapper>

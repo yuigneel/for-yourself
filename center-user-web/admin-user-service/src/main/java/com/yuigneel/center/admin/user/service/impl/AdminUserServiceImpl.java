@@ -281,6 +281,8 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
                 AdminUser adminUser = adminUserMapper.selectOneByNicknameIgnoreLogicDelete(name);
                 if (adminUser == null)
                     throw new ForYourselfException(ResultCodeEnum.ACCOUNT_NOT_FOUND_OR_CANCELLED, null);
+                // 处理账号状态
+                if (!checkStatus(adminUser)) throw new ForYourselfException(ResultCodeEnum.ACCOUNT_BANNED, null);
                 if (!bCryptPasswordEncoder.matches(request.getPassword(), adminUser.getPassword()))
                     throw new ForYourselfException(ResultCodeEnum.PASSWORD_ERROR, null);
                 adminUserLoginResponseVO.setResultCodeENum(LoginStatusEnum.NORMAL_LOGIN);
@@ -302,6 +304,8 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
                 AdminUser adminUser = adminUserMapper.selectOneByEmailIgnoreLogicDelete(name);
                 if (adminUser == null)
                     throw new ForYourselfException(ResultCodeEnum.ACCOUNT_NOT_FOUND_OR_CANCELLED, null);
+                // 处理账号状态
+                if (!checkStatus(adminUser)) throw new ForYourselfException(ResultCodeEnum.ACCOUNT_BANNED, null);
                 if (!bCryptPasswordEncoder.matches(request.getPassword(), adminUser.getPassword()))
                     throw new ForYourselfException(ResultCodeEnum.PASSWORD_ERROR, null);
                 adminUserLoginResponseVO.setResultCodeENum(LoginStatusEnum.NORMAL_LOGIN);
@@ -326,6 +330,8 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
                 AdminUser adminUser = adminUserMapper.selectOneByUidIgnoreLogicDelete(Long.valueOf(name));
                 if (adminUser == null)
                     throw new ForYourselfException(ResultCodeEnum.ACCOUNT_NOT_FOUND_OR_CANCELLED, null);
+                // 处理账号状态
+                if (!checkStatus(adminUser)) throw new ForYourselfException(ResultCodeEnum.ACCOUNT_BANNED, null);
                 if (!bCryptPasswordEncoder.matches(request.getPassword(), adminUser.getPassword()))
                     throw new ForYourselfException(ResultCodeEnum.PASSWORD_ERROR, null);
                 adminUserLoginResponseVO.setResultCodeENum(LoginStatusEnum.NORMAL_LOGIN);
@@ -867,6 +873,7 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
         LambdaUpdateWrapper<AdminUser> set = new LambdaUpdateWrapper<AdminUser>().eq(AdminUser::getId, updatedBy.getId())
                 .set(AdminUser::getAccountPermission, request.getNewPermission())
                 .set(AdminUser::getUpdateBy, upDater.getUid());
+        log.info("管理员{}：修改了管理员{}的权限等级为{}", upDater.getUid(), updatedBy.getUid(), request.getNewPermission().getName());
         boolean update = this.update(set);
         if (!update) throw new ForYourselfException(ResultCodeEnum.DATABASE_SERVICE_ERROR, null);
     }
@@ -893,10 +900,17 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
         // ===判断是否需要修改
         if (originStatus == targetStatus) throw new ForYourselfException(ResultCodeEnum.NO_NEED_TO_UPDATE, null);
         // ====修改
-        // ---获取封禁等级（如果目标状态不是正常，则必须有封禁等级）
+        // ---获取封禁等级（如果目标状态不是正常或者强制注销，则必须有封禁等级）
         AccountBanLevel byLetter;
-        if (request.getBanLevel() != null && !request.getBanLevel().isEmpty()) {
+        if (request.getTargetStatus() != AccountStatusEnum.ACCOUNT_STATUS_NORMAL
+                && request.getTargetStatus() != AccountStatusEnum.ACCOUNT_STATUS_FORCE_LOGOUT) {
+            if (request.getBanLevel() == null || request.getBanLevel().isEmpty()) {
+                throw new ForYourselfException(ResultCodeEnum.INCOMPLETE_PARAMETERS, "异常状态必须指定封禁等级");
+            }
             byLetter = AccountBanLevel.getByLetter(request.getBanLevel());
+            if (byLetter == null) {
+                throw new ForYourselfException(ResultCodeEnum.INCOMPLETE_PARAMETERS, "无效的封禁等级");
+            }
         } else {
             byLetter = null;
         }
@@ -905,25 +919,22 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
             LambdaUpdateWrapper<AdminUser> set = new LambdaUpdateWrapper<AdminUser>().eq(AdminUser::getUid, updated.getUid())
                     .set(AdminUser::getAccountStatus, targetStatus)
                     .set(AdminUser::getUpdateBy, modifier.getUid());
+            log.info("管理员{}：修改了管理员{}的账号状态为{}", modifier.getUid(), updated.getUid(), targetStatus.getName());
             boolean update = this.update(set);
             if (!update) throw new ForYourselfException(ResultCodeEnum.DATABASE_SERVICE_ERROR, null);
             // ---根据情况处理封禁表
-            // ···如果目标状态为正常,原始状态肯定为异常，删除
-            if (targetStatus == AccountStatusEnum.ACCOUNT_STATUS_NORMAL) {
-                LambdaQueryWrapper<AccountExceptionStatusTime> eq = new LambdaQueryWrapper<AccountExceptionStatusTime>().eq(AccountExceptionStatusTime::getUid, updated.getUid())
-                        .eq(AccountExceptionStatusTime::getExceptionType, originStatus)
-                        .eq(AccountExceptionStatusTime::getIdentityType, AccountIdentityTypeEnum.ADMIN);
-                boolean delete = accountExceptionStatusTimeMapper.delete(eq) > 0;
+            // ···如果目标状态为正常或者强制注销,原始状态肯定为需要记录的状态，删除
+            if (targetStatus == AccountStatusEnum.ACCOUNT_STATUS_NORMAL || targetStatus == AccountStatusEnum.ACCOUNT_STATUS_FORCE_LOGOUT) {
+
+                boolean delete = accountExceptionStatusTimeMapper.physicalDeleteByUidAndIdentity(updated.getUid(), AccountIdentityTypeEnum.ADMIN) > 0;
                 if (!delete) throw new ForYourselfException(ResultCodeEnum.DATABASE_SERVICE_ERROR, null);
             }
-            // ···如果目标状态为异常
+            // ···如果目标状态为需要记录时间的状态
             else {
                 // ~~~先计算到期时间
-                if (byLetter == null)
-                    throw new ForYourselfException(ResultCodeEnum.INCOMPLETE_PARAMETERS, "封禁等级不能为空");
                 LocalDateTime expireTime = LocalDateTime.now().plusHours(byLetter.getCode());
-                // ~~~如果原始状态为正常，则插入
-                if (originStatus == AccountStatusEnum.ACCOUNT_STATUS_NORMAL) {
+                // ~~~如果原始状态为正常或者强制注销，则插入
+                if (originStatus == AccountStatusEnum.ACCOUNT_STATUS_NORMAL || originStatus == AccountStatusEnum.ACCOUNT_STATUS_FORCE_LOGOUT) {
                     AccountExceptionStatusTime insert = new AccountExceptionStatusTime();
                     insert.setUid(updated.getUid());
                     insert.setExceptionType(targetStatus);
@@ -934,7 +945,7 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
                     int insertCount = accountExceptionStatusTimeMapper.insert(insert);
                     if (insertCount <= 0) throw new ForYourselfException(ResultCodeEnum.DATABASE_SERVICE_ERROR, null);
                 }
-                // ~~~如果原始状态为异常，则更新
+                // ~~~如果原始状态为警告和封禁，则更新
                 else {
                     LambdaUpdateWrapper<AccountExceptionStatusTime> updateWrapper = new LambdaUpdateWrapper<AccountExceptionStatusTime>()
                             .eq(AccountExceptionStatusTime::getUid, updated.getUid())
@@ -942,7 +953,8 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
                             .set(AccountExceptionStatusTime::getExceptionType, targetStatus)
                             .set(AccountExceptionStatusTime::getExpireTime, expireTime)
                             .set(AccountExceptionStatusTime::getUpdateBy, modifier.getUid());
-                    if (request.getBanReason() != null)updateWrapper.set(AccountExceptionStatusTime::getReason, request.getBanReason());
+                    if (request.getBanReason() != null)
+                        updateWrapper.set(AccountExceptionStatusTime::getReason, request.getBanReason());
                     int updateCount = accountExceptionStatusTimeMapper.update(null, updateWrapper);
                     if (updateCount <= 0) throw new ForYourselfException(ResultCodeEnum.DATABASE_SERVICE_ERROR, null);
                 }
@@ -1022,7 +1034,19 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
         String token = InnerFlexibleTokenSecurityUtil.generateToken(linkProperties.getAdminCommon().getSecretKey(), linkProperties.getAdminCommon().getExpireMilliseconds());
         UserContextUtil.setLink(token);
         String data = commonLinkAdminClient.changeStatus(request).getData();
+        log.info("管理员{}修改了用户{}的状态为：{}", UserContextUtil.getUid(), request.getUid(), request.getTargetStatus());
         if (data == null) throw new ForYourselfException(ResultCodeEnum.REMOTE_RESPONSE_ERROR, null);
+    }
+
+    @Override
+    public String getNewJWT() {
+        HashMap<String, Object> loadHashMap = new HashMap<>(Map.of(AuthConstants.UID_KEY, UserContextUtil.getUid()));
+        try {
+            return jwtUtil.generateToken(loadHashMap, jwtProperties.getExpireHour(), TimeUnit.HOURS);
+        } catch (Exception e) {
+            log.error("管理员{}：生成jwt令牌失败", UserContextUtil.getUid(), e);
+            throw new ForYourselfException(ResultCodeEnum.SYSTEM_EXECUTION_ERROR, null);
+        }
     }
 
 
@@ -1267,6 +1291,50 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
         // 重试次数耗尽，抛出异常
         log.error("生成唯一昵称失败：已重试{}次仍未生成", MAX_RETRY_COUNT);
         throw new ForYourselfException(ResultCodeEnum.SYSTEM_EXECUTION_ERROR, "自动生成昵称失败，请稍后重试");
+    }
+
+    /**
+     * 检查并处理账户状态
+     */
+    private Boolean checkStatus(AdminUser user) {
+        // ===获取用户状态
+        AccountStatusEnum status = user.getAccountStatus();
+        // ===正常直接返回true
+        if (status == AccountStatusEnum.ACCOUNT_STATUS_NORMAL) return true;
+        // ===强制销号返回false
+        if (status == AccountStatusEnum.ACCOUNT_STATUS_FORCE_LOGOUT) return false;
+        // ===警告和封禁分查时间表
+        if (status == AccountStatusEnum.ACCOUNT_STATUS_WARNING || status == AccountStatusEnum.ACCOUNT_STATUS_LOCKED) {
+            LambdaQueryWrapper<AccountExceptionStatusTime> select = new LambdaQueryWrapper<AccountExceptionStatusTime>().eq(AccountExceptionStatusTime::getUid, user.getUid())
+                    .eq(AccountExceptionStatusTime::getIdentityType, AccountIdentityTypeEnum.ADMIN)
+                    .select(AccountExceptionStatusTime::getExpireTime);
+            AccountExceptionStatusTime accountExceptionStatusTime = accountExceptionStatusTimeMapper.selectOne(select);
+            if (accountExceptionStatusTime == null)
+                throw new ForYourselfException(ResultCodeEnum.ACCOUNT_RELATION_NOT_FOUND, null);
+            // ---如果时间未过期则返回false
+            if (accountExceptionStatusTime.getExpireTime().isAfter(LocalDateTime.now())) {
+                return false;
+            }
+            // ---如果时间过期则回复正常
+            else {
+                Boolean execute = transactionTemplate.execute(statusChange -> {
+                    // ~~~删除异常状态时间
+                    int i = accountExceptionStatusTimeMapper.physicalDeleteByUidAndIdentity(user.getUid(), AccountIdentityTypeEnum.ADMIN);
+                    if (i <= 0) log.warn("普通用户 {} 自动解封时未找到异常记录，可能已被手动删除", user.getUid());
+                    // ~~~更新用户状态
+                    LambdaUpdateWrapper<AdminUser> set = new LambdaUpdateWrapper<AdminUser>().eq(AdminUser::getUid, user.getUid())
+                            .set(AdminUser::getAccountStatus, AccountStatusEnum.ACCOUNT_STATUS_NORMAL)
+                            .set(AdminUser::getUpdateBy, null);
+                    boolean update = this.update(set);
+                    if (!update) throw new ForYourselfException(ResultCodeEnum.DATABASE_SERVICE_ERROR, null);
+                    log.info("管理员 {} 自动解封成功", user.getUid());
+                    return true;
+                });
+                return Boolean.TRUE.equals(execute);
+            }
+        }
+        // 兜底返回：如果出现未知状态，默认不允许登录
+        return false;
     }
 }
 

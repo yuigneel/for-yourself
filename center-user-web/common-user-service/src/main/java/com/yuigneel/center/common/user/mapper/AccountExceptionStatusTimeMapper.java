@@ -10,6 +10,11 @@ import com.yuigneel.center.common.user.model.domain.AccountExceptionStatusTime;
  */
 public interface AccountExceptionStatusTimeMapper extends BaseMapper<AccountExceptionStatusTime> {
 
-    // 后续根据业务需求添加自定义方法
-
+    /**
+     * 物理删除异常状态记录（不经过逻辑删除）
+     * @param uid 用户ID
+     * @param identityType 身份类型
+     */
+    int physicalDeleteByUidAndIdentity(@org.apache.ibatis.annotations.Param("uid") Long uid, 
+                                       @org.apache.ibatis.annotations.Param("identityType") com.yuigneel.common.model.enums.AccountIdentityTypeEnum identityType);
 }

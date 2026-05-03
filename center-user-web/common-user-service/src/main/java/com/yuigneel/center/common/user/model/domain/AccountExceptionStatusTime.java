@@ -29,7 +29,7 @@ public class AccountExceptionStatusTime extends BaseDomain {
     private AccountIdentityTypeEnum identityType;
 
     /**
-     * 状态类型：1-警告 2-封禁 3-强制注销 0-正常
+     * 状态类型：1-警告 2-封禁
      */
     @TableField(value = "exception_type")
     private AccountStatusEnum exceptionType;

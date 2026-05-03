@@ -1,5 +1,6 @@
 package com.yuigneel.center.common.user.service.impl;
 
+import ch.qos.logback.core.util.ContextUtil;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.lang.Snowflake;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -292,6 +293,8 @@ public class UserServiceImpl
                     throw new ForYourselfException(ResultCodeEnum.USERNAME_FORMAT_ERROR, null);
                 CommonUser user = userMapper.selectOneByNicknameIgnoreLogicDelete(name);
                 if (user == null) throw new ForYourselfException(ResultCodeEnum.USERNAME_NOT_FOUND, null);
+                // 处理账号状态
+                if (!checkStatus(user)) throw new ForYourselfException(ResultCodeEnum.ACCOUNT_BANNED, null);
                 if (!bCryptPasswordEncoder.matches(request.getPw(), user.getPassword()))
                     throw new ForYourselfException(ResultCodeEnum.ACCOUNT_OR_PASSWORD_ERROR, null);
                 userLoginResponseVO.setResultCodeEnum(LoginStatusEnum.NORMAL_LOGIN);
@@ -312,7 +315,8 @@ public class UserServiceImpl
                     throw new ForYourselfException(ResultCodeEnum.EMAIL_FORMAT_ERROR, null);
                 CommonUser user = userMapper.selectOneByEmailIgnoreLogicDelete(name);
                 if (user == null) throw new ForYourselfException(ResultCodeEnum.EMAIL_NOT_FOUND, null);
-
+                // 处理账号状态
+                if (!checkStatus(user)) throw new ForYourselfException(ResultCodeEnum.ACCOUNT_BANNED, null);
                 if (!bCryptPasswordEncoder.matches(request.getPw(), user.getPassword()))
                     throw new ForYourselfException(ResultCodeEnum.ACCOUNT_OR_PASSWORD_ERROR, null);
                 userLoginResponseVO.setResultCodeEnum(LoginStatusEnum.NORMAL_LOGIN);
@@ -337,6 +341,9 @@ public class UserServiceImpl
                 CommonUser user = userMapper.selectOneByUidIgnoreLogicDelete(Long.valueOf(name));
                 if (user == null) throw new ForYourselfException(ResultCodeEnum.UID_NOT_FOUND, null);
 
+                // 处理账号状态
+                if (!checkStatus(user)) throw new ForYourselfException(ResultCodeEnum.ACCOUNT_BANNED, null);
+
                 if (!bCryptPasswordEncoder.matches(request.getPw(), user.getPassword()))
                     throw new ForYourselfException(ResultCodeEnum.ACCOUNT_OR_PASSWORD_ERROR, null);
 
@@ -351,7 +358,6 @@ public class UserServiceImpl
                 userLoginResponseVO.setToken(generateToken(name, user.getUid()));
                 return userLoginResponseVO;
             }
-
             default -> {
                 log.warn("用户{}：登录方式错误", name);
                 throw new ForYourselfException(ResultCodeEnum.PARAMETER_ERROR, null);
@@ -491,12 +497,14 @@ public class UserServiceImpl
      * @param request 用户信息更新请求参数，包含昵称、性别和生日
      */
     @Override
-    public void updateUserInfo(UserUpdateInfoRequestDTO request,MultipartFile avatarFile) {
+    public void updateUserInfo(UserUpdateInfoRequestDTO request, MultipartFile avatarFile) {
         // 检查昵称格式
-        if (!ValidateUtil.isValidUsername(request.getNickname())) throw new ForYourselfException(ResultCodeEnum.USERNAME_FORMAT_ERROR, null);
+        if (!ValidateUtil.isValidUsername(request.getNickname()))
+            throw new ForYourselfException(ResultCodeEnum.USERNAME_FORMAT_ERROR, null);
         // 检查生日格式
         if (request.getBirthday() != null) {
-            if (request.getBirthday().isAfter(LocalDate.now())) throw new ForYourselfException(ResultCodeEnum.DATE_FORMAT_ERROR, null);
+            if (request.getBirthday().isAfter(LocalDate.now()))
+                throw new ForYourselfException(ResultCodeEnum.DATE_FORMAT_ERROR, null);
         }
         // 获取用户
         LambdaQueryWrapper<CommonUser> eq = new LambdaQueryWrapper<CommonUser>().eq(CommonUser::getUid, UserContextUtil.getUid());
@@ -557,7 +565,7 @@ public class UserServiceImpl
                 .set(CommonUser::getNickname, request.getNickname())
                 .set(CommonUser::getGender, request.getGenderEnum().getCode())
                 .set(CommonUser::getBirthday, request.getBirthday());
-        
+
         final Boolean finalHasAvatarChanged = hasAvatarChanged;
         transactionTemplate.execute(status -> {
             try {
@@ -609,7 +617,7 @@ public class UserServiceImpl
         if (value == null) {
             throw new ForYourselfException(ResultCodeEnum.CAPTCHA_EXPIRED, null);
         }
-        String code  ;
+        String code;
         int remainTimes;
         try {
             code = value.split(AuthConstants.SEPARATOR)[0];
@@ -656,10 +664,12 @@ public class UserServiceImpl
     @Override
     public void updatePassword(UserUpdatePasswordRequestDTO request) {
         // 先验证新旧密码是否相同（避免不必要的数据库查询）
-        if (request.getNewPassword().equals(request.getOldPassword())) throw new ForYourselfException(ResultCodeEnum.PARAMETER_ERROR, null);
+        if (request.getNewPassword().equals(request.getOldPassword()))
+            throw new ForYourselfException(ResultCodeEnum.PARAMETER_ERROR, null);
 
         // 验证两个密码是否符合规范
-        if (!ValidateUtil.isValidPassword(request.getNewPassword()) || !ValidateUtil.isValidPassword(request.getOldPassword())) throw new ForYourselfException(ResultCodeEnum.PASSWORD_FORMAT_ERROR, null);
+        if (!ValidateUtil.isValidPassword(request.getNewPassword()) || !ValidateUtil.isValidPassword(request.getOldPassword()))
+            throw new ForYourselfException(ResultCodeEnum.PASSWORD_FORMAT_ERROR, null);
 
         // 获取用户
         CommonUser commonUser = this.getOne(new LambdaQueryWrapper<CommonUser>().eq(CommonUser::getUid, UserContextUtil.getUid()));
@@ -667,7 +677,8 @@ public class UserServiceImpl
         if (commonUser == null) throw new ForYourselfException(ResultCodeEnum.ACCOUNT_NOT_FOUND_OR_CANCELLED, null);
 
         // 验证原密码
-        if (!bCryptPasswordEncoder.matches(request.getOldPassword(), commonUser.getPassword())) throw new ForYourselfException(ResultCodeEnum.PASSWORD_ERROR, null);
+        if (!bCryptPasswordEncoder.matches(request.getOldPassword(), commonUser.getPassword()))
+            throw new ForYourselfException(ResultCodeEnum.PASSWORD_ERROR, null);
         log.info("用户{}：开始修改密码", commonUser.getNickname());
         // 修改密码
         LambdaUpdateWrapper<CommonUser> updateWrapper = new LambdaUpdateWrapper<CommonUser>()
@@ -762,10 +773,10 @@ public class UserServiceImpl
         if (token == null) throw new ForYourselfException(ResultCodeEnum.ILLEGAL_ACCESS, "我容易吗我，go out!");
         if (!InnerFlexibleTokenSecurityUtil.verifyToken(linkProperties.getAdminCommon().getSecretKey(), linkProperties.getAdminCommon().getExpireMilliseconds(), token))
             throw new ForYourselfException(ResultCodeEnum.ILLEGAL_ACCESS, "我容易吗我，go out!");
-    
-        // === 1. 前置校验：获取封禁等级（如果目标状态不是正常，则必须有封禁等级）
+
+        // === 1. 前置校验：获取封禁等级（如果目标状态不是正常或者强制删除，则必须有封禁等级）
         AccountBanLevel banLevel;
-        if (request.getTargetStatus() != AccountStatusEnum.ACCOUNT_STATUS_NORMAL) {
+        if (request.getTargetStatus() != AccountStatusEnum.ACCOUNT_STATUS_NORMAL && request.getTargetStatus() != AccountStatusEnum.ACCOUNT_STATUS_FORCE_LOGOUT) {
             if (request.getBanLevel() == null || request.getBanLevel().isEmpty()) {
                 throw new ForYourselfException(ResultCodeEnum.INCOMPLETE_PARAMETERS, "异常状态必须指定封禁等级");
             }
@@ -780,14 +791,14 @@ public class UserServiceImpl
         // === 2. 获取被修改者对象
         CommonUser updated = this.getOne(new LambdaQueryWrapper<CommonUser>().eq(CommonUser::getUid, request.getUid()));
         if (updated == null) throw new ForYourselfException(ResultCodeEnum.ACCOUNT_NOT_FOUND, null);
-    
+
         // === 3. 获取原状态和目标状态
         AccountStatusEnum originStatus = updated.getAccountStatus();
         AccountStatusEnum targetStatus = request.getTargetStatus();
-    
+
         // === 4. 判断是否需要修改
         if (originStatus == targetStatus) throw new ForYourselfException(ResultCodeEnum.NO_NEED_TO_UPDATE, null);
-    
+
         // === 5. 事务处理
         transactionTemplate.executeWithoutResult(status -> {
             // --- 5.1 修改普通用户账户状态
@@ -795,32 +806,28 @@ public class UserServiceImpl
                     .eq(CommonUser::getUid, updated.getUid())
                     .set(CommonUser::getAccountStatus, targetStatus)
                     .set(CommonUser::getUpdateBy, UserContextUtil.getUid());
-    
+
             if (!this.update(userUpdate)) {
                 throw new ForYourselfException(ResultCodeEnum.DATABASE_SERVICE_ERROR, "更新普通用户状态失败");
             }
-    
+
             // --- 5.2 处理异常状态时间表
-            if (targetStatus == AccountStatusEnum.ACCOUNT_STATUS_NORMAL) {
-                // 恢复正常：删除异常记录
-                LambdaQueryWrapper<AccountExceptionStatusTime> deleteWrapper = new LambdaQueryWrapper<AccountExceptionStatusTime>()
-                        .eq(AccountExceptionStatusTime::getUid, updated.getUid())
-                        .eq(AccountExceptionStatusTime::getIdentityType, AccountIdentityTypeEnum.USER);
-    
-                if (accountExceptionStatusTimeMapper.delete(deleteWrapper) <= 0) {
-                    log.warn("普通用户{}恢复正常，但未找到对应的异常记录", updated.getUid());
+            if (targetStatus == AccountStatusEnum.ACCOUNT_STATUS_NORMAL || targetStatus == AccountStatusEnum.ACCOUNT_STATUS_FORCE_LOGOUT) {
+                // 不需要异常记录，删除异常记录
+                if (accountExceptionStatusTimeMapper.physicalDeleteByUidAndIdentity(updated.getUid(), AccountIdentityTypeEnum.USER) <= 0) {
+                    log.warn("普通用户{}的状态时间表已经删除，但未找到对应的异常记录", updated.getUid());
                 }
             } else {
                 // 设为异常：计算到期时间
                 LocalDateTime expireTime = LocalDateTime.now().plusHours(banLevel.getCode());
-    
+
                 // 尝试查询是否已存在异常记录
                 AccountExceptionStatusTime existingRecord = accountExceptionStatusTimeMapper.selectOne(
                         new LambdaQueryWrapper<AccountExceptionStatusTime>()
                                 .eq(AccountExceptionStatusTime::getUid, updated.getUid())
                                 .eq(AccountExceptionStatusTime::getIdentityType, AccountIdentityTypeEnum.USER)
                 );
-    
+
                 if (existingRecord == null) {
                     // 插入新记录
                     AccountExceptionStatusTime insert = new AccountExceptionStatusTime();
@@ -830,7 +837,7 @@ public class UserServiceImpl
                     insert.setExpireTime(expireTime);
                     insert.setReason(request.getBanReason());
                     insert.setUpdateBy(UserContextUtil.getUid());
-    
+
                     if (accountExceptionStatusTimeMapper.insert(insert) <= 0) {
                         throw new ForYourselfException(ResultCodeEnum.DATABASE_SERVICE_ERROR, "插入异常记录失败");
                     }
@@ -841,17 +848,28 @@ public class UserServiceImpl
                             .set(AccountExceptionStatusTime::getExceptionType, targetStatus.getCode())
                             .set(AccountExceptionStatusTime::getExpireTime, expireTime)
                             .set(AccountExceptionStatusTime::getUpdateBy, UserContextUtil.getUid());
-    
+
                     if (request.getBanReason() != null) {
                         updateWrapper.set(AccountExceptionStatusTime::getReason, request.getBanReason());
                     }
-    
+
                     if (accountExceptionStatusTimeMapper.update(null, updateWrapper) <= 0) {
                         throw new ForYourselfException(ResultCodeEnum.DATABASE_SERVICE_ERROR, "更新异常记录失败");
                     }
                 }
             }
         });
+    }
+
+    @Override
+    public String getNewJWT() {
+        HashMap<String, Object> loadHashMap = new HashMap<>(Map.of(AuthConstants.UID_KEY, UserContextUtil.getUid()));
+        try {
+            return jwtUtil.generateToken(loadHashMap, jwtProperties.getExpireHour(), TimeUnit.HOURS);
+        } catch (Exception e) {
+            log.error("用户{}：生成jwt令牌失败", UserContextUtil.getUid(), e);
+            throw new ForYourselfException(ResultCodeEnum.SYSTEM_EXECUTION_ERROR, null);
+        }
     }
 
 
@@ -1027,5 +1045,54 @@ public class UserServiceImpl
         return new String(passwordArray);
     }
 
+    /**
+     * 检查并处理账户状态
+     */
+    private Boolean checkStatus(CommonUser user) {
+        // ===获取用户状态
+        AccountStatusEnum status = user.getAccountStatus();
+        // ===正常直接返回true
+        if (status == AccountStatusEnum.ACCOUNT_STATUS_NORMAL) return true;
+        // ===强制销号返回false
+        if (status == AccountStatusEnum.ACCOUNT_STATUS_FORCE_LOGOUT) return false;
+        // ===警告和封禁分查时间表
+        if (status == AccountStatusEnum.ACCOUNT_STATUS_WARNING || status == AccountStatusEnum.ACCOUNT_STATUS_LOCKED) {
+            LambdaQueryWrapper<AccountExceptionStatusTime> select = new LambdaQueryWrapper<AccountExceptionStatusTime>().eq(AccountExceptionStatusTime::getUid, user.getUid())
+                    .eq(AccountExceptionStatusTime::getIdentityType, AccountIdentityTypeEnum.USER)
+                    .select(AccountExceptionStatusTime::getExpireTime);
+            AccountExceptionStatusTime accountExceptionStatusTime = accountExceptionStatusTimeMapper.selectOne(select);
+            if (accountExceptionStatusTime == null)
+                throw new ForYourselfException(ResultCodeEnum.ACCOUNT_RELATION_NOT_FOUND, null);
+            // ---如果时间未过期则返回false
+            if (accountExceptionStatusTime.getExpireTime().isAfter(LocalDateTime.now())) {
+                return false;
+            }
+            // ---如果时间过期则回复正常
+            else {
+                log.info("开始执行普通用户 {} 登录时的自动解封逻辑", user.getUid());
+                Boolean execute = transactionTemplate.execute(statusChange -> {
+                    try {
+                        // ~~~删除异常状态时间
+                        int i = accountExceptionStatusTimeMapper.physicalDeleteByUidAndIdentity(user.getUid(), AccountIdentityTypeEnum.USER);
+                        if (i <= 0) log.warn("普通用户 {} 自动解封时未找到异常记录，可能已被手动删除", user.getUid());
+                        // ~~~更新用户状态
+                        LambdaUpdateWrapper<CommonUser> set = new LambdaUpdateWrapper<CommonUser>().eq(CommonUser::getUid, user.getUid())
+                                .set(CommonUser::getAccountStatus, AccountStatusEnum.ACCOUNT_STATUS_NORMAL)
+                                .set(CommonUser::getUpdateBy, null);
+                        boolean update = this.update(set);
+                        if (!update) throw new ForYourselfException(ResultCodeEnum.DATABASE_SERVICE_ERROR, null);
+                        log.info("普通用户 {} 登录时自动解封成功，事务提交", user.getUid());
+                        return true;
+                    } catch (Exception e) {
+                        log.error("普通用户 {} 登录时自动解封失败，事务回滚。原因: {}", user.getUid(), e.getMessage());
+                        throw e;
+                    }
+                });
+                return Boolean.TRUE.equals(execute);
+            }
+        }
+        // 兜底返回：如果出现未知状态，默认不允许登录
+        return false;
+    }
 }
 

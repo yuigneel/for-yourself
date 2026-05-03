@@ -30,7 +30,7 @@ public class AccountStatusUpdateRequestDTO {
     @Schema(description = "目标账户状态：0-正常 1-警告 2-封禁 3-强制注销", example = "2", requiredMode = Schema.RequiredMode.REQUIRED)
     private AccountStatusEnum targetStatus;
     
-    @Schema(description = "异常状态到期时间等级（仅当目标状态为异常时填写，正常状态无需填写）", example = "A")
+    @Schema(description = "异常状态到期时间等级（仅当目标状态为异常时填写，正常状态,强制删除无需填写）", example = "A")
     private String banLevel;
 
     @Schema(description = "异常状态理由", example = "用户没给up主逆羽风辰一键三联")

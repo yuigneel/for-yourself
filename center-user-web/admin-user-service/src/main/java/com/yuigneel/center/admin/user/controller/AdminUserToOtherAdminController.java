@@ -73,7 +73,7 @@ public class AdminUserToOtherAdminController {
      */
     @PostMapping("/update-status")
     @Operation(summary = "修改其它管理员账号状态", description = "修改其它管理员的账号状态")
-    public Result<String> updateAdminStatus(@Valid @RequestBody AccountStatusUpdateRequestDTO  request) {
+    public Result<String> updateAdminStatus(@Valid @RequestBody AccountStatusUpdateRequestDTO request  ) {
         adminUserService.updateAdminStatus(request);
         return Result.ok("修改状态成功！");
     }

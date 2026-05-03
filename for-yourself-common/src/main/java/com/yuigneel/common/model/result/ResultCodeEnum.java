@@ -80,6 +80,8 @@ public enum ResultCodeEnum {
     ACCOUNT_NOT_FOUND_OR_CANCELLED("A0804", "账户不存在或已注销"),
     AVATAR_NOT_FOUND("A0805", "头像不存在"),
     ACCOUNT_BANNED("A0806", "账户已被封禁"),
+    ACCOUNT_RELATION_NOT_FOUND("A0807", "账户关联表未找到"),
+        
     // A09xx 账户操作
     SAVE_ACCOUNT_FAILED("A0900", "保存账户信息失败"),
     NO_NEED_TO_UPDATE("A0901", "无需更新"),

@@ -45,12 +45,14 @@ public interface AdminUserService extends IService<AdminUser> {
 
     IPage<CommonUserInfoResponseVO> getCommonPages(CommonUserPageQueryDTO query);
 
-    void updateAdminStatus(AccountStatusUpdateRequestDTO request );
+    void updateAdminStatus( AccountStatusUpdateRequestDTO request);
 
     AdminUserInfoResponseVO getOtherAdminInfo(Long uid);
 
     CommonUserInfoResponseVO getOneCommonUserInfo( Long uid);
 
     void updateCommonUserStatus(AccountStatusUpdateRequestDTO request);
+
+    String getNewJWT();
 }
 

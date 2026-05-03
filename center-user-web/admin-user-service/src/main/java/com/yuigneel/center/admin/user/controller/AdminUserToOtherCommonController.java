@@ -4,7 +4,6 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.yuigneel.center.admin.user.service.AdminUserService;
 import com.yuigneel.center.user.api.model.dto.AccountStatusUpdateRequestDTO;
 import com.yuigneel.center.user.api.model.dto.CommonUserPageQueryDTO;
-import com.yuigneel.center.user.api.model.dto.CommonUserStatusUpdateRequestDTO;
 import com.yuigneel.center.user.api.model.vo.CommonUserInfoResponseVO;
 import com.yuigneel.common.model.result.Result;
 import io.swagger.v3.oas.annotations.Operation;
