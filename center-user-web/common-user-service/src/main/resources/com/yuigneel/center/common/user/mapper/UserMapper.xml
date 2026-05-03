@@ -115,4 +115,12 @@
         </choose>
     </select>
 
+    <!-- 物理删除用户账号（直接 DELETE，不走逻辑删除） -->
+    <delete id="physicalDeleteByUids">
+        DELETE FROM t_common_user WHERE uid IN
+        <foreach collection="uids" item="uid" open="(" separator="," close=")">
+            #{uid}
+        </foreach>
+    </delete>
+
 </mapper>

@@ -2,6 +2,7 @@ package com.yuigneel.center.admin.user.mapper;
 
 import com.yuigneel.center.admin.user.model.domain.AdminUser;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import org.apache.ibatis.annotations.Param;
 
 /**
 * @author Yu_Lgnier
@@ -38,6 +39,13 @@ public interface AdminUserMapper extends BaseMapper<AdminUser> {
      * @return 管理员用户
      */
     AdminUser selectOneByUidIgnoreLogicDelete(Long uid);
+
+    /**
+     * 物理删除管理员账号（直接 DELETE，不走逻辑删除）
+     * @param uids 需要删除的管理员 UID 列表
+     * @return 影响行数
+     */
+    int physicalDeleteByUids(@Param("uids") java.util.List<Long> uids);
 }
 
 

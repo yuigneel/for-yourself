@@ -61,6 +61,12 @@ public interface UserMapper extends BaseMapper<CommonUser> {
      */
     IPage<CommonUser> selectPageByCondition(Page<CommonUser> page, @Param("query") CommonUserPageQueryDTO query);
 
+    /**
+     * 物理删除用户账号（直接 DELETE，不走逻辑删除）
+     * @param uids 需要删除的用户 UID 列表
+     * @return 影响行数
+     */
+    int physicalDeleteByUids(@Param("uids") java.util.List<Long> uids);
 
 }
 
