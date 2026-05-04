@@ -41,11 +41,11 @@ public interface AdminUserMapper extends BaseMapper<AdminUser> {
     AdminUser selectOneByUidIgnoreLogicDelete(Long uid);
 
     /**
-     * 物理删除管理员账号（直接 DELETE，不走逻辑删除）
-     * @param uids 需要删除的管理员 UID 列表
+     * 物理删除单个管理员账号（直接 DELETE，不走逻辑删除）
+     * @param uid 需要删除的管理员 UID
      * @return 影响行数
      */
-    int physicalDeleteByUids(@Param("uids") java.util.List<Long> uids);
+    int physicalDeleteByUid(@Param("uid") Long uid);
 }
 
 

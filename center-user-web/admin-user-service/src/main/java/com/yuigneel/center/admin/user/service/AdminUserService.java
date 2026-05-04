@@ -45,7 +45,7 @@ public interface AdminUserService extends IService<AdminUser> {
 
     IPage<CommonUserInfoResponseVO> getCommonPages(CommonUserPageQueryDTO query);
 
-    void updateAdminStatus( AccountStatusUpdateRequestDTO request);
+    void updateAdminStatus(AccountStatusUpdateRequestDTO request );
 
     AdminUserInfoResponseVO getOtherAdminInfo(Long uid);
 

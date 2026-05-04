@@ -9,4 +9,6 @@ public interface AdminUserFileService extends IService<AccountAvatar> {
     void uploadAvatar(MultipartFile file);
 
     String getAvatar();
+
+    void physicalDeleteAvatarByUid(Long uid);
 }

@@ -55,12 +55,10 @@
         WHERE uid = #{uid}
     </select>
 
-    <!-- 物理删除管理员账号（直接 DELETE，不走逻辑删除） -->
-    <delete id="physicalDeleteByUids">
-        DELETE FROM t_admin_user WHERE uid IN
-        <foreach collection="uids" item="uid" open="(" separator="," close=")">
-            #{uid}
-        </foreach>
+
+    <!-- 物理删除单个管理员账号（直接 DELETE，不走逻辑删除） -->
+    <delete id="physicalDeleteByUid">
+        DELETE FROM t_admin_user WHERE uid = #{uid}
     </delete>
 
 </mapper>

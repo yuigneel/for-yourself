@@ -13,13 +13,19 @@ public class AdminUserFileServiceByCloudImpl extends ServiceImpl<AccountAvatarMa
     @Override
     public void uploadAvatar(MultipartFile file) {
         //TODO
-        throw new ForYourselfException(ResultCodeEnum.TODO,null);
+        throw new ForYourselfException(ResultCodeEnum.TODO, null);
     }
 
     @Override
     public String getAvatar() {
         //TODO
-        throw new ForYourselfException(ResultCodeEnum.TODO,null);
+        throw new ForYourselfException(ResultCodeEnum.TODO, null);
+    }
+
+    @Override
+    public void physicalDeleteAvatarByUid(Long uid) {
+        //TODO
+        throw new ForYourselfException(ResultCodeEnum.TODO, null);
     }
 
 }

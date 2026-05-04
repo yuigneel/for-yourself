@@ -23,7 +23,7 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class AdminUserFileServiceByMinIOImpl extends ServiceImpl<AccountAvatarMapper, AccountAvatar>implements AdminUserFileService {
+public class AdminUserFileServiceByMinIOImpl extends ServiceImpl<AccountAvatarMapper, AccountAvatar> implements AdminUserFileService {
     private final MinioUtil minioUtil;
     private final TransactionTemplate transactionTemplate;
     private final AccountAvatarMapper accountAvatarMapper;
@@ -80,7 +80,7 @@ public class AdminUserFileServiceByMinIOImpl extends ServiceImpl<AccountAvatarMa
                     log.error("上传头像失败", e);
                     throw new ForYourselfException(ResultCodeEnum.MINIO_SERVICE_ERROR, null);
                 }
-                
+
                 // ---判断数据库中是否有头像记录，决定是新增还是更新
                 if (one == null) {
                     // 数据库中没有头像记录，直接新增
@@ -95,7 +95,7 @@ public class AdminUserFileServiceByMinIOImpl extends ServiceImpl<AccountAvatarMa
                             .eq(AccountAvatar::getIdentityType, AccountIdentityTypeEnum.ADMIN)
                             .set(AccountAvatar::getAvatarUrl, newFileName);
                     this.update(set);
-                    
+
                     // ---删除旧的头像文件（如果存在）
                     String oldFileName = one.getAvatarUrl();
                     if (StringUtils.hasText(oldFileName)) {
@@ -132,6 +132,29 @@ public class AdminUserFileServiceByMinIOImpl extends ServiceImpl<AccountAvatarMa
             throw new ForYourselfException(ResultCodeEnum.MINIO_SERVICE_ERROR, null);
         }
         return presignedUrl;
+    }
+
+    /**
+     * 根据用户ID（UID）删除用户头像（物理删除）
+     *
+     * @param uid 用户 UID
+     * @throws ForYourselfException 当用户未找到头像记录或 MinIO 服务异常时抛出异常
+     */
+    @Override
+    public void physicalDeleteAvatarByUid(Long uid) {
+        // ===先获得账号头像对象
+        LambdaQueryWrapper<AccountAvatar> eq = new LambdaQueryWrapper<AccountAvatar>().eq(AccountAvatar::getUid, uid).eq(AccountAvatar::getIdentityType, AccountIdentityTypeEnum.ADMIN);
+        AccountAvatar one = this.getOne(eq);
+        if (one == null) throw new ForYourselfException(ResultCodeEnum.ACCOUNT_NOT_FOUND_OR_CANCELLED, null);
+        final String avatarUrl = one.getAvatarUrl();
+        transactionTemplate.executeWithoutResult(status -> {
+            // ===直接物理删除头像数据，返回删除行数
+            int i = accountAvatarMapper.deleteByUidAndIdentityTypeIgnoreLogic(uid, AccountIdentityTypeEnum.ADMIN.getCode());
+            if (i <= 0) throw new ForYourselfException(ResultCodeEnum.DATABASE_SERVICE_ERROR, null);
+            // ===删除文件
+            boolean b = minioUtil.deleteFile(avatarUrl);
+            if (!b) throw new ForYourselfException(ResultCodeEnum.MINIO_SERVICE_ERROR, null);
+        });
     }
 
 }
