@@ -9,4 +9,5 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "gateway")
 public class GateWayProperties {
     private String[] whiteList; // 白名单
+    private String[] insideList; // 内部调用名单
 }

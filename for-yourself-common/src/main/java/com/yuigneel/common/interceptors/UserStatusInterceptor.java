@@ -12,6 +12,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.web.servlet.HandlerInterceptor;
 
+import java.time.LocalDateTime;
+
 /**
  * 用户账号状态校验拦截器
  * <p>核心功能：通过发布 Spring 事件实现跨模块解耦的动态封禁校验</p>
@@ -26,10 +28,7 @@ public class UserStatusInterceptor implements HandlerInterceptor {
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         String uri = request.getRequestURI();
-
-        // 【教学注释】此处无需再校验白名单
-        // 因为在 WebMVCConfig 注册时已经通过 .excludePathPatterns() 排除了白名单路径。
-        // 能执行到这里，说明该请求一定是需要校验状态的受保护路径。
+        // yuigneel： 此处无需校验白名单，在注册器中已经配置了白名单和内部调用白名单
 
         // 1. 获取当前请求用户的 UID
         Long uid = UserContextUtil.getUid();
@@ -55,11 +54,18 @@ public class UserStatusInterceptor implements HandlerInterceptor {
 
         // 4. 校验结果
         if (Boolean.TRUE.equals(event.getIsBanned())) {
-            log.warn("用户 {} 已被封禁，拦截请求: {}", uid, uri);
-            throw new ForYourselfException(ResultCodeEnum.ACCOUNT_BANNED, 
-                "账号已被封禁，解封时间: " + event.getExpireTime());
+            // Yu·Igneel：懒得改了，能跑就行目前业务没有拓展，以后如果要优化封禁的话可以改一下事件逻辑
+            LocalDateTime expireTime = event.getExpireTime();
+            if (expireTime == null) {
+                log.warn("用户 {} 已被强制销号，拦截请求: {}", uid, uri);
+                throw new ForYourselfException(ResultCodeEnum.ACCOUNT_BANNED, "账号已被强制销号");
+            } else {
+                log.warn("用户 {} 已被封禁，拦截请求: {}", uid, uri);
+                throw new ForYourselfException(ResultCodeEnum.ACCOUNT_BANNED,
+                        "账号已被封禁，解封时间: " + event.getExpireTime());
+            }
         }
-
         return true;
     }
+
 }

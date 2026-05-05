@@ -282,7 +282,7 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
                 if (adminUser == null)
                     throw new ForYourselfException(ResultCodeEnum.ACCOUNT_NOT_FOUND_OR_CANCELLED, null);
                 // 处理账号状态
-                if (!checkStatus(adminUser)) throw new ForYourselfException(ResultCodeEnum.ACCOUNT_BANNED, null);
+                checkStatus(adminUser);
                 if (!bCryptPasswordEncoder.matches(request.getPassword(), adminUser.getPassword()))
                     throw new ForYourselfException(ResultCodeEnum.PASSWORD_ERROR, null);
                 adminUserLoginResponseVO.setResultCodeENum(LoginStatusEnum.NORMAL_LOGIN);
@@ -305,7 +305,7 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
                 if (adminUser == null)
                     throw new ForYourselfException(ResultCodeEnum.ACCOUNT_NOT_FOUND_OR_CANCELLED, null);
                 // 处理账号状态
-                if (!checkStatus(adminUser)) throw new ForYourselfException(ResultCodeEnum.ACCOUNT_BANNED, null);
+                checkStatus(adminUser);
                 if (!bCryptPasswordEncoder.matches(request.getPassword(), adminUser.getPassword()))
                     throw new ForYourselfException(ResultCodeEnum.PASSWORD_ERROR, null);
                 adminUserLoginResponseVO.setResultCodeENum(LoginStatusEnum.NORMAL_LOGIN);
@@ -331,7 +331,7 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
                 if (adminUser == null)
                     throw new ForYourselfException(ResultCodeEnum.ACCOUNT_NOT_FOUND_OR_CANCELLED, null);
                 // 处理账号状态
-                if (!checkStatus(adminUser)) throw new ForYourselfException(ResultCodeEnum.ACCOUNT_BANNED, null);
+                checkStatus(adminUser);
                 if (!bCryptPasswordEncoder.matches(request.getPassword(), adminUser.getPassword()))
                     throw new ForYourselfException(ResultCodeEnum.PASSWORD_ERROR, null);
                 adminUserLoginResponseVO.setResultCodeENum(LoginStatusEnum.NORMAL_LOGIN);
@@ -887,6 +887,9 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
      */
     @Override
     public void updateAdminStatus(AccountStatusUpdateRequestDTO request) {
+        // ===鲁棒性校验身份
+        if (!request.getIdentityType().equals(AccountIdentityTypeEnum.ADMIN))
+            throw new ForYourselfException(ResultCodeEnum.PARAMETER_ERROR, null);
         // ===获取修改者和被修改者对象
         AdminUser modifier = this.getOne(new LambdaQueryWrapper<AdminUser>().eq(AdminUser::getUid, UserContextUtil.getUid()));
         AdminUser updated = this.getOne(new LambdaQueryWrapper<AdminUser>().eq(AdminUser::getUid, request.getUid())); // 被修改者
@@ -1031,6 +1034,9 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
      */
     @Override
     public void updateCommonUserStatus(AccountStatusUpdateRequestDTO request) {
+        // ===鲁棒性校验身份
+        if (!request.getIdentityType().equals(AccountIdentityTypeEnum.USER))
+            throw new ForYourselfException(ResultCodeEnum.PARAMETER_ERROR, null);
         String token = InnerFlexibleTokenSecurityUtil.generateToken(linkProperties.getAdminCommon().getSecretKey(), linkProperties.getAdminCommon().getExpireMilliseconds());
         UserContextUtil.setLink(token);
         String data = commonLinkAdminClient.changeStatus(request).getData();
@@ -1296,13 +1302,13 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
     /**
      * 检查并处理账户状态
      */
-    private Boolean checkStatus(AdminUser user) {
+    private void checkStatus(AdminUser user) {
         // ===获取用户状态
         AccountStatusEnum status = user.getAccountStatus();
         // ===正常直接返回true
-        if (status == AccountStatusEnum.ACCOUNT_STATUS_NORMAL) return true;
+        if (status == AccountStatusEnum.ACCOUNT_STATUS_NORMAL) return;
         // ===强制销号返回false
-        if (status == AccountStatusEnum.ACCOUNT_STATUS_FORCE_LOGOUT) return false;
+        if (status == AccountStatusEnum.ACCOUNT_STATUS_FORCE_LOGOUT) throw new ForYourselfException(ResultCodeEnum.ACCOUNT_FORCED_DELETED, null);
         // ===警告和封禁分查时间表
         if (status == AccountStatusEnum.ACCOUNT_STATUS_WARNING || status == AccountStatusEnum.ACCOUNT_STATUS_LOCKED) {
             LambdaQueryWrapper<AccountExceptionStatusTime> select = new LambdaQueryWrapper<AccountExceptionStatusTime>().eq(AccountExceptionStatusTime::getUid, user.getUid())
@@ -1313,11 +1319,11 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
                 throw new ForYourselfException(ResultCodeEnum.ACCOUNT_RELATION_NOT_FOUND, null);
             // ---如果时间未过期则返回false
             if (accountExceptionStatusTime.getExpireTime().isAfter(LocalDateTime.now())) {
-                return false;
+                throw new ForYourselfException(ResultCodeEnum.ACCOUNT_BANNED, accountExceptionStatusTime.getExpireTime());
             }
             // ---如果时间过期则回复正常
             else {
-                Boolean execute = transactionTemplate.execute(statusChange -> {
+              transactionTemplate.executeWithoutResult(statusChange -> {
                     // ~~~删除异常状态时间
                     int i = accountExceptionStatusTimeMapper.physicalDeleteByUidAndIdentity(user.getUid(), AccountIdentityTypeEnum.ADMIN);
                     if (i <= 0) log.warn("普通用户 {} 自动解封时未找到异常记录，可能已被手动删除", user.getUid());
@@ -1328,13 +1334,9 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
                     boolean update = this.update(set);
                     if (!update) throw new ForYourselfException(ResultCodeEnum.DATABASE_SERVICE_ERROR, null);
                     log.info("管理员 {} 自动解封成功", user.getUid());
-                    return true;
                 });
-                return Boolean.TRUE.equals(execute);
             }
         }
-        // 兜底返回：如果出现未知状态，默认不允许登录
-        return false;
     }
 }
 

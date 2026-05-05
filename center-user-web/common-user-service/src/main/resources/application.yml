@@ -65,6 +65,8 @@ gateway:
     - /center-common/user/getEmailCode
     - /center-common/user/login
     - /center-common/user/forgetPassword
+  inside-list:
+    - /center-common/link-admin/**
 
 link:
   admin-common:

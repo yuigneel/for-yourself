@@ -18,10 +18,14 @@ gateway:
     - /error
     - /favicon.ico
     # 项目用
-    - /center-common/user/register
-    - /center-common/user/login
+    - /center-common/user/register                #TODO-----------------------改---------------------
     - /center-common/user/getEmailCode
+    - /center-common/user/login
     - /center-common/user/forgetPassword
+    - /center-admin/userself/getEmailCode
+    - /center-admin/userself/forgetPassword
+    - /center-admin/userself/login
+
   routes:
     group: ${your.gateway.routes.group}
     data-id: ${your.gateway.routes.data-id}

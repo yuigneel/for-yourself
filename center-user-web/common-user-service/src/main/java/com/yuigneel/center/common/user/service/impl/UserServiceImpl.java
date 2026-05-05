@@ -1,6 +1,5 @@
 package com.yuigneel.center.common.user.service.impl;
 
-import ch.qos.logback.core.util.ContextUtil;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.lang.Snowflake;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -294,7 +293,7 @@ public class UserServiceImpl
                 CommonUser user = userMapper.selectOneByNicknameIgnoreLogicDelete(name);
                 if (user == null) throw new ForYourselfException(ResultCodeEnum.USERNAME_NOT_FOUND, null);
                 // 处理账号状态
-                if (!checkStatus(user)) throw new ForYourselfException(ResultCodeEnum.ACCOUNT_BANNED, null);
+                checkStatus(user);
                 if (!bCryptPasswordEncoder.matches(request.getPw(), user.getPassword()))
                     throw new ForYourselfException(ResultCodeEnum.ACCOUNT_OR_PASSWORD_ERROR, null);
                 userLoginResponseVO.setResultCodeEnum(LoginStatusEnum.NORMAL_LOGIN);
@@ -316,7 +315,7 @@ public class UserServiceImpl
                 CommonUser user = userMapper.selectOneByEmailIgnoreLogicDelete(name);
                 if (user == null) throw new ForYourselfException(ResultCodeEnum.EMAIL_NOT_FOUND, null);
                 // 处理账号状态
-                if (!checkStatus(user)) throw new ForYourselfException(ResultCodeEnum.ACCOUNT_BANNED, null);
+                checkStatus(user);
                 if (!bCryptPasswordEncoder.matches(request.getPw(), user.getPassword()))
                     throw new ForYourselfException(ResultCodeEnum.ACCOUNT_OR_PASSWORD_ERROR, null);
                 userLoginResponseVO.setResultCodeEnum(LoginStatusEnum.NORMAL_LOGIN);
@@ -342,7 +341,7 @@ public class UserServiceImpl
                 if (user == null) throw new ForYourselfException(ResultCodeEnum.UID_NOT_FOUND, null);
 
                 // 处理账号状态
-                if (!checkStatus(user)) throw new ForYourselfException(ResultCodeEnum.ACCOUNT_BANNED, null);
+                checkStatus(user);
 
                 if (!bCryptPasswordEncoder.matches(request.getPw(), user.getPassword()))
                     throw new ForYourselfException(ResultCodeEnum.ACCOUNT_OR_PASSWORD_ERROR, null);
@@ -751,7 +750,7 @@ public class UserServiceImpl
         if (token == null) throw new ForYourselfException(ResultCodeEnum.ILLEGAL_ACCESS, "我容易吗我，go out!");
         if (!InnerFlexibleTokenSecurityUtil.verifyToken(linkProperties.getAdminCommon().getSecretKey(), linkProperties.getAdminCommon().getExpireMilliseconds(), token))
             throw new ForYourselfException(ResultCodeEnum.ILLEGAL_ACCESS, "我容易吗我，go out!");
-        CommonUser one = this.getOne(new LambdaQueryWrapper<CommonUser>().eq(CommonUser::getUid, uid));
+        CommonUser one = userMapper.selectOneByUidIgnoreLogicDelete(uid);   // 管理员调用，要忽略逻辑删除
         if (one == null) throw new ForYourselfException(ResultCodeEnum.ACCOUNT_NOT_FOUND_OR_CANCELLED, null);
         return BeanUtil.copyProperties(one, CommonUserInfoResponseVO.class);
     }
@@ -1048,13 +1047,14 @@ public class UserServiceImpl
     /**
      * 检查并处理账户状态
      */
-    private Boolean checkStatus(CommonUser user) {
+    private void checkStatus(CommonUser user) {
         // ===获取用户状态
         AccountStatusEnum status = user.getAccountStatus();
         // ===正常直接返回true
-        if (status == AccountStatusEnum.ACCOUNT_STATUS_NORMAL) return true;
+        if (status == AccountStatusEnum.ACCOUNT_STATUS_NORMAL) return;
         // ===强制销号返回false
-        if (status == AccountStatusEnum.ACCOUNT_STATUS_FORCE_LOGOUT) return false;
+        if (status == AccountStatusEnum.ACCOUNT_STATUS_FORCE_LOGOUT)
+            throw new ForYourselfException(ResultCodeEnum.ACCOUNT_FORCED_DELETED, null);
         // ===警告和封禁分查时间表
         if (status == AccountStatusEnum.ACCOUNT_STATUS_WARNING || status == AccountStatusEnum.ACCOUNT_STATUS_LOCKED) {
             LambdaQueryWrapper<AccountExceptionStatusTime> select = new LambdaQueryWrapper<AccountExceptionStatusTime>().eq(AccountExceptionStatusTime::getUid, user.getUid())
@@ -1065,12 +1065,12 @@ public class UserServiceImpl
                 throw new ForYourselfException(ResultCodeEnum.ACCOUNT_RELATION_NOT_FOUND, null);
             // ---如果时间未过期则返回false
             if (accountExceptionStatusTime.getExpireTime().isAfter(LocalDateTime.now())) {
-                return false;
+                throw new ForYourselfException(ResultCodeEnum.ACCOUNT_BANNED, accountExceptionStatusTime.getExpireTime());
             }
             // ---如果时间过期则回复正常
             else {
                 log.info("开始执行普通用户 {} 登录时的自动解封逻辑", user.getUid());
-                Boolean execute = transactionTemplate.execute(statusChange -> {
+                transactionTemplate.executeWithoutResult(statusChange -> {
                     try {
                         // ~~~删除异常状态时间
                         int i = accountExceptionStatusTimeMapper.physicalDeleteByUidAndIdentity(user.getUid(), AccountIdentityTypeEnum.USER);
@@ -1082,17 +1082,15 @@ public class UserServiceImpl
                         boolean update = this.update(set);
                         if (!update) throw new ForYourselfException(ResultCodeEnum.DATABASE_SERVICE_ERROR, null);
                         log.info("普通用户 {} 登录时自动解封成功，事务提交", user.getUid());
-                        return true;
                     } catch (Exception e) {
                         log.error("普通用户 {} 登录时自动解封失败，事务回滚。原因: {}", user.getUid(), e.getMessage());
                         throw e;
                     }
                 });
-                return Boolean.TRUE.equals(execute);
             }
         }
-        // 兜底返回：如果出现未知状态，默认不允许登录
-        return false;
     }
+
+
 }
 

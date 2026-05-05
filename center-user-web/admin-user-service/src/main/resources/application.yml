@@ -64,6 +64,7 @@ gateway:
     - /center-admin/userself/getEmailCode                     #TODO-----------------------改---------------------
     - /center-admin/userself/forgetPassword
     - /center-admin/userself/login
+  inside-list:
 
 
 link:

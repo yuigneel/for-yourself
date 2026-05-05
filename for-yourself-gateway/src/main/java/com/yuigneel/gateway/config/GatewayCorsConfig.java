@@ -21,10 +21,11 @@ public class GatewayCorsConfig {
         // 1. 创建跨域配置对象
         CorsConfiguration corsConfig = new CorsConfiguration();
 
-        // ====================== 核心配置：允许的源（你的场景只配8081）======================
-        // 含义：明确告诉浏览器，只允许 http://localhost:8081 这个地址跨域访问网关
+        // ====================== 核心配置：允许的源（你的场景配8081和8082）======================
+        // 含义：明确告诉浏览器，允许 http://localhost:8081 和 http://localhost:8082 这两个地址跨域访问网关
         // 以后换前端地址，只需要改这里！多个地址就多次调用 addAllowedOriginPattern
         corsConfig.addAllowedOriginPattern("http://localhost:8081");
+        corsConfig.addAllowedOriginPattern("http://localhost:8082");
 
         // ====================== 允许的请求头 ======================
         // 含义：允许所有类型的请求头（比如Token、Content-Type等）

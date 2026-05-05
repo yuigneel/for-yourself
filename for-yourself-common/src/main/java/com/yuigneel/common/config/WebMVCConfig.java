@@ -37,6 +37,7 @@ public class WebMVCConfig implements WebMvcConfigurer {
         registry.addInterceptor(new UserStatusInterceptor(eventPublisher))
                 .addPathPatterns("/**")
                 .excludePathPatterns(gateWayProperties.getWhiteList())
+                .excludePathPatterns(gateWayProperties.getInsideList()) // 内部调用白名单
                 .order(2);
     }
 }
