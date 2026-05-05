@@ -1,10 +1,10 @@
-package com.yuigneel.center.admin.user.task;
+package com.yuigneel.center.common.user.task;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.yuigneel.center.admin.user.mapper.AccountExceptionStatusTimeMapper;
-import com.yuigneel.center.admin.user.mapper.AdminUserMapper;
-import com.yuigneel.center.admin.user.model.domain.AdminUser;
-import com.yuigneel.center.admin.user.service.AdminUserFileService;
+import com.yuigneel.center.common.user.mapper.AccountExceptionStatusTimeMapper;
+import com.yuigneel.center.common.user.mapper.UserMapper;
+import com.yuigneel.center.common.user.model.domain.CommonUser;
+import com.yuigneel.center.common.user.service.CommonUserFileService;
 import com.yuigneel.common.exception.ForYourselfException;
 import com.yuigneel.common.model.enums.AccountIdentityTypeEnum;
 import com.yuigneel.common.model.enums.AccountStatusEnum;
@@ -23,11 +23,12 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * 【教学注释】管理员账号清理定时任务
+ * 【教学注释】普通用户账号清理定时任务
  * <p>
  * 职责：
- * 1. 清理已逻辑删除 (is_deleted=1) 超过 3 个月的管理员账号。
- * 2. 清理被强制销号 (FORCE_LOGOUT) 超过 120 天的管理员账号。
+ * 1. 清理已逻辑删除 (is_deleted=1) 超过 3 个月的账号。
+ * 2. 清理被强制销号 (FORCE_LOGOUT) 超过 120 天的账号。
+ * 3. 联动清理关联的头像表、异常状态时间表以及物理头像文件。
  */
 @Slf4j
 @Component
@@ -41,12 +42,12 @@ import java.util.concurrent.atomic.AtomicInteger;
  * 作用：通过在 Nacos 或 application.yml 中修改 task.schedule.enabled 的值，
  * 可以在不改动代码的情况下，随时开启或关闭整个定时任务功能。
  */
-@ConditionalOnProperty(name = "your.task.schedule.enabled", havingValue = "true", matchIfMissing = true)
-public class AdminAccountCleanupTask {
+@ConditionalOnProperty(name = "task.schedule.enabled", havingValue = "true", matchIfMissing = true)
+public class CommonAccountCleanupTask {
 
-    private final AdminUserMapper adminUserMapper; // 注入管理员 Mapper，用于执行数据库查询和删除
+    private final UserMapper userMapper; // 注入用户 Mapper，用于执行数据库查询和删除
     private final TransactionTemplate transactionTemplate; // 注入事务模板，用于手动控制事务边界
-    private final AdminUserFileService adminUserFileServiceByMinIOImpl; // 注入文件服务，用于删除文件
+    private final CommonUserFileService commonUserFileServiceByMinIOImpl; // 注入文件服务，用于删除文件
     private final AccountExceptionStatusTimeMapper exceptionStatusTimeMapper; // 注入异常状态时间 Mapper，用于删除异常状态时间
 
     /**
@@ -57,7 +58,7 @@ public class AdminAccountCleanupTask {
     @Scheduled(cron = "0 0 3 * * ?")
     public void cleanupExpiredAccounts() {
         log.info("========================================");
-        log.info("开始执行管理员账号清理定时任务...");
+        log.info("开始执行普通用户账号清理定时任务...");
         log.info("========================================");
 
         // 1. 获取当前时间，作为计算过期阈值的基准
@@ -82,9 +83,9 @@ public class AdminAccountCleanupTask {
             // 【修改】如果存在失败的 UID，则使用新的查询方法排除它们
             List<Long> idsToDelete;
             if (failedUids.isEmpty()) {
-                idsToDelete = adminUserMapper.selectUidsForCleanup(logicDeleteThreshold, forceLogoutThreshold, batchSize);
+                idsToDelete = userMapper.selectUidsForCleanup(logicDeleteThreshold, forceLogoutThreshold, batchSize);
             } else {
-                idsToDelete = adminUserMapper.selectUidsForCleanupExcluding(
+                idsToDelete = userMapper.selectUidsForCleanupExcluding(
                     logicDeleteThreshold, forceLogoutThreshold, batchSize, new java.util.ArrayList<>(failedUids)
                 );
             }
@@ -99,7 +100,7 @@ public class AdminAccountCleanupTask {
                 try {
                     transactionTemplate.executeWithoutResult(status -> {
                         // ~~~ 删除账户基础信息表
-                        int mainCount = adminUserMapper.physicalDeleteByUid(uid);
+                        int mainCount = userMapper.physicalDeleteByUid(uid);
                         if (mainCount <= 0) {
                             log.error("主表删除失败，请检查数据库连接。UID：{}", uid);
                             throw new ForYourselfException(ResultCodeEnum.DATABASE_SERVICE_ERROR, "主表删除失败");
@@ -107,17 +108,17 @@ public class AdminAccountCleanupTask {
                         log.info("主表删除成功，UID：{}", uid);
 
                         // ~~~ 删除账号异常状态时间表 (直接删，不用先查)
-                        int yuigneel = exceptionStatusTimeMapper.physicalDeleteByUidAndIdentity(uid, AccountIdentityTypeEnum.ADMIN);
-                        if (yuigneel <= 0) {
+                        int statusCount = exceptionStatusTimeMapper.physicalDeleteByUidAndIdentity(uid, AccountIdentityTypeEnum.USER);
+                        if (statusCount <= 0) {
                             log.info("没有关联的账号异常状态时间表。UID：{}", uid);
                         } else {
                             log.info("账号异常状态时间表删除成功，UID：{}", uid);
                         }
 
-                        // ~~~ 删除账号头像表记录 (直接删，不用先查)
+                        // ~~~ 删除账号头像表记录及物理文件 (封装在 Service 中)
                         int count;
                         try {
-                            count = adminUserFileServiceByMinIOImpl.physicalDeleteAvatarByUidAllowNull(uid);
+                            count = commonUserFileServiceByMinIOImpl.physicalDeleteAvatarByUidAllowNull(uid);
                         } catch (Exception e) {
                             log.error("账号头像表删除失败，请检查数据库连接。UID：{}", uid);
                             throw new RuntimeException(e);
@@ -126,17 +127,17 @@ public class AdminAccountCleanupTask {
                         else log.info("账号头像表删除成功，UID：{}", uid);
                     });
                     totalCleaned.incrementAndGet();
-                    log.info("处理管理员账号 {} 成功，已处理: {} 个账号", uid, totalCleaned.get());
+                    log.info("处理普通用户账号 {} 成功，已处理: {} 个账号", uid, totalCleaned.get());
                 } catch (Exception e) {
                     // 【修改】记录单个账号处理失败的日志，并将 UID 加入失败集合
-                    log.error("处理管理员账号 {} 时发生错误，已跳过并加入失败列表", uid, e);
+                    log.error("处理普通用户账号 {} 时发生错误，已跳过并加入失败列表", uid, e);
                     failedUids.add(uid);
                 }
             }
         }
         // 5. 任务结束，打印总结日志
         log.info("========================================");
-        log.info("管理员账号清理任务执行完毕，共清理: {} 个账号", totalCleaned.get());
+        log.info("普通用户账号清理任务执行完毕，共清理: {} 个账号", totalCleaned.get());
         if (!failedUids.isEmpty()) {
             log.warn("以下 {} 个账号因对象存储服务异常等原因删除失败，已被跳过: {}", failedUids.size(), failedUids);
         }

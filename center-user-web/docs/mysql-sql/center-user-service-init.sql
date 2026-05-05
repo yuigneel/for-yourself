@@ -120,11 +120,63 @@ CREATE TABLE t_account_exception_status_time (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='账号异常状态时间表';
 
 
+-- ============================================
+-- 测试数据：用于验证定时任务清理逻辑（全排列组合）
+-- 当前模拟时间：2026-05-05
+-- 逻辑删除清理阈值：update_time < 2026-02-05
+-- 强制销号清理阈值：update_time < 2026-01-05
+-- ============================================
 
+-- 1. 普通用户测试数据 (t_common_user)
+INSERT INTO `t_common_user` (`uid`, `email`, `nickname`, `password`, `gender`, `join_date`, `account_status`, `is_deleted`, `update_time`) VALUES
+-- [应清理] 因子：逻辑删除(1) + 状态非3(0) + 时间过期(2025-12-01)
+(1000000000000000001, 'test_u1@user.com', 'U-逻删-过期-待清', '$2a$10$pY9kwEJJB99zylONtPXgyeo8JFVjyOYk6LlZCkAmE2HpiRhNvFmQ6', 0, '2025-01-01', 0, 1, '2025-12-01 10:00:00'),
 
+-- [应清理] 因子：逻辑删除(1) + 状态强制(3) + 时间过期(2025-11-01)
+(1000000000000000002, 'test_u2@user.com', 'U-强销-过期-待清', '$2a$10$pY9kwEJJB99zylONtPXgyeo8JFVjyOYk6LlZCkAmE2HpiRhNvFmQ6', 0, '2025-01-01', 3, 1, '2025-11-01 10:00:00'),
 
+-- [应清理] 因子：未逻删(0) + 状态强制(3) + 时间过期(2025-10-01)
+(1000000000000000003, 'test_u3@user.com', 'U-强销-未删-待清', '$2a$10$pY9kwEJJB99zylONtPXgyeo8JFVjyOYk6LlZCkAmE2HpiRhNvFmQ6', 0, '2025-01-01', 3, 0, '2025-10-01 10:00:00'),
 
+-- [保留] 因子：逻辑删除(1) + 状态警告(1) + 时间未过(2026-04-01)
+(1000000000000000004, 'test_u4@user.com', 'U-逻删-警告-保留', '$2a$10$pY9kwEJJB99zylONtPXgyeo8JFVjyOYk6LlZCkAmE2HpiRhNvFmQ6', 0, '2025-01-01', 1, 1, '2026-04-01 10:00:00'),
 
+-- [保留] 因子：未逻删(0) + 状态正常(0) + 时间最新
+(1000000000000000005, 'test_u5@user.com', 'U-正常-活跃-保留', '$2a$10$pY9kwEJJB99zylONtPXgyeo8JFVjyOYk6LlZCkAmE2HpiRhNvFmQ6', 2, '2025-01-01', 0, 0, '2026-05-01 10:00:00'),
+
+-- [保留] 因子：未逻删(0) + 状态禁用(2) + 时间未过强销线
+(1000000000000000006, 'test_u6@user.com', 'U-禁用-观察-保留', '$2a$10$pY9kwEJJB99zylONtPXgyeo8JFVjyOYk6LlZCkAmE2HpiRhNvFmQ6', 0, '2025-01-01', 2, 0, '2026-03-01 10:00:00');
+
+-- 2. 管理员测试数据 (t_admin_user)
+INSERT INTO `t_admin_user` (`uid`, `email`, `nickname`, `password`, `gender`, `join_date`, `account_permission`, `account_status`, `is_deleted`, `update_time`) VALUES
+-- [应清理] 因子：逻辑删除(1) + 状态非3(0) + 时间过期
+(2000000000000000001, 'test_a1@admin.com', 'A-逻删-过期-待清', '$2a$10$pY9kwEJJB99zylONtPXgyeo8JFVjyOYk6LlZCkAmE2HpiRhNvFmQ6', 0, '2025-01-01', 3, 0, 1, '2025-12-01 10:00:00'),
+
+-- [应清理] 因子：逻辑删除(1) + 状态强制(3) + 时间过期
+(2000000000000000002, 'test_a2@admin.com', 'A-强销-过期-待清', '$2a$10$pY9kwEJJB99zylONtPXgyeo8JFVjyOYk6LlZCkAmE2HpiRhNvFmQ6', 0, '2025-01-01', 3, 3, 1, '2025-11-01 10:00:00'),
+
+-- [应清理] 因子：未逻删(0) + 状态强制(3) + 时间过期
+(2000000000000000003, 'test_a3@admin.com', 'A-强销-未删-待清', '$2a$10$pY9kwEJJB99zylONtPXgyeo8JFVjyOYk6LlZCkAmE2HpiRhNvFmQ6', 0, '2025-01-01', 3, 3, 0, '2025-10-01 10:00:00'),
+
+-- [保留] 因子：逻辑删除(1) + 状态警告(1) + 时间未过
+(2000000000000000004, 'test_a4@admin.com', 'A-逻删-警告-保留', '$2a$10$pY9kwEJJB99zylONtPXgyeo8JFVjyOYk6LlZCkAmE2HpiRhNvFmQ6', 0, '2025-01-01', 3, 1, 1, '2026-04-01 10:00:00'),
+
+-- [保留] 因子：未逻删(0) + 状态正常(0) + 时间最新
+(2000000000000000005, 'test_a5@admin.com', 'A-正常-活跃-保留', '$2a$10$pY9kwEJJB99zylONtPXgyeo8JFVjyOYk6LlZCkAmE2HpiRhNvFmQ6', 2, '2025-01-01', 0, 0, 0, '2026-05-01 10:00:00');
+
+-- 3. 关联头像测试数据 (t_account_avatar)
+-- 策略：给 UID ...001 (应清理) 和 ...004 (保留) 添加头像，验证清理时是否同步删除
+INSERT INTO `t_account_avatar` (`identity_type`, `uid`, `avatar_url`, `update_time`) VALUES
+(1, 1000000000000000001, 'minio://bucket/avatars/user_1000000000000000001.jpg', '2025-12-01 10:00:00'),
+(0, 2000000000000000001, 'minio://bucket/avatars/admin_2000000000000000001.jpg', '2025-12-01 10:00:00'),
+(1, 1000000000000000004, 'minio://bucket/avatars/user_1000000000000000004.jpg', '2026-04-01 10:00:00');
+
+-- 4. 关联异常状态测试数据 (t_account_exception_status_time)
+-- 策略：给 UID ...002 (应清理-强销) 和 ...004 (保留-警告) 添加记录，验证联动清理
+INSERT INTO `t_account_exception_status_time` (`uid`, `identity_type`, `exception_type`, `expire_time`, `reason`, `update_time`) VALUES
+(1000000000000000002, 1, 3, '2025-12-01 10:00:00', '严重违规，永久封禁', '2025-11-01 10:00:00'),
+(1000000000000000004, 1, 1, '2026-06-01 10:00:00', '轻微违规，警告一个月', '2026-04-01 10:00:00'),
+(2000000000000000002, 0, 3, '2025-12-01 10:00:00', '管理失职，强制销号', '2025-11-01 10:00:00');
 
 
 

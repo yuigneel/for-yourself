@@ -46,6 +46,30 @@ public interface AdminUserMapper extends BaseMapper<AdminUser> {
      * @return 影响行数
      */
     int physicalDeleteByUid(@Param("uid") Long uid);
+
+    /**
+     * 【教学注释】查询待清理的管理员 UID 列表（忽略逻辑删除）
+     * @param logicDeleteThreshold 逻辑删除的时间阈值
+     * @param forceLogoutThreshold 强制销号的时间阈值
+     * @param batchSize 每批查询的数量
+     * @return UID 列表
+     */
+    java.util.List<Long> selectUidsForCleanup(@Param("logicThreshold") java.time.LocalDateTime logicDeleteThreshold,
+                                              @Param("forceThreshold") java.time.LocalDateTime forceLogoutThreshold,
+                                              @Param("limit") int batchSize);
+
+    /**
+     * 【教学注释】查询待清理的管理员 UID 列表（忽略逻辑删除，并排除指定 UID）
+     * @param logicDeleteThreshold 逻辑删除的时间阈值
+     * @param forceLogoutThreshold 强制销号的时间阈值
+     * @param batchSize 每批查询的数量
+     * @param excludeUids 需要排除的 UID 列表（删除失败的 UID）
+     * @return UID 列表
+     */
+    java.util.List<Long> selectUidsForCleanupExcluding(@Param("logicThreshold") java.time.LocalDateTime logicDeleteThreshold,
+                                                       @Param("forceThreshold") java.time.LocalDateTime forceLogoutThreshold,
+                                                       @Param("limit") int batchSize,
+                                                       @Param("excludeUids") java.util.List<Long> excludeUids);
 }
 
 

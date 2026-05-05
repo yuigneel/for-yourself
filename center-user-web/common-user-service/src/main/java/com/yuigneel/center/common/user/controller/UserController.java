@@ -10,6 +10,7 @@ import com.yuigneel.center.user.api.model.vo.CommonUserInfoResponseVO;
 import com.yuigneel.common.exception.ForYourselfException;
 import com.yuigneel.common.model.result.Result;
 import com.yuigneel.common.model.result.ResultCodeEnum;
+import com.yuigneel.common.utils.UserContextUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -266,6 +267,13 @@ public class UserController {
         return Result.ok("头像上传成功！");
     }
 
+    @Operation(summary = "删除用户头像", description = "删除用户头像")
+    @PostMapping("/deleteAvatar")
+    public Result<String> deleteAvatar() {
+        commonUserFileServiceByMinIOImpl.physicalDeleteAvatarByUid(UserContextUtil.getUid());
+        return Result.ok("删除成功");
+    }
+
     @Operation(summary = "获取用户头像", description = "返回用户头像的 临时URL！")
     @GetMapping("/getAvatar")
     public Result<String> getAvatar() {
@@ -281,4 +289,5 @@ public class UserController {
         String response = userService.getNewJWT();
         return Result.ok(response);
     }
+
 }

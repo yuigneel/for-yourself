@@ -28,4 +28,10 @@ public class AdminUserFileServiceByCloudImpl extends ServiceImpl<AccountAvatarMa
         throw new ForYourselfException(ResultCodeEnum.TODO, null);
     }
 
+    @Override
+    public int physicalDeleteAvatarByUidAllowNull(Long uid) {
+        //TODO
+        throw new ForYourselfException(ResultCodeEnum.TODO, null);
+    }
+
 }

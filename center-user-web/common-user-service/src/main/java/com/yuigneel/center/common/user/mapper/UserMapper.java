@@ -7,16 +7,19 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.yuigneel.center.user.api.model.dto.CommonUserPageQueryDTO;
 import org.apache.ibatis.annotations.Param;
 
+import java.util.List;
+
 /**
-* @author Yu_Lgnier
-* @description 针对表【t_common_user(普通用户基础信息表)】的数据库操作Mapper
-* @createDate 2026-03-30 13:04:36
-* @Entity domain.model.com.yuigneel.center.common.user.CommonUser
-*/
+ * @author Yu_Lgnier
+ * @description 针对表【t_common_user(普通用户基础信息表)】的数据库操作Mapper
+ * @createDate 2026-03-30 13:04:36
+ * @Entity domain.model.com.yuigneel.center.common.user.CommonUser
+ */
 public interface UserMapper extends BaseMapper<CommonUser> {
 
     /**
      * 根据昵称查询用户(忽略逻辑删除)
+     *
      * @param nickname 用户昵称
      * @return 用户对象
      */
@@ -24,6 +27,7 @@ public interface UserMapper extends BaseMapper<CommonUser> {
 
     /**
      * 根据邮箱查询用户(忽略逻辑删除)
+     *
      * @param email 用户邮箱
      * @return 用户对象
      */
@@ -31,6 +35,7 @@ public interface UserMapper extends BaseMapper<CommonUser> {
 
     /**
      * 根据UID查询用户(忽略逻辑删除)
+     *
      * @param uid 用户 UID
      * @return 用户对象
      */
@@ -38,7 +43,8 @@ public interface UserMapper extends BaseMapper<CommonUser> {
 
     /**
      * 根据UID修改用户密码(忽略逻辑删除)
-     * @param uid 用户 UID
+     *
+     * @param uid      用户 UID
      * @param password 加密后的新密码
      * @return 影响行数
      */
@@ -46,6 +52,7 @@ public interface UserMapper extends BaseMapper<CommonUser> {
 
     /**
      * 恢复用户-将is_deleted设为0(忽略逻辑删除)
+     *
      * @param user 用户对象(需包含uid)
      * @return 影响行数
      */
@@ -62,11 +69,38 @@ public interface UserMapper extends BaseMapper<CommonUser> {
     IPage<CommonUser> selectPageByCondition(Page<CommonUser> page, @Param("query") CommonUserPageQueryDTO query);
 
     /**
-     * 物理删除用户账号（直接 DELETE，不走逻辑删除）
-     * @param uids 需要删除的用户 UID 列表
+     * 物理删除单个普通用户账号（直接 DELETE，不走逻辑删除）
+     *
+     * @param uid 需要删除的用户 UID
      * @return 影响行数
      */
-    int physicalDeleteByUids(@Param("uids") java.util.List<Long> uids);
+    int physicalDeleteByUid(@Param("uid") Long uid);
+
+    /**
+     * 【教学注释】查询待清理的 UID 列表（忽略逻辑删除）
+     *
+     * @param logicDeleteThreshold 逻辑删除的时间阈值
+     * @param forceLogoutThreshold 强制销号的时间阈值
+     * @param batchSize            每批查询的数量
+     * @return UID 列表
+     */
+    List<Long> selectUidsForCleanup(@Param("logicThreshold") java.time.LocalDateTime logicDeleteThreshold,
+                                    @Param("forceThreshold") java.time.LocalDateTime forceLogoutThreshold,
+                                    @Param("limit") int batchSize);
+
+    /**
+     * 【教学注释】查询待清理的 UID 列表（忽略逻辑删除，并排除指定 UID）
+     *
+     * @param logicDeleteThreshold 逻辑删除的时间阈值
+     * @param forceLogoutThreshold 强制销号的时间阈值
+     * @param batchSize            每批查询的数量
+     * @param excludeUids          需要排除的 UID 列表（删除失败的 UID）
+     * @return UID 列表
+     */
+    List<Long> selectUidsForCleanupExcluding(@Param("logicThreshold") java.time.LocalDateTime logicDeleteThreshold,
+                                             @Param("forceThreshold") java.time.LocalDateTime forceLogoutThreshold,
+                                             @Param("limit") int batchSize,
+                                             @Param("excludeUids") java.util.List<Long> excludeUids);
 
 }
 

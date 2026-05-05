@@ -10,16 +10,28 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 @Service
-public class CommonUserFileServiceByCloudImpl  extends ServiceImpl<AccountAvatarMapper, AccountAvatar> implements CommonUserFileService {
+public class CommonUserFileServiceByCloudImpl extends ServiceImpl<AccountAvatarMapper, AccountAvatar> implements CommonUserFileService {
     @Override
     public void uploadAvatar(MultipartFile file) {
         //TODO
-        throw new ForYourselfException(ResultCodeEnum.TODO,null);
+        throw new ForYourselfException(ResultCodeEnum.TODO, null);
     }
 
     @Override
     public String getAvatar() {
-      //TODO
-        throw new ForYourselfException(ResultCodeEnum.TODO,null);
+        //TODO
+        throw new ForYourselfException(ResultCodeEnum.TODO, null);
+    }
+
+    @Override
+    public void physicalDeleteAvatarByUid(Long uid) {
+        //TODO
+        throw new ForYourselfException(ResultCodeEnum.TODO, null);
+    }
+
+    @Override
+    public int physicalDeleteAvatarByUidAllowNull(Long uid) {
+        //TODO
+        throw new ForYourselfException(ResultCodeEnum.TODO, null);
     }
 }

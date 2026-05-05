@@ -115,12 +115,43 @@
         </choose>
     </select>
 
-    <!-- 物理删除用户账号（直接 DELETE，不走逻辑删除） -->
-    <delete id="physicalDeleteByUids">
-        DELETE FROM t_common_user WHERE uid IN
-        <foreach collection="uids" item="uid" open="(" separator="," close=")">
-            #{uid}
-        </foreach>
+    <!-- 物理删除单个普通用户账号（直接 DELETE，不走逻辑删除） -->
+    <delete id="physicalDeleteByUid">
+        DELETE FROM t_common_user WHERE uid = #{uid}
     </delete>
+
+    <!-- 【教学注释】查询待清理的 UID 列表（忽略逻辑删除） -->
+    <select id="selectUidsForCleanup" resultType="java.lang.Long">
+        SELECT uid FROM t_common_user
+        WHERE (
+            -- 情况1：已逻辑删除且超过3个月
+            (is_deleted = 1 AND update_time &lt; #{logicThreshold})
+            OR 
+            -- 情况2：强制销号且超过120天
+            (account_status = 3 AND update_time &lt; #{forceThreshold})
+        )
+        ORDER BY update_time ASC
+        LIMIT #{limit}
+    </select>
+
+    <!-- 【教学注释】查询待清理的 UID 列表（忽略逻辑删除，并排除指定 UID） -->
+    <select id="selectUidsForCleanupExcluding" resultType="java.lang.Long">
+        SELECT uid FROM t_common_user
+        WHERE (
+            -- 情况1：已逻辑删除且超过3个月
+            (is_deleted = 1 AND update_time &lt; #{logicThreshold})
+            OR 
+            -- 情况2：强制销号且超过120天
+            (account_status = 3 AND update_time &lt; #{forceThreshold})
+        )
+        <if test="excludeUids != null and excludeUids.size() > 0">
+            AND uid NOT IN
+            <foreach collection="excludeUids" item="uid" open="(" separator="," close=")">
+                #{uid}
+            </foreach>
+        </if>
+        ORDER BY update_time ASC
+        LIMIT #{limit}
+    </select>
 
 </mapper>

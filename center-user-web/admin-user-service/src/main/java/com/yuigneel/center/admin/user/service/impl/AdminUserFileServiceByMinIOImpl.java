@@ -157,4 +157,22 @@ public class AdminUserFileServiceByMinIOImpl extends ServiceImpl<AccountAvatarMa
         });
     }
 
+    @Override
+    public int physicalDeleteAvatarByUidAllowNull(Long uid) {
+        // ===先获得账号头像对象
+        LambdaQueryWrapper<AccountAvatar> eq = new LambdaQueryWrapper<AccountAvatar>().eq(AccountAvatar::getUid, uid).eq(AccountAvatar::getIdentityType, AccountIdentityTypeEnum.ADMIN);
+        AccountAvatar one = this.getOne(eq);
+        if (one == null) return 0;
+        final String avatarUrl = one.getAvatarUrl();
+        Boolean execute = transactionTemplate.execute(status -> {
+            // ===直接物理删除头像数据，返回删除行数
+            int i = accountAvatarMapper.deleteByUidAndIdentityTypeIgnoreLogic(uid, AccountIdentityTypeEnum.ADMIN.getCode());
+            if (i <= 0) throw new ForYourselfException(ResultCodeEnum.DATABASE_SERVICE_ERROR, null);
+            // ===删除文件
+            boolean b = minioUtil.deleteFile(avatarUrl);
+            if (!b) throw new ForYourselfException(ResultCodeEnum.MINIO_SERVICE_ERROR, null);
+            return true;
+        });
+        return Boolean.TRUE.equals(execute) ? 1 : 0;
+    }
 }

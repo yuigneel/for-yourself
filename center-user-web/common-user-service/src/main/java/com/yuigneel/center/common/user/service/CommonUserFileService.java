@@ -9,4 +9,8 @@ public interface CommonUserFileService extends IService<AccountAvatar> {
     void uploadAvatar(MultipartFile file);
 
     String getAvatar();
+
+    void physicalDeleteAvatarByUid(Long uid);
+
+    int physicalDeleteAvatarByUidAllowNull(Long uid);
 }

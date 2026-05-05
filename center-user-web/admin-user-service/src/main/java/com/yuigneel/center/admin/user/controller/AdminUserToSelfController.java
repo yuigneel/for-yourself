@@ -9,6 +9,7 @@ import com.yuigneel.center.user.api.model.dto.EmailCodeRequestDTO;
 import com.yuigneel.common.exception.ForYourselfException;
 import com.yuigneel.common.model.result.Result;
 import com.yuigneel.common.model.result.ResultCodeEnum;
+import com.yuigneel.common.utils.UserContextUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -110,6 +111,13 @@ public class AdminUserToSelfController {
         if (response == null || response.isEmpty())
             throw new ForYourselfException(ResultCodeEnum.AVATAR_NOT_FOUND, null);
         return Result.ok(response);
+    }
+
+    @Operation(summary = "删除用户头像", description = "删除用户头像")
+    @PostMapping("/deleteAvatar")
+    public Result<String> deleteAvatar() {
+        adminUserFileServiceByMinIOImpl.physicalDeleteAvatarByUid(UserContextUtil.getUid());
+        return Result.ok("删除成功");
     }
 
     @Operation(summary = "获取新的 JWT", description = "JWT快过期的时候前端主动请求，获取新的JWT")

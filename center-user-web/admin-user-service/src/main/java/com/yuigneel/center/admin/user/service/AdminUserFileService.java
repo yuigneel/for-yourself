@@ -11,4 +11,6 @@ public interface AdminUserFileService extends IService<AccountAvatar> {
     String getAvatar();
 
     void physicalDeleteAvatarByUid(Long uid);
+
+    int physicalDeleteAvatarByUidAllowNull(Long uid);
 }
