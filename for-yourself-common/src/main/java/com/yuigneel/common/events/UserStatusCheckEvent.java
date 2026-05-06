@@ -45,6 +45,11 @@ public class UserStatusCheckEvent extends ApplicationEvent {
     private java.time.LocalDateTime expireTime;
 
     /**
+     * 封禁/异常理由
+     */
+    private String reason;
+
+    /**
      * 构造函数
      * @param source 事件源（通常为 this）
      * @param uid 待校验的用户 ID
@@ -60,8 +65,9 @@ public class UserStatusCheckEvent extends ApplicationEvent {
      * 【教学注释】供监听器调用的结果设置方法
      * 监听器查完数据库后，调用此方法将结果“回传”给拦截器
      */
-    public void setBanned(boolean isBanned, java.time.LocalDateTime expireTime) {
+    public void setBanned(boolean isBanned, java.time.LocalDateTime expireTime, String reason) {
         this.isBanned = isBanned;
         this.expireTime = expireTime;
+        this.reason = reason;
     }
 }

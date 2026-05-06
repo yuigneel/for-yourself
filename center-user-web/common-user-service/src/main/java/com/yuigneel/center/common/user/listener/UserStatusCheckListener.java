@@ -67,14 +67,21 @@ public class UserStatusCheckListener {
 
         // 2. 正常状态直接放行
         if (status == AccountStatusEnum.ACCOUNT_STATUS_NORMAL) {
-            event.setBanned(false, null);
+            event.setBanned(false, null, null);
             return;
         }
 
-        // 3. 强制销号直接拦截（不查时间表）
+        // 3. 强制销号：查询副表获取理由并拦截
         if (status == AccountStatusEnum.ACCOUNT_STATUS_FORCE_LOGOUT) {
-            log.warn("普通用户 {} 已被强制销号，拦截请求", event.getUid());
-            event.setBanned(true, null);
+            AccountExceptionStatusTime record = exceptionStatusTimeMapper.selectOne(
+                    new LambdaQueryWrapper<AccountExceptionStatusTime>()
+                            .eq(AccountExceptionStatusTime::getUid, event.getUid())
+                            .eq(AccountExceptionStatusTime::getIdentityType, AccountIdentityTypeEnum.USER)
+                            .select(AccountExceptionStatusTime::getReason)
+            );
+            String reason = (record != null && record.getReason() != null) ? record.getReason() : "账号已被强制销号";
+            log.info("普通用户 {} 已被强制销号，拦截请求", event.getUid());
+            event.setBanned(true, null, reason);
             return;
         }
 
@@ -88,15 +95,22 @@ public class UserStatusCheckListener {
                             .eq(AccountExceptionStatusTime::getIdentityType, AccountIdentityTypeEnum.USER)
             );
 
-            if (record != null && record.getExpireTime().isAfter(LocalDateTime.now())) {
-                // 未过期，拦截
-                log.warn("普通用户 {} 处于{}状态，到期时间: {}", event.getUid(), status.getName(), record.getExpireTime());
-                event.setBanned(true, record.getExpireTime());
+            if (record != null && record.getExpireTime() != null && record.getExpireTime().isAfter(LocalDateTime.now())) {
+                // 未过期
+                String reason = record.getReason();
+                if (status == AccountStatusEnum.ACCOUNT_STATUS_WARNING) {
+                    // 警告状态：放行
+                    event.setBanned(false, null, null);
+                } else {
+                    // 封禁状态：拦截
+                    log.info("普通用户 {} 处于封禁状态，到期时间: {}", event.getUid(), record.getExpireTime());
+                    event.setBanned(true, record.getExpireTime(), reason);
+                }
             } else {
                 // 已过期或无记录，执行自动恢复
                 log.info("普通用户 {} 的{}状态已过期，执行自动恢复", event.getUid(), status.getName());
                 autoUnbanUser(event.getUid());
-                event.setBanned(false, null);
+                event.setBanned(false, null, null);
             }
         }
     }

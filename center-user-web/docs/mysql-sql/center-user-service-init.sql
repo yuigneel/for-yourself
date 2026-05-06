@@ -58,7 +58,7 @@ CREATE TABLE `t_admin_user` (
 
 -- 插入初始管理员账号（最高权限）
 INSERT INTO `t_admin_user` (`uid`, `email`, `nickname`, `password`, `join_date`, `account_permission`)
-VALUES 
+VALUES
 (2043953017778077696, 'yu_lgnier@outlook.com', '小白', '$2a$10$FwxZr3z10XgKu24nfJPkheB3W4LGQszgKxhCInaZ9akRJ0n5isZkK', CURDATE(), 0),
 (2045827709510090752, 'yuigneel@outlook.com', '小黑', '$2a$10$pY9kwEJJB99zylONtPXgyeo8JFVjyOYk6LlZCkAmE2HpiRhNvFmQ6', CURDATE(), 0),
 (2049676213701574656, 'yulgnier@gmail.com', '小蓝', '$2a$10$pY9kwEJJB99zylONtPXgyeo8JFVjyOYk6LlZCkAmE2HpiRhNvFmQ6', CURDATE(), 0);
@@ -96,9 +96,9 @@ CREATE TABLE t_account_exception_status_time (
 
     identity_type TINYINT NOT NULL COMMENT '身份类型：0-管理员 1-普通用户（对应AccountIdentityTypeEnum枚举）',
 
-    exception_type TINYINT NOT NULL COMMENT '异常类型：1-警告 2-封禁 3-强制注销',
+    exception_type TINYINT DEFAULT NULL COMMENT '异常类型：1-警告 2-封禁 3-强制注销',
 
-    expire_time DATETIME NOT NULL COMMENT '异常状态到期时间（精确到秒）',
+    expire_time DATETIME DEFAULT NULL COMMENT '异常状态到期时间（精确到秒）',
 
     reason VARCHAR(500) DEFAULT NULL COMMENT '异常原因/封禁理由',
 

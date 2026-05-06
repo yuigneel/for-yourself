@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.web.servlet.HandlerInterceptor;
 
@@ -26,7 +27,7 @@ public class UserStatusInterceptor implements HandlerInterceptor {
     private final ApplicationEventPublisher eventPublisher; // 事件发布器
 
     @Override
-    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+    public boolean preHandle(HttpServletRequest request, @NotNull HttpServletResponse response, @NotNull Object handler) throws Exception {
         String uri = request.getRequestURI();
         // yuigneel： 此处无需校验白名单，在注册器中已经配置了白名单和内部调用白名单
 
@@ -54,15 +55,26 @@ public class UserStatusInterceptor implements HandlerInterceptor {
 
         // 4. 校验结果
         if (Boolean.TRUE.equals(event.getIsBanned())) {
-            // Yu·Igneel：懒得改了，能跑就行目前业务没有拓展，以后如果要优化封禁的话可以改一下事件逻辑
             LocalDateTime expireTime = event.getExpireTime();
+            String reason = event.getReason();
+
             if (expireTime == null) {
-                log.warn("用户 {} 已被强制销号，拦截请求: {}", uid, uri);
-                throw new ForYourselfException(ResultCodeEnum.ACCOUNT_BANNED, "账号已被强制销号");
+                // 强制销号逻辑
+                log.info("用户 {} 已被强制销号，拦截请求: {}", uid, uri);
+                StringBuilder msg = new StringBuilder("账号已被强制销号");
+                if (reason != null && !reason.isEmpty()) {
+                    msg.append("，原因：").append(reason);
+                }
+                throw new ForYourselfException(ResultCodeEnum.ACCOUNT_BANNED, msg.toString());
             } else {
-                log.warn("用户 {} 已被封禁，拦截请求: {}", uid, uri);
-                throw new ForYourselfException(ResultCodeEnum.ACCOUNT_BANNED,
-                        "账号已被封禁，解封时间: " + event.getExpireTime());
+                // 封禁逻辑（带解封时间）
+                log.info("用户 {} 已被封禁，拦截请求: {}", uid, uri);
+                StringBuilder msg = new StringBuilder("账号已被封禁");
+                if (reason != null && !reason.isEmpty()) {
+                    msg.append("，原因：").append(reason);
+                }
+                msg.append("，解封时间：").append(expireTime);
+                throw new ForYourselfException(ResultCodeEnum.ACCOUNT_BANNED, msg.toString());
             }
         }
         return true;
