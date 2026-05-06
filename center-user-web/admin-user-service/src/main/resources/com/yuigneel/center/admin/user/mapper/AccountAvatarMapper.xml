@@ -2,6 +2,7 @@
 <!DOCTYPE mapper
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 账号头像 Mapper XML -->
 <mapper namespace="com.yuigneel.center.admin.user.mapper.AccountAvatarMapper">
 
     <!-- 根据UID和身份类型物理删除（忽略逻辑删除） -->

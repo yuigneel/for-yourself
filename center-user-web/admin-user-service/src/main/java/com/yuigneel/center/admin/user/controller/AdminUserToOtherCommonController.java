@@ -15,6 +15,15 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * 管理员对普通用户接口控制器
+ * <p>
+ * 处理管理员对普通用户进行管理的核心业务接口，包括分页查询、获取用户信息、状态管理等
+ * </p>
+ *
+ * @author 羽·伊格尼尔
+ * @since 2026-05-06
+ */
 @Slf4j
 @RestController
 @RequiredArgsConstructor
@@ -27,10 +36,11 @@ public class AdminUserToOtherCommonController {
 
     /**
      * 分页查询普通用户列表
-     * <p>通过 Feign 调用 common-user-service，无需额外权限校验（Gateway 已确保是管理员）</p>
      *
      * @param query 查询参数
      * @return 分页结果
+     * @author 羽·伊格尼尔
+     * @since 2026-05-06
      */
     @GetMapping("/page")
     @Operation(summary = "分页查询普通用户列表", description = "通过 Feign 调用普通用户服务")
@@ -41,6 +51,11 @@ public class AdminUserToOtherCommonController {
 
     /**
      * 获取单个普通用户信息
+     *
+     * @param uid 普通用户UID
+     * @return 普通用户详细信息
+     * @author 羽·伊格尼尔
+     * @since 2026-05-06
      */
     @GetMapping("/get")
     @Operation(summary = "获取单个普通用户信息", description = "通过 Feign 调用普通用户服务")
@@ -51,6 +66,11 @@ public class AdminUserToOtherCommonController {
 
     /**
      * 修改普通用户账号状态
+     *
+     * @param request 账号状态更新请求参数
+     * @return 操作结果提示
+     * @author 羽·伊格尼尔
+     * @since 2026-05-06
      */
     @PostMapping("/updateStatus")
     @Operation(summary = "修改普通用户账号状态", description = "通过 Feign 调用普通用户服务")

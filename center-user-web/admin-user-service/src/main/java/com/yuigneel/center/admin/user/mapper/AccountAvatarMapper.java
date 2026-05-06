@@ -8,8 +8,8 @@ import org.apache.ibatis.annotations.Param;
 /**
  * 账号头像 Mapper 接口
  *
- * @author yulgnier
- * @date 2025
+ * @author yuigneel
+ * @since 2026-05-06
  */
 public interface AccountAvatarMapper extends BaseMapper<AccountAvatar> {
 
@@ -19,6 +19,8 @@ public interface AccountAvatarMapper extends BaseMapper<AccountAvatar> {
      * @param uid          用户/管理员唯一业务UID
      * @param identityType 身份类型
      * @return 影响行数
+     * @author yuigneel
+     * @since 2026-05-06
      */
     int deleteByUidAndIdentityTypeIgnoreLogic(@Param("uid") Long uid, @Param("identityType") Integer identityType);
 }

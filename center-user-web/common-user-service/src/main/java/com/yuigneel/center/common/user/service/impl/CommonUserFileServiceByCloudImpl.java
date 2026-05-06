@@ -9,26 +9,70 @@ import com.yuigneel.common.model.result.ResultCodeEnum;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+/**
+ * 普通用户文件服务实现类（基于云存储）
+ * <p>
+ * 实现CommonUserFileService接口，预留云存储方案的文件管理功能
+ * </p>
+ * <p>
+ * 特殊事项：
+ * - 当前为TODO状态，所有方法均抛出未实现异常
+ * - 用于未来扩展云存储方案（如阿里云OSS、腾讯云COS等）
+ * </p>
+ *
+ * @author Yu·Igneel
+ * @since 2026-05-06
+ */
 @Service
 public class CommonUserFileServiceByCloudImpl extends ServiceImpl<AccountAvatarMapper, AccountAvatar> implements CommonUserFileService {
+
+    /**
+     * 上传普通用户头像（待实现）
+     *
+     * @param file 头像文件
+     * @author Yu·Igneel
+     * @since 2026-05-06
+     */
     @Override
     public void uploadAvatar(MultipartFile file) {
         //TODO
         throw new ForYourselfException(ResultCodeEnum.TODO, null);
     }
 
+    /**
+     * 获取普通用户头像URL（待实现）
+     *
+     * @return 头像URL
+     * @author Yu·Igneel
+     * @since 2026-05-06
+     */
     @Override
     public String getAvatar() {
         //TODO
         throw new ForYourselfException(ResultCodeEnum.TODO, null);
     }
 
+    /**
+     * 物理删除普通用户头像（待实现）
+     *
+     * @param uid 普通用户ID
+     * @author Yu·Igneel
+     * @since 2026-05-06
+     */
     @Override
     public void physicalDeleteAvatarByUid(Long uid) {
         //TODO
         throw new ForYourselfException(ResultCodeEnum.TODO, null);
     }
 
+    /**
+     * 物理删除普通用户头像（允许为空，待实现）
+     *
+     * @param uid 普通用户ID
+     * @return 删除记录数
+     * @author Yu·Igneel
+     * @since 2026-05-06
+     */
     @Override
     public int physicalDeleteAvatarByUidAllowNull(Long uid) {
         //TODO

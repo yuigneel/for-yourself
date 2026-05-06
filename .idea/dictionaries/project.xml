@@ -2,6 +2,8 @@
   <dictionary name="project">
     <words>
       <w>yuigneel</w>
+      <w>普通用户uid</w>
+      <w>管理员uid</w>
     </words>
   </dictionary>
 </component>

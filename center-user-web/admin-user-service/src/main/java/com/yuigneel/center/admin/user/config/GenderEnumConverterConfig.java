@@ -9,6 +9,8 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  * 性别枚举转换器注册器
  * 专属职责：仅注册GenderEnum相关的转换器，不掺杂其他MVC配置
  * 原理：实现WebMvcConfigurer接口，通过addFormatters方法将自定义转换器加入Spring MVC转换器列表
+ * @author 逆羽风辰
+ * @since 2026-05-06
  */
 @Configuration
 public class GenderEnumConverterConfig implements WebMvcConfigurer {

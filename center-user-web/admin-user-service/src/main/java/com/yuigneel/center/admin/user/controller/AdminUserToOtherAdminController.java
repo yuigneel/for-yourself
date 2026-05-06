@@ -20,6 +20,15 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * 管理员对其它管理员接口控制器
+ * <p>
+ * 处理管理员管理其它管理员的核心业务接口，包括分页查询、创建账号、权限修改、状态管理等
+ * </p>
+ *
+ * @author Yu·Igneel
+ * @since 2026-05-06
+ */
 @Slf4j
 @RestController
 @RequiredArgsConstructor
@@ -32,10 +41,11 @@ public class AdminUserToOtherAdminController {
 
     /**
      * 分页查询管理员用户列表
-     * <p>支持条件：排除自己、时间范围、逻辑删除状态、账户权限、账户状态、关键词搜索</p>
      *
      * @param query 查询参数
      * @return 分页结果
+     * @author Yu·Igneel
+     * @since 2026-05-06
      */
     @GetMapping("/page")
     @Operation(summary = "分页查询管理员列表", description = "支持排除自己、时间范围、权限、状态、删除状态、关键词等条件筛选")
@@ -46,10 +56,11 @@ public class AdminUserToOtherAdminController {
 
     /**
      * 创建新的管理员账号
-     * <p>系统会自动生成账户昵称和原始密码，并在响应中返回</p>
      *
      * @param request 创建请求参数，包含邮箱和权限等级
      * @return 创建的账户信息，包含账户昵称和原始密码
+     * @author Yu·Igneel
+     * @since 2026-05-06
      */
     @PostMapping("/create")
     @Operation(summary = "创建管理员账号", description = "创建新的管理员账号，系统自动生成昵称和初始密码")
@@ -60,6 +71,11 @@ public class AdminUserToOtherAdminController {
 
     /**
      * 修改其它管理员的权限等级
+     *
+     * @param request 权限更新请求参数
+     * @return 操作结果提示
+     * @author Yu·Igneel
+     * @since 2026-05-06
      */
     @PostMapping("/update-permission")
     @Operation(summary = "修改其它管理员权限等级", description = "修改其它管理员的权限等级")
@@ -70,6 +86,11 @@ public class AdminUserToOtherAdminController {
 
     /**
      * 修改其它管理员的账号状态
+     *
+     * @param request 账号状态更新请求参数
+     * @return 操作结果提示
+     * @author Yu·Igneel
+     * @since 2026-05-06
      */
     @PostMapping("/update-status")
     @Operation(summary = "修改其它管理员账号状态", description = "修改其它管理员的账号状态")
@@ -80,6 +101,11 @@ public class AdminUserToOtherAdminController {
 
     /**
      * 获取特定某个管理员的信息
+     *
+     * @param uid 管理员UID
+     * @return 管理员详细信息
+     * @author Yu·Igneel
+     * @since 2026-05-06
      */
     @GetMapping("/get-info")
     @Operation(summary = "获取特定某个管理员的信息", description = "获取特定某个管理员的信息")

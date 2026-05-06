@@ -60,12 +60,13 @@ import java.util.concurrent.ThreadLocalRandom;
 
 
 /**
- * 管理员用户自助服务实现类
- * <p>针对表【t_admin_user(管理员用户基础信息表)】的数据库操作Service实现</p>
- * <p>注意：管理员账户被逻辑删除后，不允许像普通用户那样靠登录来恢复，因此不需要自定义Mapper，使用MyBatis-Plus默认方法即可</p>
+ * 管理员用户服务实现类
+ * <p>
+ * 实现AdminUserService接口，提供管理员用户的注册、登录、信息管理、权限管理等功能
+ * </p>
  *
- * @author Yu_Lgnier
- * @since 2026-04-18
+ * @author 羽·伊格尼尔
+ * @since 2026-05-06
  */
 @Slf4j
 @Service
@@ -114,6 +115,8 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
      *                                <li>{@link ResultCodeEnum#CACHE_SERVICE_ERROR} - Redis缓存服务异常</li>
      *                                <li>{@link ResultCodeEnum#THIRD_PARTY_SERVICE_ERROR} - 邮件发送服务异常</li>
      *                              </ul>
+     * @author 羽·伊格尼尔
+     * @since 2026-05-06
      */
     @Override
     public String getEmailCode(EmailCodeRequestDTO request) {
@@ -206,6 +209,8 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
      *                                <li>{@link ResultCodeEnum#CACHE_SERVICE_ERROR} - Redis缓存数据格式错误或缓存服务异常</li>
      *                                <li>{@link ResultCodeEnum#CAPTCHA_ERROR} - 验证码错误（附带剩余尝试次数）</li>
      *                              </ul>
+     * @author 羽·伊格尼尔
+     * @since 2026-05-06
      */
     @Override
     public String forgetPassword(UserForgetPasswordRequestDTO request) {
@@ -260,6 +265,8 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
      * @param request 登录请求参数，包含登录类型、账号、密码和 Cloudflare 验证令牌
      * @return 登录响应，包含 JWT Token 和结果码
      * @throws ForYourselfException 当验证码验证失败、格式错误、用户不存在或密码错误时抛出
+     * @author 羽·伊格尼尔
+     * @since 2026-05-06
      */
     @Override
     public AdminUserLoginResponseVO login(UserLoginRequestDTO request) {
@@ -356,6 +363,8 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
      *
      * @param request 换绑邮箱请求参数，包含新邮箱、密码、验证码
      * @throws ForYourselfException 账户已注销、邮箱格式错误、参数错误、密码格式错误、密码错误、验证码过期、缓存服务异常、验证码错误、数据库写入失败
+     * @author 羽·伊格尼尔
+     * @since 2026-05-06
      */
     @Override
     public void changeEmail(UserChangeEmailRequestDTO request) {
@@ -427,6 +436,8 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
      *                                <li>{@link ResultCodeEnum#DATE_FORMAT_ERROR} - 生日不能是未来日期</li>
      *                                <li>{@link ResultCodeEnum#DATABASE_SERVICE_ERROR} - 数据库更新失败</li>
      *                              </ul>
+     * @author 羽·伊格尼尔
+     * @since 2026-05-06
      */
     @Override
     public void updateUserInfo(UserUpdateInfoRequestDTO request, MultipartFile avatarFile) {
@@ -526,6 +537,8 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
      *
      * @return 管理员用户信息响应VO，包含用户的基本信息
      * @throws ForYourselfException 当账户不存在或已注销时抛出 {@link ResultCodeEnum#ACCOUNT_NOT_FOUND_OR_CANCELLED}
+     * @author 羽·伊格尼尔
+     * @since 2026-05-06
      */
     @Override
     public AdminUserInfoResponseVO getAdminSelfInfo() {
@@ -551,6 +564,8 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
      *                                <li>{@link ResultCodeEnum#ACCOUNT_NOT_FOUND_OR_CANCELLED} - 账户不存在或已注销</li>
      *                                <li>{@link ResultCodeEnum#PASSWORD_ERROR} - 原密码错误</li>
      *                              </ul>
+     * @author 羽·伊格尼尔
+     * @since 2026-05-06
      */
     @Override
     public void updatePassword(UserUpdatePasswordRequestDTO request) {
@@ -618,6 +633,8 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
      *                                <li>{@link ResultCodeEnum#PASSWORD_ERROR} - 密码错误</li>
      *                                <li>{@link ResultCodeEnum#DATABASE_SERVICE_ERROR} - 数据库服务异常</li>
      *                              </ul>
+     * @author 羽·伊格尼尔
+     * @since 2026-05-06
      */
     @Override
     public void logout(AdminUserLogoutRequestDTO request) {
@@ -669,6 +686,8 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
      *
      * @param query 分页查询请求参数
      * @return 分页结果，包含管理员用户信息列表
+     * @author 羽·伊格尼尔
+     * @since 2026-05-06
      */
     @Override
     public IPage<AdminUserInfoResponseVO> pageUsers(AdminUserPageQueryDTO query) {
@@ -800,6 +819,8 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
      *                                <li>INSUFFICIENT_PERMISSIONS: 创建者权限不足</li>
      *                                <li>DATABASE_SERVICE_ERROR: 数据库服务异常</li>
      *                              </ul>
+     * @author 羽·伊格尼尔
+     * @since 2026-05-06
      */
     @Override
     public AdminUserCreateResponseVO createAdmin(AdminUserCreateRequestDTO request) {
@@ -856,6 +877,8 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
      *                                <li>INSUFFICIENT_PERMISSIONS: 修改者权限不足</li>
      *                                <li>DATABASE_SERVICE_ERROR: 数据库更新失败</li>
      *                              </ul>
+     * @author 羽·伊格尼尔
+     * @since 2026-05-06
      */
     @Override
     public void updateAdminPermission(AdminUserPermissionUpdateRequestDTO request) {
@@ -884,6 +907,8 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
      *
      * @param request 状态修改请求，包含目标管理员UID和新状态
      * @throws ForYourselfException 当权限不足或数据库操作失败时抛出异常
+     * @author 羽·伊格尼尔
+     * @since 2026-05-06
      */
     @Override
     public void updateAdminStatus(AccountStatusUpdateRequestDTO request) {
@@ -997,6 +1022,8 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
      * @param uid 管理员 UID
      * @return 管理员信息 VO
      * @throws ForYourselfException 当管理员不存在时抛出 ACCOUNT_NOT_FOUND 异常
+     * @author 羽·伊格尼尔
+     * @since 2026-05-06
      */
     @Override
     public AdminUserInfoResponseVO getOtherAdminInfo(Long uid) {
@@ -1019,6 +1046,8 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
      * @param query 分页查询参数，包含页码、每页条数、筛选条件等
      * @return 普通用户分页结果
      * @throws ForYourselfException {@link ResultCodeEnum#REMOTE_RESPONSE_ERROR} - 远程服务响应异常
+     * @author 羽·伊格尼尔
+     * @since 2026-05-06
      */
     @Override
     public IPage<CommonUserInfoResponseVO> getCommonPages(CommonUserPageQueryDTO query) {
@@ -1038,6 +1067,8 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
      * @param uid 普通用户 UID
      * @return 普通用户信息 VO
      * @throws ForYourselfException 当用户不存在时抛出 ACCOUNT_NOT_FOUND 异常
+     * @author 羽·伊格尼尔
+     * @since 2026-05-06
      */
     @Override
     public CommonUserInfoResponseVO getOneCommonUserInfo(Long uid) {
@@ -1057,6 +1088,8 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
      *                              <ul>
      *                                <li>{@link ResultCodeEnum#REMOTE_RESPONSE_ERROR} - 远程服务返回数据为空</li>
      *                              </ul>
+     * @author 羽·伊格尼尔
+     * @since 2026-05-06
      */
     @Override
     public void updateCommonUserStatus(AccountStatusUpdateRequestDTO request) {
@@ -1070,6 +1103,13 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
         if (data == null) throw new ForYourselfException(ResultCodeEnum.REMOTE_RESPONSE_ERROR, null);
     }
 
+    /**
+     * 获取新的JWT令牌
+     *
+     * @return JWT令牌字符串
+     * @author 羽·伊格尼尔
+     * @since 2026-05-06
+     */
     @Override
     public String getNewJWT() {
         HashMap<String, Object> loadHashMap = new HashMap<>(Map.of(AuthConstants.UID_KEY, UserContextUtil.getUid()));
@@ -1086,6 +1126,10 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
 
     /**
      * 生成6位随机数字验证码
+     *
+     * @return 6位随机数字字符串
+     * @author 羽·伊格尼尔
+     * @since 2026-05-06
      */
     private String generateCode() {
         return String.valueOf(new Random().nextInt(899999) + 100000);
@@ -1094,7 +1138,10 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
     /**
      * 检查邮箱是否允许发送验证码
      *
+     * @param key 业务名称+分隔符+邮箱
      * @return 还剩余多少时间解冻
+     * @author 羽·伊格尼尔
+     * @since 2026-05-06
      */
     private Integer getNeedWaitTime(String key) {
         /*
@@ -1123,6 +1170,8 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
      * 标记该邮箱因验证码错误被冻结（等级自动升级）
      *
      * @param key 业务名称+分隔符+邮箱
+     * @author 羽·伊格尼尔
+     * @since 2026-05-06
      */
     private void markEmailAsCaptchaFreeze(String key) {
         // 🔥 核心优化：只调用1次枚举，全部提取到局部变量（后续直接用，不重复调用）
@@ -1168,6 +1217,9 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
      *
      * @param nickname 昵称（用于打日志）
      * @param uid      实际存入信息
+     * @return JWT令牌字符串
+     * @author 羽·伊格尼尔
+     * @since 2026-05-06
      */
     private String generateToken(String nickname, Long uid) {
         HashMap<String, Object> loadHashMap = new HashMap<>(Map.of(AuthConstants.UID_KEY, uid));
@@ -1188,6 +1240,8 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
      * @param trueCode    缓存中的验证码
      * @param remainTimes 缓存中的剩余尝试次数
      * @return true:验证码正确
+     * @author 羽·伊格尼尔
+     * @since 2026-05-06
      */
     private boolean checkCode(String code, String email, String key, String trueCode, Integer remainTimes) {
         // 验证码正确，返回true
@@ -1219,6 +1273,8 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
      *
      * @param length 密码长度（默认16位）
      * @return 符合规则的随机密码
+     * @author 羽·伊格尼尔
+     * @since 2026-05-06
      */
     private String generateRandomPassword(int length) {
         // 定义字符集
@@ -1267,6 +1323,8 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
      *
      * @return 符合规则且在数据库中不重复的随机昵称
      * @throws ForYourselfException 当多次尝试仍无法生成唯一昵称时抛出
+     * @author 羽·伊格尼尔
+     * @since 2026-05-06
      */
     private String generateUniqueNickname() {
         // 友好前缀池
@@ -1327,6 +1385,10 @@ public class AdminUserServiceImpl extends ServiceImpl<AdminUserMapper, AdminUser
 
     /**
      * 检查并处理账户状态
+     *
+     * @param user 管理员用户对象
+     * @author 羽·伊格尼尔
+     * @since 2026-05-06
      */
     private void checkStatus(AdminUser user) {
         // ===获取用户状态

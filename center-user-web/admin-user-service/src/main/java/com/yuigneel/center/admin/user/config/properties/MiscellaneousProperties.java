@@ -5,7 +5,10 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 /**
- * 杂项类配置
+ * 杂项配置类
+ *
+ * @author 逆羽风辰
+ * @since 2026-05-06
  */
 @Data
 @Component

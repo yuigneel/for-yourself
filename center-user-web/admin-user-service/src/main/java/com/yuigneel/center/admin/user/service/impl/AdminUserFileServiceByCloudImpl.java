@@ -8,26 +8,69 @@ import com.yuigneel.common.exception.ForYourselfException;
 import com.yuigneel.common.model.result.ResultCodeEnum;
 import org.springframework.web.multipart.MultipartFile;
 
+/**
+ * 管理员用户文件服务实现类（基于云存储）
+ * <p>
+ * 实现AdminUserFileService接口，预留云存储方案的文件管理功能
+ * </p>
+ * <p>
+ * 特殊事项：
+ * - 当前为TODO状态，所有方法均抛出未实现异常
+ * - 用于未来扩展云存储方案（如阿里云OSS、腾讯云COS等）
+ * </p>
+ *
+ * @author yuigneel
+ * @since 2026-05-06
+ */
 public class AdminUserFileServiceByCloudImpl extends ServiceImpl<AccountAvatarMapper, AccountAvatar> implements AdminUserFileService {
 
+    /**
+     * 上传管理员头像（待实现）
+     *
+     * @param file 头像文件
+     * @author yuigneel
+     * @since 2026-05-06
+     */
     @Override
     public void uploadAvatar(MultipartFile file) {
         //TODO
         throw new ForYourselfException(ResultCodeEnum.TODO, null);
     }
 
+    /**
+     * 获取管理员头像URL（待实现）
+     *
+     * @return 头像URL
+     * @author yuigneel
+     * @since 2026-05-06
+     */
     @Override
     public String getAvatar() {
         //TODO
         throw new ForYourselfException(ResultCodeEnum.TODO, null);
     }
 
+    /**
+     * 物理删除管理员头像（待实现）
+     *
+     * @param uid 管理员ID
+     * @author yuigneel
+     * @since 2026-05-06
+     */
     @Override
     public void physicalDeleteAvatarByUid(Long uid) {
         //TODO
         throw new ForYourselfException(ResultCodeEnum.TODO, null);
     }
 
+    /**
+     * 物理删除管理员头像（允许为空，待实现）
+     *
+     * @param uid 管理员ID
+     * @return 删除记录数
+     * @author yuigneel
+     * @since 2026-05-06
+     */
     @Override
     public int physicalDeleteAvatarByUidAllowNull(Long uid) {
         //TODO

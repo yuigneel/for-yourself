@@ -20,6 +20,15 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.concurrent.TimeUnit;
 
+/**
+ * 普通用户文件服务实现类（基于MinIO）
+ * <p>
+ * 实现CommonUserFileService接口，提供基于MinIO对象存储的文件管理功能
+ * </p>
+ *
+ * @author yuigneel
+ * @since 2026-05-06
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -30,17 +39,25 @@ public class CommonUserFileServiceByMinIOImpl extends ServiceImpl<AccountAvatarM
     private final AccountAvatarMapper accountAvatarMapper;
 
     /**
-     * 上传用户头像到 MinIO
+     * 上传用户头像
      * <p>
-     * 该方法会执行以下操作：
-     * 1. 验证上传文件是否为空
-     * 2. 获取当前登录用户的UID
-     * 3. 将头像文件上传至MinIO对象存储
-     * 4. 保存或更新用户头像URL到数据库
-     * 5. 如果数据库保存失败，会自动清理MinIO中已上传的文件（事务回滚）
+     * 逻辑流程：
+     * 1. 校验文件名格式
+     * 2. 查询数据库中是否已有头像记录
+     * 3. 如果前端未传文件且数据库无记录，直接返回
+     * 4. 如果前端未传文件但数据库有记录，物理删除数据库记录和MinIO文件
+     * 5. 如果前端传了文件，上传到MinIO并更新数据库（新增或更新）
+     * 6. 如果是更新操作，删除旧的MinIO文件
+     * </p>
+     * <p>
+     * 特殊事项：
+     * - 使用事务保证数据库和MinIO操作的一致性
+     * - 更新时会先保存新文件再删除旧文件，避免文件丢失
+     * </p>
      *
-     * @param file 用户上传的头像文件
-     * @throws ForYourselfException MinIO 上传失败或数据库保存失败时抛出异常
+     * @param file 用户上传的头像文件，可为null表示删除头像
+     * @author yuigneel
+     * @since 2026-05-06
      */
     @Override
     public void uploadAvatar(MultipartFile file) {
@@ -81,7 +98,7 @@ public class CommonUserFileServiceByMinIOImpl extends ServiceImpl<AccountAvatarM
                     log.error("上传头像失败", e);
                     throw new ForYourselfException(ResultCodeEnum.MINIO_SERVICE_ERROR, null);
                 }
-                
+
                 // ---判断数据库中是否有头像记录，决定是新增还是更新
                 if (one == null) {
                     // 数据库中没有头像记录，直接新增
@@ -96,7 +113,7 @@ public class CommonUserFileServiceByMinIOImpl extends ServiceImpl<AccountAvatarM
                             .eq(AccountAvatar::getIdentityType, AccountIdentityTypeEnum.USER)
                             .set(AccountAvatar::getAvatarUrl, newFileName);
                     this.update(set);
-                    
+
                     // ---删除旧的头像文件
                     String oldFileName = one.getAvatarUrl();
                     if (StringUtils.hasText(oldFileName)) {
@@ -109,15 +126,17 @@ public class CommonUserFileServiceByMinIOImpl extends ServiceImpl<AccountAvatarM
     }
 
     /**
-     * 获取当前用户的头像 URL
+     * 获取当前用户的头像URL
      * <p>
-     * 该方法会执行以下操作：
-     * 1. 根据当前登录用户的UID查询头像记录
-     * 2. 生成MinIO预签名URL（有效期1天）
-     * 3. 返回可用于直接访问头像的临时URL
+     * 逻辑流程：
+     * 1. 根据当前登录用户UID查询头像记录
+     * 2. 如果不存在返回null
+     * 3. 生成MinIO预签名URL（有效期1天）
+     * </p>
      *
-     * @return MinIO预签名URL，有效期为1天
-     * @throws ForYourselfException 当用户未找到头像记录或 MinIO 服务异常时抛出异常
+     * @return MinIO预签名URL，有效期为1天；如果用户没有头像则返回null
+     * @author yuigneel
+     * @since 2026-05-06
      */
     @Override
     public String getAvatar() {
@@ -135,6 +154,24 @@ public class CommonUserFileServiceByMinIOImpl extends ServiceImpl<AccountAvatarM
         return presignedUrl;
     }
 
+    /**
+     * 物理删除指定UID的用户头像
+     * <p>
+     * 逻辑流程：
+     * 1. 查询头像记录，不存在则抛异常
+     * 2. 在事务中物理删除数据库记录
+     * 3. 删除MinIO中的文件
+     * </p>
+     * <p>
+     * 特殊事项：
+     * - 如果头像记录不存在会抛出异常
+     * - 使用事务保证数据一致性
+     * </p>
+     *
+     * @param uid 用户ID
+     * @author yuigneel
+     * @since 2026-05-06
+     */
     @Override
     public void physicalDeleteAvatarByUid(Long uid) {
         // ===先获得账号头像对象
@@ -152,6 +189,26 @@ public class CommonUserFileServiceByMinIOImpl extends ServiceImpl<AccountAvatarM
         });
     }
 
+    /**
+     * 物理删除指定UID的用户头像（允许为空）
+     * <p>
+     * 逻辑流程：
+     * 1. 查询头像记录，不存在则返回0
+     * 2. 在事务中物理删除数据库记录
+     * 3. 删除MinIO中的文件
+     * 4. 返回删除结果（1表示成功，0表示未找到）
+     * </p>
+     * <p>
+     * 特殊事项：
+     * - 与physicalDeleteAvatarByUid的区别是：头像不存在时不抛异常，返回0
+     * - 适用于注销等场景，允许用户没有头像
+     * </p>
+     *
+     * @param uid 用户ID
+     * @return 删除的记录数，1表示成功删除，0表示未找到记录
+     * @author yuigneel
+     * @since 2026-05-06
+     */
     @Override
     public int physicalDeleteAvatarByUidAllowNull(Long uid) {
         // ===先获得账号头像对象
@@ -170,5 +227,5 @@ public class CommonUserFileServiceByMinIOImpl extends ServiceImpl<AccountAvatarM
         });
         return Boolean.TRUE.equals(execute) ? 1 : 0;
     }
-    
+
 }

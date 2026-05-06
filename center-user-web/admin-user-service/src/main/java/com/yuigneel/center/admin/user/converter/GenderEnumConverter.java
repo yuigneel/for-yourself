@@ -14,6 +14,8 @@ import org.springframework.util.StringUtils;
  * 1. URL路径参数：/user/gender/2 → 自动转为GenderEnum.MALE
  * 2. 请求参数：?gender=-2 → 自动转为GenderEnum.FEMALE
  * 3. 表单提交的性别编码参数转换
+ * @author 逆羽风辰
+ * @since 2026-05-06
  */
 public class GenderEnumConverter implements Converter<String, GenderEnum> {
 

@@ -4,6 +4,12 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
+/**
+ * 内部服务链接配置类
+ *
+ * @author Yu·Igneel
+ * @since 2026-05-06
+ */
 @Data
 @Component
 @ConfigurationProperties(prefix = "link")

@@ -52,10 +52,13 @@ import java.util.concurrent.TimeUnit;
 import java.util.Random;
 
 /**
- * 用户服务实现类
+ * 普通用户服务实现类
+ * <p>
+ * 实现UserService接口，提供普通用户的注册、登录、信息管理等功能
+ * </p>
  *
- * @author yulgnier
- * @since 2023-09-05
+ * @author 逆羽风辰
+ * @since 2026-05-06
  */
 @Slf4j
 @Service
@@ -85,6 +88,8 @@ public class UserServiceImpl
      *
      * @param request 邮箱验证码请求参数
      * @return 邮箱验证码
+     * @author 逆羽风辰
+     * @since 2026-05-06
      */
     @Override
     public String getEmailCode(EmailCodeRequestDTO request) {
@@ -156,6 +161,8 @@ public class UserServiceImpl
      *
      * @param request 注册请求参数
      * @return jwt 令牌
+     * @author 逆羽风辰
+     * @since 2026-05-06
      */
     @Override
     public String register(UserRegisterRequestDTO request, MultipartFile avatarFile) {
@@ -269,6 +276,8 @@ public class UserServiceImpl
      *
      * @param request 登录请求参数
      * @return jwt 令牌
+     * @author 逆羽风辰
+     * @since 2026-05-06
      */
     @Override
     public UserLoginResponseVO login(UserLoginRequestDTO request) {
@@ -369,6 +378,8 @@ public class UserServiceImpl
      * <p>校验流程：Cloudflare人机验证 → 用户名/邮箱/密码格式校验 → 验证码校验 → 用户名邮箱匹配校验 → 密码校验 → 逻辑删除</p>
      *
      * @param request 用户注销请求DTO，包含昵称、邮箱、密码、验证码和Cloudflare令牌
+     * @author 逆羽风辰
+     * @since 2026-05-06
      */
     @Override
     public void cancel(UserCancelRequestDTO request) {
@@ -442,6 +453,8 @@ public class UserServiceImpl
      *
      * @param request 找回密码请求DTO，包含邮箱、验证码和Cloudflare令牌
      * @return 新生成的随机密码(明文)
+     * @author 逆羽风辰
+     * @since 2026-05-06
      */
     @Override
     public String forgetPassword(UserForgetPasswordRequestDTO request) {
@@ -494,6 +507,8 @@ public class UserServiceImpl
      * 更新用户信息
      *
      * @param request 用户信息更新请求参数，包含昵称、性别和生日
+     * @author 逆羽风辰
+     * @since 2026-05-06
      */
     @Override
     public void updateUserInfo(UserUpdateInfoRequestDTO request, MultipartFile avatarFile) {
@@ -586,6 +601,8 @@ public class UserServiceImpl
      * <p>校验流程：查询用户 → 新邮箱格式校验 → 验证码校验 → 更新邮箱</p>
      *
      * @param request 换绑邮箱请求DTO，包含新邮箱、用户密码和新邮箱验证码
+     * @author 逆羽风辰
+     * @since 2026-05-06
      */
     @Override
     public void changeEmail(UserChangeEmailRequestDTO request) {
@@ -643,6 +660,8 @@ public class UserServiceImpl
      * <p>根据当前登录用户的 UID查询并返回用户详细信息</p>
      *
      * @return 用户信息响应VO，包含用户的基本信息
+     * @author 逆羽风辰
+     * @since 2026-05-06
      */
     @Override
     public CommonUserInfoResponseVO getUserInfo() {
@@ -659,6 +678,8 @@ public class UserServiceImpl
      * <p>使用 LambdaUpdateWrapper 局部更新，避免触发 update_time 自动更新</p>
      *
      * @param request 修改密码请求DTO，包含原始密码和新密码
+     * @author 逆羽风辰
+     * @since 2026-05-06
      */
     @Override
     public void updatePassword(UserUpdatePasswordRequestDTO request) {
@@ -695,6 +716,8 @@ public class UserServiceImpl
      *
      * @param query 查询参数
      * @return 分页结果
+     * @author 逆羽风辰
+     * @since 2026-05-06
      */
     @Override
     public IPage<CommonUserInfoResponseVO> pageUsers(CommonUserPageQueryDTO query) {
@@ -743,6 +766,8 @@ public class UserServiceImpl
      * @param uid 用户 UID
      * @return 普通用户信息 VO
      * @throws ForYourselfException 当Token无效、访问非法或用户不存在时抛出异常
+     * @author 逆羽风辰
+     * @since 2026-05-06
      */
     @Override
     public CommonUserInfoResponseVO getOneById(Long uid) {
@@ -765,6 +790,8 @@ public class UserServiceImpl
      *                                <li>{@link ResultCodeEnum#ILLEGAL_ACCESS} - 管理员访问令牌缺失或验证失败</li>
      *                                <li>{@link ResultCodeEnum#DATABASE_SERVICE_ERROR} - 数据库更新失败</li>
      *                              </ul>
+     * @author 逆羽风辰
+     * @since 2026-05-06
      */
     @Override
     public void updateCommonUserStatus(AccountStatusUpdateRequestDTO request) {
@@ -889,6 +916,10 @@ public class UserServiceImpl
 
     /**
      * 生成6位随机数字验证码
+     *
+     * @return 6位随机数字字符串
+     * @author 逆羽风辰
+     * @since 2026-05-06
      */
     private String generateCode() {
         return String.valueOf(new Random().nextInt(899999) + 100000);
@@ -897,7 +928,10 @@ public class UserServiceImpl
     /**
      * 检查邮箱是否允许发送验证码
      *
+     * @param key 业务名称+分隔符+邮箱
      * @return 还剩余多少时间解冻
+     * @author 逆羽风辰
+     * @since 2026-05-06
      */
     private Integer getNeedWaitTime(String key) {
         /*
@@ -926,6 +960,8 @@ public class UserServiceImpl
      * 标记该邮箱因验证码错误被冻结（等级自动升级）
      *
      * @param key 业务名称+分隔符+邮箱
+     * @author 逆羽风辰
+     * @since 2026-05-06
      */
     private void markEmailAsCaptchaFreeze(String key) {
         // 🔥 核心优化：只调用1次枚举，全部提取到局部变量（后续直接用，不重复调用）
@@ -971,6 +1007,9 @@ public class UserServiceImpl
      *
      * @param nickname 昵称（用于打日志）
      * @param uid      实际存入信息
+     * @return JWT令牌字符串
+     * @author 逆羽风辰
+     * @since 2026-05-06
      */
     private String generateToken(String nickname, Long uid) {
         HashMap<String, Object> loadHashMap = new HashMap<>(Map.of(AuthConstants.UID_KEY, uid));
@@ -991,6 +1030,8 @@ public class UserServiceImpl
      * @param trueCode    缓存中的验证码
      * @param remainTimes 缓存中的剩余尝试次数
      * @return true:验证码正确
+     * @author 逆羽风辰
+     * @since 2026-05-06
      */
     private boolean checkCode(String code, String email, String key, String trueCode, Integer remainTimes) {
         // 验证码正确，返回true
@@ -1022,6 +1063,8 @@ public class UserServiceImpl
      *
      * @param length 密码长度（默认16位）
      * @return 符合规则的随机密码
+     * @author 逆羽风辰
+     * @since 2026-05-06
      */
     private String generateRandomPassword(int length) {
         // 定义字符集
@@ -1059,6 +1102,10 @@ public class UserServiceImpl
 
     /**
      * 检查并处理账户状态
+     *
+     * @param user 普通用户对象
+     * @author 逆羽风辰
+     * @since 2026-05-06
      */
     private void checkStatus(CommonUser user) {
         // ===获取用户状态

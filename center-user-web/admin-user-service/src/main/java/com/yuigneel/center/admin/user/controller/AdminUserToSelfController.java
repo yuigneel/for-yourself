@@ -13,7 +13,6 @@ import com.yuigneel.common.utils.UserContextUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +22,15 @@ import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+/**
+ * 管理员对接自己主账号接口控制器
+ * <p>
+ * 处理管理员自己对自己账号的管理接口，包括登录、注册、信息管理、密码修改等
+ * </p>
+ *
+ * @author yuigneel
+ * @since 2026-05-06
+ */
 @Slf4j
 @RestController
 @RequiredArgsConstructor
@@ -31,6 +39,15 @@ import org.springframework.web.multipart.MultipartFile;
 public class AdminUserToSelfController {
     private final AdminUserService userService;
     private final AdminUserFileService adminUserFileServiceByMinIOImpl;
+
+    /**
+     * 获取邮箱验证码
+     *
+     * @param request 邮箱验证码请求参数
+     * @return 操作结果提示
+     * @author yuigneel
+     * @since 2026-05-06
+     */
     @Operation(summary = "获取邮箱验证码")
     @PostMapping("/getEmailCode")
     public Result<String> getEmailCode(@Valid @RequestBody EmailCodeRequestDTO request) {
@@ -38,6 +55,14 @@ public class AdminUserToSelfController {
         return Result.ok(response);
     }
 
+    /**
+     * 找回密码
+     *
+     * @param request 找回密码请求参数
+     * @return 新生成的密码
+     * @author yuigneel
+     * @since 2026-05-06
+     */
     @Operation(summary = "找回密码")
     @PostMapping("/forgetPassword")
     public Result<String> forgetPassword(@Valid @RequestBody UserForgetPasswordRequestDTO request) {
@@ -45,6 +70,14 @@ public class AdminUserToSelfController {
         return Result.ok(response);
     }
 
+    /**
+     * 管理员登录
+     *
+     * @param request 登录请求参数
+     * @return 登录结果及令牌
+     * @author yuigneel
+     * @since 2026-05-06
+     */
     @Operation(summary = "管理员登录")
     @PostMapping("/login")
     public Result<String> login( @Valid @RequestBody UserLoginRequestDTO request) {
@@ -53,6 +86,14 @@ public class AdminUserToSelfController {
         return Result.buildDIY(ResultCodeEnum.SUCCESS.getCode(),message,response.getToken());
     }
 
+    /**
+     * 换绑邮箱
+     *
+     * @param request 换绑邮箱请求参数
+     * @return 操作结果提示
+     * @author yuigneel
+     * @since 2026-05-06
+     */
     @Operation(summary = "换绑邮箱")
     @PostMapping("/changeEmail")
     public Result<String> changeEmail(@Valid @RequestBody UserChangeEmailRequestDTO request) {
@@ -60,6 +101,15 @@ public class AdminUserToSelfController {
         return Result.ok("更改成功");
     }
 
+    /**
+     * 修改管理员普通信息
+     *
+     * @param request 用户信息更新请求参数
+     * @param avatarFile 头像文件
+     * @return 操作结果提示
+     * @author yuigneel
+     * @since 2026-05-06
+     */
     @Operation(summary = "修改管理员普通信息")
     @PostMapping("/updateUserInfo")
     public Result<String> updateUserInfo(
@@ -69,6 +119,14 @@ public class AdminUserToSelfController {
         userService.updateUserInfo(request, avatarFile);
         return Result.ok("修改成功");
     }
+
+    /**
+     * 获取管理员基础信息
+     *
+     * @return 管理员详细信息
+     * @author yuigneel
+     * @since 2026-05-06
+     */
     @Operation(summary = "获取管理员基础信息")
     @GetMapping("/getUserInfo")
     public Result<AdminUserInfoResponseVO> getUserInfo() {
@@ -77,12 +135,30 @@ public class AdminUserToSelfController {
         response.setAvatar(avatar);
         return Result.ok(response);
     }
+
+    /**
+     * 修改用户密码
+     *
+     * @param request 密码修改请求参数
+     * @return 操作结果提示
+     * @author yuigneel
+     * @since 2026-05-06
+     */
     @Operation(summary = "修改用户密码")
     @PostMapping("/updatePassword")
     public Result<String> updatePassword(@Valid @RequestBody UserUpdatePasswordRequestDTO request) {
         userService.updatePassword(request);
         return Result.ok("修改成功");
     }
+
+    /**
+     * 管理员用户注销
+     *
+     * @param request 注销请求参数
+     * @return 操作结果提示
+     * @author yuigneel
+     * @since 2026-05-06
+     */
     @Operation(summary = "管理员用户注销")
     @PostMapping("/logout")
     public Result<String> logout(@Valid @RequestBody AdminUserLogoutRequestDTO request) {
@@ -90,6 +166,14 @@ public class AdminUserToSelfController {
         return Result.ok("注销成功");
     }
 
+    /**
+     * 上传用户头像
+     *
+     * @param file 图片文件
+     * @return 操作结果提示
+     * @author yuigneel
+     * @since 2026-05-06
+     */
     @Operation(summary = "上传用户头像", description = "接收前端传来的 MultipartFile 文件，上传到 MinIO/云存储后返回提示")
     @PostMapping(value = "/uploadAvatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Result<String> uploadAvatar(
@@ -104,6 +188,13 @@ public class AdminUserToSelfController {
         return Result.ok("头像上传成功！");
     }
 
+    /**
+     * 获取用户头像
+     *
+     * @return 头像临时URL
+     * @author Yu·Igneel
+     * @since 2026-05-06
+     */
     @Operation(summary = "获取用户头像", description = "返回用户头像的 临时URL！")
     @GetMapping("/getAvatar")
     public Result<String> getAvatar() {
@@ -113,6 +204,13 @@ public class AdminUserToSelfController {
         return Result.ok(response);
     }
 
+    /**
+     * 删除用户头像
+     *
+     * @return 操作结果提示
+     * @author yuigneel
+     * @since 2026-05-06
+     */
     @Operation(summary = "删除用户头像", description = "删除用户头像")
     @PostMapping("/deleteAvatar")
     public Result<String> deleteAvatar() {
@@ -120,6 +218,13 @@ public class AdminUserToSelfController {
         return Result.ok("删除成功");
     }
 
+    /**
+     * 获取新的 JWT
+     *
+     * @return 新的JWT令牌
+     * @author 逆羽风辰
+     * @since 2026-05-06
+     */
     @Operation(summary = "获取新的 JWT", description = "JWT快过期的时候前端主动请求，获取新的JWT")
     @GetMapping("/getNewJWT")
     public Result<String> getNewJWT() {

@@ -10,10 +10,10 @@ import org.apache.ibatis.annotations.Param;
 import java.util.List;
 
 /**
- * @author Yu_Lgnier
- * @description 针对表【t_common_user(普通用户基础信息表)】的数据库操作Mapper
- * @createDate 2026-03-30 13:04:36
- * @Entity domain.model.com.yuigneel.center.common.user.CommonUser
+ * 普通用户 Mapper 接口
+ *
+ * @author 逆羽风辰
+ * @since 2026-05-06
  */
 public interface UserMapper extends BaseMapper<CommonUser> {
 
@@ -22,6 +22,8 @@ public interface UserMapper extends BaseMapper<CommonUser> {
      *
      * @param nickname 用户昵称
      * @return 用户对象
+     * @author 逆羽风辰
+     * @since 2026-05-06
      */
     CommonUser selectOneByNicknameIgnoreLogicDelete(String nickname);
 
@@ -30,6 +32,8 @@ public interface UserMapper extends BaseMapper<CommonUser> {
      *
      * @param email 用户邮箱
      * @return 用户对象
+     * @author 逆羽风辰
+     * @since 2026-05-06
      */
     CommonUser selectOneByEmailIgnoreLogicDelete(String email);
 
@@ -38,6 +42,8 @@ public interface UserMapper extends BaseMapper<CommonUser> {
      *
      * @param uid 用户 UID
      * @return 用户对象
+     * @author 逆羽风辰
+     * @since 2026-05-06
      */
     CommonUser selectOneByUidIgnoreLogicDelete(Long uid);
 
@@ -47,6 +53,8 @@ public interface UserMapper extends BaseMapper<CommonUser> {
      * @param uid      用户 UID
      * @param password 加密后的新密码
      * @return 影响行数
+     * @author 逆羽风辰
+     * @since 2026-05-06
      */
     int updatePasswordByUidIgnoreLogicDelete(Long uid, String password);
 
@@ -55,16 +63,19 @@ public interface UserMapper extends BaseMapper<CommonUser> {
      *
      * @param user 用户对象(需包含uid)
      * @return 影响行数
+     * @author 逆羽风辰
+     * @since 2026-05-06
      */
     int restoreUserIgnoreLogicDelete(CommonUser user);
 
     /**
      * 分页查询普通用户列表（支持动态条件）
-     * <p>通过 XML 手写 SQL 实现复杂查询逻辑</p>
      *
      * @param page  分页对象（MyBatis-Plus 自动注入 LIMIT/OFFSET）
      * @param query 查询条件
      * @return 分页结果
+     * @author 逆羽风辰
+     * @since 2026-05-06
      */
     IPage<CommonUser> selectPageByCondition(Page<CommonUser> page, @Param("query") CommonUserPageQueryDTO query);
 
@@ -73,29 +84,35 @@ public interface UserMapper extends BaseMapper<CommonUser> {
      *
      * @param uid 需要删除的用户 UID
      * @return 影响行数
+     * @author 逆羽风辰
+     * @since 2026-05-06
      */
     int physicalDeleteByUid(@Param("uid") Long uid);
 
     /**
-     * 【教学注释】查询待清理的 UID 列表（忽略逻辑删除）
+     * 查询待清理的 UID 列表（忽略逻辑删除）
      *
      * @param logicDeleteThreshold 逻辑删除的时间阈值
      * @param forceLogoutThreshold 强制销号的时间阈值
      * @param batchSize            每批查询的数量
      * @return UID 列表
+     * @author 逆羽风辰
+     * @since 2026-05-06
      */
     List<Long> selectUidsForCleanup(@Param("logicThreshold") java.time.LocalDateTime logicDeleteThreshold,
                                     @Param("forceThreshold") java.time.LocalDateTime forceLogoutThreshold,
                                     @Param("limit") int batchSize);
 
     /**
-     * 【教学注释】查询待清理的 UID 列表（忽略逻辑删除，并排除指定 UID）
+     * 查询待清理的 UID 列表（忽略逻辑删除，并排除指定 UID）
      *
      * @param logicDeleteThreshold 逻辑删除的时间阈值
      * @param forceLogoutThreshold 强制销号的时间阈值
      * @param batchSize            每批查询的数量
      * @param excludeUids          需要排除的 UID 列表（删除失败的 UID）
      * @return UID 列表
+     * @author 逆羽风辰
+     * @since 2026-05-06
      */
     List<Long> selectUidsForCleanupExcluding(@Param("logicThreshold") java.time.LocalDateTime logicDeleteThreshold,
                                              @Param("forceThreshold") java.time.LocalDateTime forceLogoutThreshold,

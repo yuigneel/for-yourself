@@ -2,6 +2,7 @@
 <!DOCTYPE mapper
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 管理员用户 Mapper XML -->
 <mapper namespace="com.yuigneel.center.admin.user.mapper.AdminUserMapper">
 
     <resultMap id="BaseResultMap" type="com.yuigneel.center.admin.user.model.domain.AdminUser">
@@ -21,6 +22,7 @@
             <result property="updateBy" column="update_by" />
     </resultMap>
 
+    <!-- 根据昵称查询用户（忽略逻辑删除） -->
     <select id="selectOneByNicknameIgnoreLogicDelete" resultMap="BaseResultMap">
         SELECT
             id, uid, email, nickname, password, gender, birthday,
@@ -30,6 +32,7 @@
         WHERE nickname = #{nickname}
     </select>
 
+    <!-- 恢复已逻辑删除的用户 -->
     <update id="restoreUserIgnoreLogicDelete">
         UPDATE t_admin_user
         SET is_deleted = 0,
@@ -37,6 +40,7 @@
         WHERE id = #{id}
     </update>
 
+    <!-- 根据邮箱查询用户（忽略逻辑删除） -->
     <select id="selectOneByEmailIgnoreLogicDelete" resultMap="BaseResultMap">
         SELECT
             id, uid, email, nickname, password, gender, birthday,
@@ -46,6 +50,7 @@
         WHERE email = #{email}
     </select>
 
+    <!-- 根据UID查询用户（忽略逻辑删除） -->
     <select id="selectOneByUidIgnoreLogicDelete" resultMap="BaseResultMap">
         SELECT
             id, uid, email, nickname, password, gender, birthday,
@@ -56,12 +61,12 @@
     </select>
 
 
-    <!-- 物理删除单个管理员账号（直接 DELETE，不走逻辑删除） -->
+    <!-- 物理删除单个管理员账号 -->
     <delete id="physicalDeleteByUid">
         DELETE FROM t_admin_user WHERE uid = #{uid}
     </delete>
 
-    <!-- 【教学注释】查询待清理的管理员 UID 列表（忽略逻辑删除） -->
+    <!-- 查询待清理的管理员 UID 列表 -->
     <select id="selectUidsForCleanup" resultType="java.lang.Long">
         SELECT uid FROM t_admin_user
         WHERE (
@@ -75,7 +80,7 @@
         LIMIT #{limit}
     </select>
 
-    <!-- 【教学注释】查询待清理的管理员 UID 列表（忽略逻辑删除，并排除指定 UID） -->
+    <!-- 查询待清理的管理员 UID 列表（排除指定 UID） -->
     <select id="selectUidsForCleanupExcluding" resultType="java.lang.Long">
         SELECT uid FROM t_admin_user
         WHERE (

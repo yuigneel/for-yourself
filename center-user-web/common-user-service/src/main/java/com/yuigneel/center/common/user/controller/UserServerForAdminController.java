@@ -17,6 +17,15 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * 普通用户服务管理员接口控制器
+ * <p>
+ * 提供服务于管理员调用的普通用户管理接口，包括分页查询、获取用户信息、状态管理等
+ * </p>
+ *
+ * @author Yu·Igneel
+ * @since 2026-05-06
+ */
 @Slf4j
 @RestController
 @RequiredArgsConstructor
@@ -29,10 +38,11 @@ public class UserServerForAdminController {
 
     /**
      * 分页查询普通用户列表
-     * <p>仅管理员可调用，内部会校验身份</p>
      *
      * @param query 查询参数
      * @return 分页结果
+     * @author Yu·Igneel
+     * @since 2026-05-06
      */
     @GetMapping("/page")
     @Operation(summary = "分页查询普通用户列表", description = "仅管理员可调用，支持时间范围、状态、关键词等条件筛选")
@@ -43,7 +53,11 @@ public class UserServerForAdminController {
 
     /**
      * 根据 id获得普通用户信息
-     * <p>仅管理员可调用，内部会校验身份</p>
+     *
+     * @param uid 普通用户UID
+     * @return 普通用户详细信息
+     * @author Yu·Igneel
+     * @since 2026-05-06
      */
     @GetMapping("/getById")
     @Operation(summary = "根据 id获得普通用户信息")
@@ -58,10 +72,11 @@ public class UserServerForAdminController {
 
     /**
      * 更改普通用户的账号状态
-     * <p>仅管理员可调用，内部会校验身份</p>
      *
      * @param request 状态更新请求参数，包含普通用户UID和新的账户状态
      * @return 操作结果提示
+     * @author Yu·Igneel
+     * @since 2026-05-06
      */
     @PostMapping("/changeStatus")
     @Operation(summary = "更改普通用户的账号状态", description = "仅管理员可调用，内部会校验身份")

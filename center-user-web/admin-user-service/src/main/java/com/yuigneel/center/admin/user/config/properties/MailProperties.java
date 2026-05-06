@@ -5,7 +5,10 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 /**
- * 邮箱配置类（绑定 yml 配置）
+ * 邮箱配置类
+ *
+ * @author yuigneel
+ * @since 2026-05-06
  */
 @Data
 @Component

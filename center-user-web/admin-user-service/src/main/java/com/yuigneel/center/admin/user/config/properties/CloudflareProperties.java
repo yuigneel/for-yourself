@@ -5,7 +5,10 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 /**
- * Cloudflare 配置类（绑定yml配置）
+ * Cloudflare Turnstile 配置类
+ *
+ * @author 羽·伊格尼尔
+ * @since 2026-05-06
  */
 @Data
 @Component

@@ -2,9 +2,10 @@
 <!DOCTYPE mapper
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 账号异常状态时间 Mapper XML -->
 <mapper namespace="com.yuigneel.center.common.user.mapper.AccountExceptionStatusTimeMapper">
 
-    <!-- 物理删除：直接 DELETE，不走 MyBatis-Plus 的逻辑删除 -->
+    <!-- 物理删除异常状态记录 -->
     <delete id="physicalDeleteByUidAndIdentity">
         DELETE FROM t_account_exception_status_time 
         WHERE uid = #{uid} AND identity_type = #{identityType}
