@@ -26,8 +26,8 @@
 
 ## 我的宠物
 
-<P align="center">![Stone Badge](https://stone.professorlee.work/api/stone/yuigneel/for-yourself)<P/>
-<P align="center">**石墩子**<P/>
+<p align="center"><img src="https://stone.professorlee.work/api/stone/yuigneel/for-yourself" /></p>
+<p align="center"><strong>石墩子</strong></p>
 
 ## 特别鸣谢
 

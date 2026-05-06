@@ -28,8 +28,8 @@ large ecosystem projects**. It will not be maintained or updated within the next
 
 ## My Pet
 
-<P align="center">![Stone Badge](https://stone.professorlee.work/api/stone/yuigneel/for-yourself)<P/>
-<P align="center">**Stone**<P/>
+<p align="center"><img src="https://stone.professorlee.work/api/stone/yuigneel/for-yourself" /></p>
+<p align="center"><strong>Stone</strong></p>
 
 ## Special Thanks
 
