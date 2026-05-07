@@ -41,7 +41,7 @@ large ecosystem projects**. It will not be maintained or updated within the next
 
 |                                          Avatar                                           |                     Nickname                      |   Contribution    |
 |:-----------------------------------------------------------------------------------------:|:-------------------------------------------------:|:-----------------:|
-| <img src="https://avatars.githubusercontent.com/u/89632742?v=4" width="32" height="32" /> | [professor-lee](https://github.com/professor-lee) | A Cyber Pet Stone |
+| <img src="https://avatars.githubusercontent.com/u/89632742?v=4" width="32" height="32" /> | [professor-lee](https://github.com/professor-lee) | A Cyber Pet Stone from the documentation |
 |                                                                                           |                                                   |                   |
 
 <p align="center"><strong>Special thanks to all developers who have contributed to and supported this project!</strong></p>
@@ -55,4 +55,8 @@ In principle, as long as the following principles are not violated, it can be us
 - **Attribution** - Must declare the original author when using and modifying the code
 - **Open Source** - Must remain open source whether deployed locally or used as an API service
 
-### License Statement (TODO)
+### License Statement
+
+- This project is licensed under the [GNU Affero General Public License v3.0](https://www.gnu.org/licenses/agpl-3.0.html). For detailed terms, please refer to the [AGPL-3.0 Official Documentation](https://www.gnu.org/licenses/agpl-3.0.en.html).
+
+- All source code in this project is independently written by the author without direct reuse of third-party code. The project is released under the license chosen by the author to ensure openness and traceability of the code.

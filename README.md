@@ -37,10 +37,10 @@
   <img src="https://img.shields.io/badge/🙏-感恩-4169e1?style=flat-square" alt="Pray" />
 </p>  
 
-|                                           贡献者头像                                           |                       贡献者昵称                       |   贡献内容    |
-|:-----------------------------------------------------------------------------------------:|:-------------------------------------------------:|:---------:|
-| <img src="https://avatars.githubusercontent.com/u/89632742?v=4" width="32" height="32" /> | [professor-lee](https://github.com/professor-lee) | 赛博宠物石墩子一枚 |
-|                                                                                           |                                                   |           |
+|                                           贡献者头像                                           |                       贡献者昵称                       |       贡献内容       |
+|:-----------------------------------------------------------------------------------------:|:-------------------------------------------------:|:----------------:|
+| <img src="https://avatars.githubusercontent.com/u/89632742?v=4" width="32" height="32" /> | [professor-lee](https://github.com/professor-lee) | 阅读文档里面的赛博宠物石墩子一枚 |
+|                                                                                           |                                                   |                  |
 
 <p align="center"><strong>特别鸣谢所有为本项目做出贡献和支持的开发者们！</strong></p>
 
@@ -53,4 +53,13 @@
 - **保留署名** - 使用和修改代码时必须声明原作者
 - **开源要求** - 无论本地部署还是作为API服务，都必须保持开源
 
-### 许可证声明（TODO）
+### 许可证声明
+
+- 本项目采用 [GNU Affero General Public License v3.0](https://www.gnu.org/licenses/agpl-3.0.html)
+  开源许可证。详细条款请参阅 [AGPL-3.0 官方文档](https://www.gnu.org/licenses/agpl-3.0.en.html)。
+
+- 本项目所有源代码均由作者独立编写，未直接复用第三方代码，故项目遵循作者本人选择的许可证发布，确保代码的开放性与可追溯性。
+
+
+
+
