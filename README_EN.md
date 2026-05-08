@@ -20,8 +20,6 @@ gateway modules, and account management modules.
 This project is currently only used for **learning**, **demonstration**, **graduation projects**, and as a **Demo for
 large ecosystem projects**. It will not be maintained or updated within the next year.
 
----  
-
 ### Related Projects
 
 |    Project Name     |    Project Description     |     Status     |
@@ -62,8 +60,6 @@ In principle, as long as the following principles are not violated, it can be us
 
 - **Attribution** - Must declare the original author when using and modifying the code
 - **Open Source** - Must remain open source whether deployed locally or used as an API service
-
----  
 
 ### License Statement
 
