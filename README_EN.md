@@ -93,9 +93,9 @@ Start the following core modules in IntelliJ IDEA one by one:
     </td>
   </tr>
   <tr>
-    <th>贡献者头像</th>
-    <th>贡献者昵称</th>
-    <th>贡献内容</th>
+    <th>Contributor Avatar</th>
+    <th>Contributor Nickname</th>
+    <th>Contribution Content</th>
   </tr>
   <tr>
     <td style="text-align:center;">
