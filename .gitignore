@@ -49,3 +49,5 @@ application-prod.yml
 application-prod.yaml
 logs/
 *.log
+docs/beginner-notes.md
+docs/Knowledge points

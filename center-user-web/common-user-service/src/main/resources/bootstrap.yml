@@ -24,6 +24,8 @@ spring:
             group: FOR_YOURSELF_LOCAL
           - data-id: minin-common.yml
             group: FOR_YOURSELF_LOCAL
+          - data-id: sentinel-common.yml
+            group: FOR_YOURSELF_LOCAL
 
       discovery:
         group: FOR_YOURSELF_LOCAL # 服务分组
